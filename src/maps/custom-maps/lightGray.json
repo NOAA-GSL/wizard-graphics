@@ -1,0 +1,2451 @@
+{
+    "version": 8,
+    "glyphs": "https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer/resources/fonts/{fontstack}/{range}.pbf?token=",
+    "sources": {
+        "esri": {
+            "type": "vector",
+            "url": "https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer",
+            "tiles": [
+                "https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer/tile/{z}/{y}/{x}.pbf?token="
+            ]
+        }
+    },
+    "layers": [
+        {
+            "id": "Land/Not ice",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Land",
+            "filter": ["==", "_symbol", 0],
+            "layout": {},
+            "paint": {
+                "fill-color": "#e4e7eb",
+                "fill-opacity": 1
+            }
+        },
+        {
+            "id": "Land/Coastline",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Land",
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round",
+                "visibility": "none"
+            },
+            "paint": {
+                "line-color": "#9e9ba8",
+                "line-width": {
+                    "stops": [
+                        [0, 2],
+                        [9, 2]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Land/Ice",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Land",
+            "filter": ["==", "_symbol", 1],
+            "layout": {},
+            "paint": {
+                "fill-color": "#e4e7eb",
+                "fill-opacity": 1
+            }
+        },
+        {
+            "id": "Land/Ice/Coastline",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Land",
+            "filter": ["==", "_symbol", 1],
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round",
+                "visibility": "none"
+            },
+            "paint": {
+                "line-color": "#9e9ba8",
+                "line-width": {
+                    "stops": [
+                        [0, 2],
+                        [9, 2]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Airport/Airport property",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Airport",
+            "filter": ["==", "_symbol", 1],
+            "minzoom": 9,
+            "layout": {},
+            "paint": {
+                "fill-color": "#bdcada",
+                "fill-opacity": 0.15
+            }
+        },
+        {
+            "id": "Airport/Airport runway",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Airport",
+            "filter": ["==", "_symbol", 0],
+            "minzoom": 11,
+            "layout": {},
+            "paint": {
+                "fill-color": "#bdcada"
+            }
+        },
+        {
+            "id": "Water line small scale",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Water line small scale",
+            "minzoom": 1,
+            "maxzoom": 5,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#8fabd9",
+                "line-width": 0.5
+            }
+        },
+        {
+            "id": "Water line medium scale",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Water line medium scale",
+            "minzoom": 5,
+            "maxzoom": 7,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#8fabd9",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [5, 0.5],
+                        [7, 0.7]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Water line large scale",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Water line large scale",
+            "minzoom": 7,
+            "maxzoom": 11,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#8fabd9",
+                "line-width": 0.7
+            }
+        },
+        {
+            "id": "Water line/Stream or river",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Water line",
+            "filter": ["==", "_symbol", 0],
+            "minzoom": 11,
+            "layout": {
+                "line-cap": "round"
+            },
+            "paint": {
+                "line-color": "#8fabd9",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [11, 0.7],
+                        [14, 0.7],
+                        [17, 2]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Marine area/detail",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Marine area",
+            "layout": {},
+            "paint": {
+                "fill-color": "#8fabd9"
+            }
+        },
+        {
+            "id": "Water area small scale",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Water area small scale",
+            "minzoom": 1,
+            "maxzoom": 5,
+            "layout": {},
+            "paint": {
+                "fill-color": "#8fabd9"
+            }
+        },
+        {
+            "id": "Water area medium scale/Lake or river",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Water area medium scale",
+            "filter": ["==", "_symbol", 0],
+            "minzoom": 5,
+            "maxzoom": 7,
+            "layout": {},
+            "paint": {
+                "fill-color": "#8fabd9"
+            }
+        },
+        {
+            "id": "Water area large scale/Lake or river",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Water area large scale",
+            "filter": ["==", "_symbol", 0],
+            "minzoom": 7,
+            "maxzoom": 11,
+            "layout": {},
+            "paint": {
+                "fill-color": "#8fabd9"
+            }
+        },
+        {
+            "id": "Water area/Lake, river or bay",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Water area",
+            "filter": ["==", "_symbol", 7],
+            "minzoom": 11,
+            "layout": {},
+            "paint": {
+                "fill-color": "#8fabd9"
+            }
+        },
+        {
+            "id": "Water area/Dam or weir",
+            "type": "fill",
+            "source": "esri",
+            "source-layer": "Water area",
+            "filter": ["==", "_symbol", 5],
+            "minzoom": 11,
+            "layout": {},
+            "paint": {
+                "fill-color": "#8fabd9",
+                "fill-outline-color": "#8fabd9"
+            }
+        },
+        {
+            "id": "Boundary line/Disputed admin2/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": ["all", ["==", "_symbol", 8], ["!in", "Viz", 3]],
+            "minzoom": 8,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#595959",
+                "line-opacity": 0.5,
+                "line-dasharray": [2, 3],
+                "line-width": 1.5
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Disputed admin1/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "minzoom": 4,
+            "filter": ["all", ["==", "_symbol", 7], ["!in", "Viz", 3]],
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#303030",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1,
+                    "stops": [
+                        [4, 2],
+                        [6, 3.5],
+                        [14, 7],
+                        [17, 7]
+                    ]
+                }
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Disputed admin0/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": [
+                "all",
+                ["==", "_symbol", 6],
+                ["!in", "Viz", 3],
+                ["!in", "DisputeID", 8, 16, 90, 96, 0]
+            ],
+            "minzoom": 4,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#303030",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [6, 5],
+                        [8, 7.5],
+                        [14, 10],
+                        [17, 10]
+                    ]
+                }
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Disputed admin0/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": [
+                "all",
+                ["==", "_symbol", 6],
+                ["!in", "Viz", 3],
+                ["!in", "DisputeID", 8, 16, 90, 96, 0]
+            ],
+            "minzoom": 4,
+            "layout": {
+                "line-join": "round",
+                "visibility": "none"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [4, 1.2],
+                        [17, 9]
+                    ]
+                },
+                "line-color": "#595959",
+                "line-opacity": 0.7,
+                "line-dasharray": [10, 4]
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Disputed admin0/0 small",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": [
+                "all",
+                ["==", "_symbol", 6],
+                ["!in", "Viz", 3],
+                ["!in", "DisputeID", 8, 16, 90, 96, 0]
+            ],
+            "minzoom": 1,
+            "maxzoom": 4,
+            "layout": {
+                "line-join": "round",
+                "visibility": "none"
+            },
+            "paint": {
+                "line-width": 0.75,
+                "line-color": "#595959",
+                "line-dasharray": [4, 3]
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Admin1/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": ["all", ["==", "_symbol", 1], ["!in", "Viz", 3]],
+            "minzoom": 3,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#303030",
+                "line-width": {
+                    "base": 1,
+                    "stops": [
+                        [3, 0.75],
+                        [6, 3.5],
+                        [14, 7],
+                        [17, 7]
+                    ]
+                }
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Admin0/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "minzoom": 4,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#303030",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [6, 4],
+                        [8, 6.5],
+                        [14, 8],
+                        [17, 8]
+                    ]
+                }
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Admin2/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": ["all", ["==", "_symbol", 2], ["!in", "Viz", 3]],
+            "minzoom": 6,
+            "layout": {
+                "visibility": "none",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#595959",
+                "line-width": 1.2,
+                "line-dasharray": [2, 3]
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Admin0/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "minzoom": 4,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round",
+                "visibility": "none"
+            },
+            "paint": {
+                "line-color": "#595959",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [4, 1.5],
+                        [14, 2.5],
+                        [17, 2.5]
+                    ]
+                },
+                "line-dasharray": [8, 3]
+            },
+            "showProperties": false
+        },
+        {
+            "id": "Boundary line/Admin0/0/Small",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Boundary line",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#595959"
+            },
+            "maxzoom": 4,
+            "minzoom": 1,
+            "showProperties": false
+        },
+        {
+            "id": "Trail or path",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Trail or path",
+            "minzoom": 15,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": 1.6,
+                "line-color": "#fd9a94"
+            }
+        },
+        {
+            "id": "Road/Pedestrian",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 9], ["!in", "Viz", 3]],
+            "minzoom": 15,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": 1.22,
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Railroad",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Railroad",
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#f3908a",
+                "line-width": 1.2
+            },
+            "minzoom": 15
+        },
+        {
+            "id": "Ferry/Rail ferry",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Ferry",
+            "filter": ["all", ["==", "_symbol", 1], ["!in", "Viz", 3]],
+            "minzoom": 15,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a3bfed",
+                "line-width": 1.2
+            }
+        },
+        {
+            "id": "Road/4WD/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 10], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 2.22],
+                        [17, 3.32]
+                    ]
+                },
+                "line-dasharray": [6, 3],
+                "line-color": "#a84f4c"
+            }
+        },
+        {
+            "id": "Road/Service/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 8], ["!in", "Viz", 3]],
+            "minzoom": 14,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 2.22],
+                        [17, 3.32]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Local/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 7], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.4,
+                    "stops": [
+                        [13, 2.22],
+                        [14, 3.58],
+                        [17, 6.64]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Minor, ramp or traffic circle/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 6], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 2.22],
+                        [15, 3.58],
+                        [17, 5.87]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Minor/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 5], ["!in", "Viz", 3]],
+            "minzoom": 12,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [12, 2.22],
+                        [14, 3.58],
+                        [17, 6.64]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Major, ramp or traffic circle/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 4], ["!in", "Viz", 3]],
+            "minzoom": 10,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 2.22],
+                        [15, 3.58],
+                        [17, 5.87]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Major/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 3], ["!in", "Viz", 3]],
+            "minzoom": 10,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 2.22],
+                        [14, 5.61],
+                        [17, 10.97]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Freeway Motorway, ramp or traffic circle/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 2], ["!in", "Viz", 3]],
+            "minzoom": 5,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 2.22],
+                        [14, 3.58],
+                        [17, 6.64]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Freeway Motorway/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "minzoom": 5,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [8, 2.68],
+                        [14, 5.61],
+                        [17, 10.97]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/4WD/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 10], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 0.77],
+                        [17, 1.53]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Service/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 8], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 0.77],
+                        [17, 1.79]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Local/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 7], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 1.15],
+                        [14, 2.05],
+                        [17, 3.58]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Minor, ramp or traffic circle/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 6], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 0.77],
+                        [14, 2.05],
+                        [17, 3.58]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Minor/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 5], ["!in", "Viz", 3]],
+            "minzoom": 12,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [12, 0.77],
+                        [14, 2.05],
+                        [17, 3.58]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Major, ramp or traffic circle/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 4], ["!in", "Viz", 3]],
+            "minzoom": 10,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 0.77],
+                        [14, 2.05],
+                        [17, 3.58]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Major/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 3], ["!in", "Viz", 3]],
+            "minzoom": 10,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 0.77],
+                        [14, 4.08],
+                        [17, 7.91]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/Freeway Motorway, ramp or traffic circle/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 2], ["!in", "Viz", 3]],
+            "minzoom": 5,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#dd7d78",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 0.77],
+                        [14, 2.05],
+                        [17, 3.58]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Highway/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 1], ["!in", "Viz", 3]],
+            "minzoom": 7,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#dd7d78",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [8, 0.77],
+                        [14, 4.08],
+                        [17, 7.91]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road/Freeway Motorway/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "minzoom": 5,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#dd7d78",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [8, 0.77],
+                        [14, 4.08],
+                        [17, 7.91]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/4WD/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 10], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 2.9],
+                        [17, 4.33]
+                    ]
+                },
+                "line-dasharray": [6, 3],
+                "line-opacity": 0.5,
+                "line-color": "#a84f4c"
+            }
+        },
+        {
+            "id": "Road tunnel/Service/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 8], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 2.9],
+                        [17, 4.33]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Local/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 7], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.4,
+                    "stops": [
+                        [13, 2.9],
+                        [14, 4.67],
+                        [17, 8.67]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Minor, ramp or traffic circle/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 6], ["!in", "Viz", 3]],
+            "minzoom": 12,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 2.9],
+                        [15, 4.67],
+                        [17, 7.67]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Minor/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 5], ["!in", "Viz", 3]],
+            "minzoom": 12,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [12, 2.9],
+                        [14, 4.67],
+                        [17, 8.67]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Major, ramp or traffic circle/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 4], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 2.9],
+                        [15, 4.67],
+                        [17, 7.67]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Major/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 3], ["!in", "Viz", 3]],
+            "minzoom": 10,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-color": "#a84f4c",
+                "line-opacity": 0.5,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 2.9],
+                        [14, 7.33],
+                        [17, 14.33]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Freeway Motorway, ramp or traffic circle/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 2], ["!in", "Viz", 3]],
+            "minzoom": 5,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.5,
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 2.9],
+                        [14, 4.67],
+                        [17, 8.67]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Freeway Motorway/1",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "minzoom": 5,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.5,
+                "line-color": "#a84f4c",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [8, 3.5],
+                        [14, 7.33],
+                        [17, 14.33]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/4WD/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 10], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 1],
+                        [17, 2]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Service/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 8], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [14, 1],
+                        [17, 2.33]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Local/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 7], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 1.5],
+                        [14, 2.67],
+                        [17, 4.67]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Minor, ramp or traffic circle/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 6], ["!in", "Viz", 3]],
+            "minzoom": 12,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 1],
+                        [14, 2.67],
+                        [17, 4.67]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Minor/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 5], ["!in", "Viz", 3]],
+            "minzoom": 12,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [12, 1],
+                        [14, 2.67],
+                        [17, 4.67]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Major, ramp or traffic circle/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 4], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [13, 1],
+                        [14, 2.67],
+                        [17, 4.67]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Major/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 3], ["!in", "Viz", 3]],
+            "minzoom": 10,
+            "layout": {
+                "line-cap": "round",
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 1],
+                        [14, 5.33],
+                        [17, 10.33]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Freeway Motorway, ramp or traffic circle/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 2], ["!in", "Viz", 3]],
+            "minzoom": 13,
+            "layout": {
+                "line-join": "round",
+                "line-cap": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [10, 1],
+                        [14, 2.67],
+                        [17, 4.67]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road tunnel/Highway/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 1], ["!in", "Viz", 3]],
+            "minzoom": 7,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-color": "#dd7d78",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [8, 1],
+                        [14, 5.33],
+                        [17, 10.33]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "Road tunnel/Freeway Motorway/0",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "Road tunnel",
+            "filter": ["all", ["==", "_symbol", 0], ["!in", "Viz", 3]],
+            "minzoom": 8,
+            "layout": {
+                "line-join": "round"
+            },
+            "paint": {
+                "line-opacity": 0.7,
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [8, 1],
+                        [14, 5.33],
+                        [17, 10.33]
+                    ]
+                },
+                "line-color": "#dd7d78"
+            }
+        },
+        {
+            "id": "Road/label/Rectangle white black (Alt)",
+            "type": "symbol",
+            "source": "esri",
+            "source-layer": "Road/label",
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "_label_class",
+                    8,
+                    10,
+                    12,
+                    14,
+                    16,
+                    20,
+                    22,
+                    24,
+                    26,
+                    28,
+                    30,
+                    32,
+                    34,
+                    36,
+                    38,
+                    40,
+                    42,
+                    44,
+                    46,
+                    48,
+                    50,
+                    52,
+                    54,
+                    56,
+                    58,
+                    60,
+                    62,
+                    64,
+                    66,
+                    68,
+                    70,
+                    72,
+                    74
+                ],
+                ["!in", "Viz", 3]
+            ],
+            "minzoom": 14,
+            "layout": {
+                "symbol-placement": "line",
+                "symbol-spacing": 800,
+                "text-max-angle": 25,
+                "symbol-avoid-edges": true,
+                "text-font": ["Arial Regular"],
+                "text-size": 8.5,
+                "text-max-width": 8,
+                "text-field": "{_name}",
+                "icon-image": "Road/Rectangle white black (Alt)/{_len}",
+                "icon-rotation-alignment": "viewport",
+                "text-rotation-alignment": "viewport",
+                "text-offset": [0, 0.2],
+                "text-padding": 20
+            },
+            "paint": {
+                "text-color": "#fedad4",
+                "text-halo-color": "#8d4543"
+            }
+        },
+        {
+            "id": "Road/label/Rectangle white black",
+            "type": "symbol",
+            "source": "esri",
+            "source-layer": "Road/label",
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "_label_class",
+                    7,
+                    9,
+                    11,
+                    13,
+                    15,
+                    17,
+                    19,
+                    21,
+                    23,
+                    25,
+                    27,
+                    29,
+                    31,
+                    33,
+                    35,
+                    37,
+                    39,
+                    41,
+                    43,
+                    45,
+                    47,
+                    49,
+                    51,
+                    53,
+                    55,
+                    57,
+                    59,
+                    61,
+                    63,
+                    65,
+                    67,
+                    69,
+                    71,
+                    73
+                ],
+                ["!in", "Viz", 3]
+            ],
+            "minzoom": 14,
+            "layout": {
+                "symbol-placement": "line",
+                "symbol-spacing": 800,
+                "text-max-angle": 25,
+                "symbol-avoid-edges": true,
+                "text-font": ["Arial Regular"],
+                "text-size": 8.5,
+                "text-max-width": 8,
+                "text-field": "{_name}",
+                "icon-image": "Road/Rectangle white black/{_len}",
+                "icon-rotation-alignment": "viewport",
+                "text-rotation-alignment": "viewport",
+                "text-offset": [0, 0.2],
+                "text-padding": 20
+            },
+            "paint": {
+                "text-color": "#fedad4",
+                "text-halo-color": "#8d4543"
+            }
+        }
+    ],
+    "metadata": {
+        "arcgisStyleUrl": "https://www.arcgis.com/sharing/rest/content/items/29f3edfacb6147509f0db16829e7b382/resources/styles/root.json",
+        "arcgisOriginalItemTitle": "GG Light",
+        "arcgisQuickEditor": {
+            "land": "#ebeae6",
+            "labelTextColor": "#ffffff",
+            "labelHaloColor": "#000000",
+            "baseColor": "#7c838d",
+            "spriteProcessing": true,
+            "labelContrast": 4.5,
+            "labelColorMode": "LABELS_MAP_COLORS",
+            "colorMode": "CUSTOM",
+            "colors": {
+                "water": "#7096d4",
+                "land": "#ebeae6",
+                "building": "#474b52",
+                "road": "#b5b5b5",
+                "boundaries": "#595959"
+            },
+            "road": "#b5b5b5",
+            "water": "#7096d4",
+            "boundaries": "#595959"
+        },
+        "arcgisQuickEditorWarning": true,
+        "arcgisEditorExtents": [
+            {
+                "spatialReference": {
+                    "wkid": 102100
+                },
+                "xmin": -12652118.493631177,
+                "ymin": 3410479.680458824,
+                "xmax": -8349631.04551632,
+                "ymax": 5543378.517727816
+            },
+            {
+                "spatialReference": {
+                    "latestWkid": 3857,
+                    "wkid": 102100
+                },
+                "xmin": -371197.9381234135,
+                "ymin": 6496985.075827017,
+                "xmax": 343029.6541730836,
+                "ymax": 6905464.554982891
+            },
+            {
+                "spatialReference": {
+                    "latestWkid": 3857,
+                    "wkid": 102100
+                },
+                "xmin": -8597472.05169507,
+                "ymin": 4692615.939336582,
+                "xmax": -8552832.82717651,
+                "ymax": 4718145.906783841
+            },
+            {
+                "spatialReference": {
+                    "latestWkid": 3857,
+                    "wkid": 102100
+                },
+                "xmin": 16831588.19989804,
+                "ymin": -4011777.2067113556,
+                "xmax": 16832983.175664283,
+                "ymax": -4010979.3952286085
+            }
+        ],
+        "arcgisMinimapVisibility": true,
+        "arcgisSpriteData": {
+            "spriteImage": {
+                "__zone_symbol__loadfalse": [
+                    {
+                        "type": "eventTask",
+                        "state": "scheduled",
+                        "source": "HTMLImageElement.addEventListener:load",
+                        "zone": "angular",
+                        "runCount": 2
+                    }
+                ]
+            },
+            "spriteJson": {
+                "Water area/Inundated area": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Water area/Lake or river intermittent": {
+                    "x": 64,
+                    "y": 0,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Water area/Swamp or marsh": {
+                    "x": 128,
+                    "y": 0,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Special area of interest/Sand": {
+                    "x": 0,
+                    "y": 64,
+                    "width": 32,
+                    "height": 32,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Special area of interest/Groundcover": {
+                    "x": 32,
+                    "y": 64,
+                    "width": 32,
+                    "height": 32,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Special area of interest/Rock or gravel": {
+                    "x": 32,
+                    "y": 64,
+                    "width": 32,
+                    "height": 32,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Water area/Playa": {
+                    "x": 32,
+                    "y": 64,
+                    "width": 32,
+                    "height": 32,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/1": {
+                    "x": 64,
+                    "y": 64,
+                    "width": 16,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/1": {
+                    "x": 80,
+                    "y": 64,
+                    "width": 16,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/7": {
+                    "x": 96,
+                    "y": 64,
+                    "width": 38,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/7": {
+                    "x": 134,
+                    "y": 64,
+                    "width": 38,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/6": {
+                    "x": 0,
+                    "y": 96,
+                    "width": 34,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/6": {
+                    "x": 34,
+                    "y": 96,
+                    "width": 34,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/5": {
+                    "x": 68,
+                    "y": 96,
+                    "width": 30,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/5": {
+                    "x": 98,
+                    "y": 96,
+                    "width": 30,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/4": {
+                    "x": 128,
+                    "y": 96,
+                    "width": 26,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/4": {
+                    "x": 154,
+                    "y": 96,
+                    "width": 26,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/3": {
+                    "x": 0,
+                    "y": 112,
+                    "width": 24,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/3": {
+                    "x": 24,
+                    "y": 112,
+                    "width": 24,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/2": {
+                    "x": 48,
+                    "y": 112,
+                    "width": 20,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/2": {
+                    "x": 68,
+                    "y": 112,
+                    "width": 20,
+                    "height": 16,
+                    "pixelRatio": 1,
+                    "sdf": false
+                },
+                "Water line/Levee/0": {
+                    "x": 88,
+                    "y": 112,
+                    "width": 10,
+                    "height": 12,
+                    "pixelRatio": 1,
+                    "sdf": false
+                }
+            },
+            "spriteImage2x": {
+                "__zone_symbol__loadfalse": [
+                    {
+                        "type": "eventTask",
+                        "state": "scheduled",
+                        "source": "HTMLImageElement.addEventListener:load",
+                        "zone": "angular",
+                        "runCount": 2
+                    }
+                ]
+            },
+            "spriteJson2x": {
+                "Water area/Inundated area": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 128,
+                    "height": 128,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Water area/Lake or river intermittent": {
+                    "x": 128,
+                    "y": 0,
+                    "width": 128,
+                    "height": 128,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Water area/Swamp or marsh": {
+                    "x": 256,
+                    "y": 0,
+                    "width": 128,
+                    "height": 128,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Special area of interest/Sand": {
+                    "x": 0,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Special area of interest/Groundcover": {
+                    "x": 64,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Special area of interest/Rock or gravel": {
+                    "x": 64,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Water area/Playa": {
+                    "x": 64,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/1": {
+                    "x": 128,
+                    "y": 128,
+                    "width": 28,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/1": {
+                    "x": 156,
+                    "y": 128,
+                    "width": 28,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/7": {
+                    "x": 184,
+                    "y": 128,
+                    "width": 74,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/7": {
+                    "x": 258,
+                    "y": 128,
+                    "width": 74,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/6": {
+                    "x": 0,
+                    "y": 192,
+                    "width": 66,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/6": {
+                    "x": 66,
+                    "y": 192,
+                    "width": 66,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/5": {
+                    "x": 132,
+                    "y": 192,
+                    "width": 58,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/5": {
+                    "x": 190,
+                    "y": 192,
+                    "width": 58,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/4": {
+                    "x": 248,
+                    "y": 192,
+                    "width": 50,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/4": {
+                    "x": 298,
+                    "y": 192,
+                    "width": 50,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/3": {
+                    "x": 0,
+                    "y": 222,
+                    "width": 44,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/3": {
+                    "x": 44,
+                    "y": 222,
+                    "width": 44,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black (Alt)/2": {
+                    "x": 88,
+                    "y": 222,
+                    "width": 36,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Road/Rectangle white black/2": {
+                    "x": 124,
+                    "y": 222,
+                    "width": 36,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false
+                },
+                "Water line/Levee/0": {
+                    "x": 160,
+                    "y": 222,
+                    "width": 16,
+                    "height": 22,
+                    "pixelRatio": 2,
+                    "sdf": false
+                }
+            },
+            "spriteList": [
+                {
+                    "x": 128,
+                    "y": 128,
+                    "width": 28,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/1",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAeCAYAAAA/xX6fAAAAAXNSR0IArs4c6QAAAIJJREFUSEtjZKAzYATZV1xcbMzAwHCGlnb//PlTesqUKc/AFpaUlPj+//9/Ey0tZGRk9Ovp6dk8aiHVQnk0SKkWlDCDRoN0NEhJDoHRRENykBHSMBqkhEKIZPnRICU5yAhpGA1SQiFEsvwIC9KcnBwpdnb2pySHEwkaUJr6JOijWCkAHfHgH/Hy6xkAAAAASUVORK5CYII=",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAeCAYAAAA/xX6fAAAAAXNSR0IArs4c6QAAAIJJREFUSEtjZKAzYATZV1xcbMzAwHCGlnb//PlTesqUKc/AFpaUlPj+//9/Ey0tZGRk9Ovp6dk8aiHVQnk0SKkWlDCDRoN0NEhJDoHRRENykBHSMBqkhEKIZPnRICU5yAhpGA1SQiFEsvwIC9KcnBwpdnb2pySHEwkaUJr6JOijWCkAHfHgH/Hy6xkAAAAASUVORK5CYII=)",
+                        "background-size": "14px 15px"
+                    }
+                },
+                {
+                    "x": 88,
+                    "y": 222,
+                    "width": 36,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/2",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAeCAYAAABE4bxTAAAAAXNSR0IArs4c6QAAAH1JREFUWEftl6EVgDAMRK+qO8AYMFZd54jLWDAG7BDXRwfgZCMuIubMvZ9vUpBsytentbbVWp+V3cxsdpmr934AuFYWAnCa2a1CP1cQIaaoCIkQI8ByOSRCjADL5ZAIMQIsl0MixAiwXA6JECPA8sQOZXilI2J393d+rplmAOgzjh/ko8LTAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAeCAYAAABE4bxTAAAAAXNSR0IArs4c6QAAAH1JREFUWEftl6EVgDAMRK+qO8AYMFZd54jLWDAG7BDXRwfgZCMuIubMvZ9vUpBsytentbbVWp+V3cxsdpmr934AuFYWAnCa2a1CP1cQIaaoCIkQI8ByOSRCjADL5ZAIMQIsl0MixAiwXA6JECPA8sQOZXilI2J393d+rplmAOgzjh/ko8LTAAAAAElFTkSuQmCC)",
+                        "background-size": "18px 15px"
+                    }
+                },
+                {
+                    "x": 0,
+                    "y": 222,
+                    "width": 44,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/3",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAeCAYAAABXNvynAAAAAXNSR0IArs4c6QAAAH5JREFUWEdjZBhigBHk3pycHCl2dvang9ntvb29YLcOGQf//PlTesqUKc9GHUyrZDUawrQKWZi5oyE8GsJoITCaJEaTxGiSoHUaGA3h0RDGHwKj5TCtU8hoCI+G8Gg5TOs0MBrCoyFMQk0HUlpcXPyfzoFGknUoQ1Uk6RxgxQBVwtgfOnR74AAAAABJRU5ErkJggg==",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAeCAYAAABXNvynAAAAAXNSR0IArs4c6QAAAH5JREFUWEdjZBhigBHk3pycHCl2dvang9ntvb29YLcOGQf//PlTesqUKc9GHUyrZDUawrQKWZi5oyE8GsJoITCaJEaTxGiSoHUaGA3h0RDGHwKj5TCtU8hoCI+G8Gg5TOs0MBrCoyFMQk0HUlpcXPyfzoFGknUoQ1Uk6RxgxQBVwtgfOnR74AAAAABJRU5ErkJggg==)",
+                        "background-size": "22px 15px"
+                    }
+                },
+                {
+                    "x": 248,
+                    "y": 192,
+                    "width": 50,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/4",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAeCAYAAABuUU38AAAAAXNSR0IArs4c6QAAAHJJREFUWEftksENgDAMxMjMmSMzg/rpACcZFWT+ZxG7df3kq3VHd99fvmdmykNOKmiRk2qsf7GIRSADPi1IbIy1SKwOGloEEhtjLRKrg4YWgcTGWIvE6qChRSCxMdYisTpoaBFIbIy1SKwOGu4iEP9V7AM6aHAfcyCAfgAAAABJRU5ErkJggg==",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAeCAYAAABuUU38AAAAAXNSR0IArs4c6QAAAHJJREFUWEftksENgDAMxMjMmSMzg/rpACcZFWT+ZxG7df3kq3VHd99fvmdmykNOKmiRk2qsf7GIRSADPi1IbIy1SKwOGloEEhtjLRKrg4YWgcTGWIvE6qChRSCxMdYisTpoaBFIbIy1SKwOGu4iEP9V7AM6aHAfcyCAfgAAAABJRU5ErkJggg==)",
+                        "background-size": "25px 15px"
+                    }
+                },
+                {
+                    "x": 132,
+                    "y": 192,
+                    "width": 58,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/5",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAAAeCAYAAAB9hg0IAAAAAXNSR0IArs4c6QAAAGJJREFUWEftlMERACAIw2Rm5mBmPT++dIBgmIA2ucb45GLnzMzZOW9VhUE7EZZoJ5o7i0QlCm1AdaHgnm9LVKLQBlQXCs4xUl3VhTagulBwrq7qqi60AdWFgnN1j7rdCN7yLLilcB/F3y8LAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAAAeCAYAAAB9hg0IAAAAAXNSR0IArs4c6QAAAGJJREFUWEftlMERACAIw2Rm5mBmPT++dIBgmIA2ucb45GLnzMzZOW9VhUE7EZZoJ5o7i0QlCm1AdaHgnm9LVKLQBlQXCs4xUl3VhTagulBwrq7qqi60AdWFgnN1j7rdCN7yLLilcB/F3y8LAAAAAElFTkSuQmCC)",
+                        "background-size": "29px 15px"
+                    }
+                },
+                {
+                    "x": 0,
+                    "y": 192,
+                    "width": 66,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/6",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAAAeCAYAAACYGMhkAAAAAXNSR0IArs4c6QAAAHBJREFUaEPt2LENgDAMBEB7Zs/hmUFENCCEXMOlSJXq5T8lybBWAnlsVbX9OY/uTkFEhCDOGghCEFcRTYSJMBGPtwTVUA3VUI23JwQjGMEIRjBi8NECS1jCEpawhOUgAVjCEpawHFDhZnnHchDa54/sNvFwH8IvT74AAAAASUVORK5CYII=",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAAAeCAYAAACYGMhkAAAAAXNSR0IArs4c6QAAAHBJREFUaEPt2LENgDAMBEB7Zs/hmUFENCCEXMOlSJXq5T8lybBWAnlsVbX9OY/uTkFEhCDOGghCEFcRTYSJMBGPtwTVUA3VUI23JwQjGMEIRjBi8NECS1jCEpawhOUgAVjCEpawHFDhZnnHchDa54/sNvFwH8IvT74AAAAASUVORK5CYII=)",
+                        "background-size": "33px 15px"
+                    }
+                },
+                {
+                    "x": 184,
+                    "y": 128,
+                    "width": 74,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black (Alt)/7",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAAAeCAYAAACLz4iQAAAAAXNSR0IArs4c6QAAAH1JREFUaEPt0rERwDAMxLB4Zs+hmZPzBkhtqmYF/Xo6Elin2nu/VF8azcwKCp4fFCCdJKigUACzFhUUCmDWooJCAcxaVFAogFmLCgoFMGtRQaEAZi0qKBTArEUFhQKYtaigUACzFhUUCmDWooJCAcxaVFAogFmL+guF/dXZB7UucB8GV1vKAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAAAeCAYAAACLz4iQAAAAAXNSR0IArs4c6QAAAH1JREFUaEPt0rERwDAMxLB4Zs+hmZPzBkhtqmYF/Xo6Elin2nu/VF8azcwKCp4fFCCdJKigUACzFhUUCmDWooJCAcxaVFAogFmLCgoFMGtRQaEAZi0qKBTArEUFhQKYtaigUACzFhUUCmDWooJCAcxaVFAogFmL+guF/dXZB7UucB8GV1vKAAAAAElFTkSuQmCC)",
+                        "background-size": "37px 15px"
+                    }
+                },
+                {
+                    "x": 156,
+                    "y": 128,
+                    "width": 28,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/1",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAeCAYAAAA/xX6fAAAAAXNSR0IArs4c6QAAAIJJREFUSEtjZKAzYATZV1xcbMzAwHCGlnb//PlTesqUKc/AFpaUlPj+//9/Ey0tZGRk9Ovp6dk8aiHVQnk0SKkWlDCDRoN0NEhJDoHRRENykBHSMBqkhEKIZPnRICU5yAhpGA1SQiFEsvwIC9KcnBwpdnb2pySHEwkaUJr6JOijWCkAHfHgH/Hy6xkAAAAASUVORK5CYII=",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAeCAYAAAA/xX6fAAAAAXNSR0IArs4c6QAAAIJJREFUSEtjZKAzYATZV1xcbMzAwHCGlnb//PlTesqUKc/AFpaUlPj+//9/Ey0tZGRk9Ovp6dk8aiHVQnk0SKkWlDCDRoN0NEhJDoHRRENykBHSMBqkhEKIZPnRICU5yAhpGA1SQiFEsvwIC9KcnBwpdnb2pySHEwkaUJr6JOijWCkAHfHgH/Hy6xkAAAAASUVORK5CYII=)",
+                        "background-size": "14px 15px"
+                    }
+                },
+                {
+                    "x": 124,
+                    "y": 222,
+                    "width": 36,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/2",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAeCAYAAABE4bxTAAAAAXNSR0IArs4c6QAAAH1JREFUWEftl6EVgDAMRK+qO8AYMFZd54jLWDAG7BDXRwfgZCMuIubMvZ9vUpBsytentbbVWp+V3cxsdpmr934AuFYWAnCa2a1CP1cQIaaoCIkQI8ByOSRCjADL5ZAIMQIsl0MixAiwXA6JECPA8sQOZXilI2J393d+rplmAOgzjh/ko8LTAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAeCAYAAABE4bxTAAAAAXNSR0IArs4c6QAAAH1JREFUWEftl6EVgDAMRK+qO8AYMFZd54jLWDAG7BDXRwfgZCMuIubMvZ9vUpBsytentbbVWp+V3cxsdpmr934AuFYWAnCa2a1CP1cQIaaoCIkQI8ByOSRCjADL5ZAIMQIsl0MixAiwXA6JECPA8sQOZXilI2J393d+rplmAOgzjh/ko8LTAAAAAElFTkSuQmCC)",
+                        "background-size": "18px 15px"
+                    }
+                },
+                {
+                    "x": 44,
+                    "y": 222,
+                    "width": 44,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/3",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAeCAYAAABXNvynAAAAAXNSR0IArs4c6QAAAH5JREFUWEdjZBhigBHk3pycHCl2dvang9ntvb29YLcOGQf//PlTesqUKc9GHUyrZDUawrQKWZi5oyE8GsJoITCaJEaTxGiSoHUaGA3h0RDGHwKj5TCtU8hoCI+G8Gg5TOs0MBrCoyFMQk0HUlpcXPyfzoFGknUoQ1Uk6RxgxQBVwtgfOnR74AAAAABJRU5ErkJggg==",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAeCAYAAABXNvynAAAAAXNSR0IArs4c6QAAAH5JREFUWEdjZBhigBHk3pycHCl2dvang9ntvb29YLcOGQf//PlTesqUKc9GHUyrZDUawrQKWZi5oyE8GsJoITCaJEaTxGiSoHUaGA3h0RDGHwKj5TCtU8hoCI+G8Gg5TOs0MBrCoyFMQk0HUlpcXPyfzoFGknUoQ1Uk6RxgxQBVwtgfOnR74AAAAABJRU5ErkJggg==)",
+                        "background-size": "22px 15px"
+                    }
+                },
+                {
+                    "x": 298,
+                    "y": 192,
+                    "width": 50,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/4",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAeCAYAAABuUU38AAAAAXNSR0IArs4c6QAAAHJJREFUWEftksENgDAMxMjMmSMzg/rpACcZFWT+ZxG7df3kq3VHd99fvmdmykNOKmiRk2qsf7GIRSADPi1IbIy1SKwOGloEEhtjLRKrg4YWgcTGWIvE6qChRSCxMdYisTpoaBFIbIy1SKwOGu4iEP9V7AM6aHAfcyCAfgAAAABJRU5ErkJggg==",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAeCAYAAABuUU38AAAAAXNSR0IArs4c6QAAAHJJREFUWEftksENgDAMxMjMmSMzg/rpACcZFWT+ZxG7df3kq3VHd99fvmdmykNOKmiRk2qsf7GIRSADPi1IbIy1SKwOGloEEhtjLRKrg4YWgcTGWIvE6qChRSCxMdYisTpoaBFIbIy1SKwOGu4iEP9V7AM6aHAfcyCAfgAAAABJRU5ErkJggg==)",
+                        "background-size": "25px 15px"
+                    }
+                },
+                {
+                    "x": 190,
+                    "y": 192,
+                    "width": 58,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/5",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAAAeCAYAAAB9hg0IAAAAAXNSR0IArs4c6QAAAGJJREFUWEftlMERACAIw2Rm5mBmPT++dIBgmIA2ucb45GLnzMzZOW9VhUE7EZZoJ5o7i0QlCm1AdaHgnm9LVKLQBlQXCs4xUl3VhTagulBwrq7qqi60AdWFgnN1j7rdCN7yLLilcB/F3y8LAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAAAeCAYAAAB9hg0IAAAAAXNSR0IArs4c6QAAAGJJREFUWEftlMERACAIw2Rm5mBmPT++dIBgmIA2ucb45GLnzMzZOW9VhUE7EZZoJ5o7i0QlCm1AdaHgnm9LVKLQBlQXCs4xUl3VhTagulBwrq7qqi60AdWFgnN1j7rdCN7yLLilcB/F3y8LAAAAAElFTkSuQmCC)",
+                        "background-size": "29px 15px"
+                    }
+                },
+                {
+                    "x": 66,
+                    "y": 192,
+                    "width": 66,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/6",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAAAeCAYAAACYGMhkAAAAAXNSR0IArs4c6QAAAHBJREFUaEPt2LENgDAMBEB7Zs/hmUFENCCEXMOlSJXq5T8lybBWAnlsVbX9OY/uTkFEhCDOGghCEFcRTYSJMBGPtwTVUA3VUI23JwQjGMEIRjBi8NECS1jCEpawhOUgAVjCEpawHFDhZnnHchDa54/sNvFwH8IvT74AAAAASUVORK5CYII=",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAAAeCAYAAACYGMhkAAAAAXNSR0IArs4c6QAAAHBJREFUaEPt2LENgDAMBEB7Zs/hmUFENCCEXMOlSJXq5T8lybBWAnlsVbX9OY/uTkFEhCDOGghCEFcRTYSJMBGPtwTVUA3VUI23JwQjGMEIRjBi8NECS1jCEpawhOUgAVjCEpawHFDhZnnHchDa54/sNvFwH8IvT74AAAAASUVORK5CYII=)",
+                        "background-size": "33px 15px"
+                    }
+                },
+                {
+                    "x": 258,
+                    "y": 128,
+                    "width": 74,
+                    "height": 30,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Road/Rectangle white black/7",
+                    "centerColor": {
+                        "0": 115,
+                        "1": 115,
+                        "2": 115,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAAAeCAYAAACLz4iQAAAAAXNSR0IArs4c6QAAAIJJREFUaEPt1bERgCAABEGpmTqoWYfEeIk544uWR8bTRwJjV3POl+pLo7XWCAoOPyhA2klQQaEAZi0qKBQ4yHr1AKurB0i9eogUVFAHApj2jwoKBTBrUUGhAGYtKigUwKxFBYUCmLWooFAAsxYVFApg1qKCQgHMWlRQKIDZvyjsr84+Z9Jud34cvyIAAAAASUVORK5CYII=",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAAAeCAYAAACLz4iQAAAAAXNSR0IArs4c6QAAAIJJREFUaEPt1bERgCAABEGpmTqoWYfEeIk544uWR8bTRwJjV3POl+pLo7XWCAoOPyhA2klQQaEAZi0qKBQ4yHr1AKurB0i9eogUVFAHApj2jwoKBTBrUUGhAGYtKigUwKxFBYUCmLWooFAAsxYVFApg1qKCQgHMWlRQKIDZvyjsr84+Z9Jud34cvyIAAAAASUVORK5CYII=)",
+                        "background-size": "37px 15px"
+                    }
+                },
+                {
+                    "x": 64,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Special area of interest/Groundcover",
+                    "centerColor": {
+                        "0": 0,
+                        "1": 0,
+                        "2": 0,
+                        "3": 0
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAACnFJREFUeF7tW2lsG1sV9p2x09jpFugLfVTwCoRFAQrC6JU0iTNz7xghxCoQq0CIVUJsYl+E2Pf1ISRAYt9B7Lvw3PHESRsKBEGBsBXoewXKUrUlLcR27Bk4n+eEybzYYxp+Me/+yPHMvXPsfOfMved891yRi5plWaP00TTNN5Nst9tvILm4uPi3aIggadv2E0iGYfg1kr7vX2Id28np6elb0f3S7t1vxHPd7ptIep53Y1yvlPKRdB0Ewdcjvc1Bei3Lui9+b6HwVJKXLlx4NsmVlZUNktPT00WSu0qlh0Kf1p8nOTU1lSe5urraIYl/ilrmARiENvVNTk7uInnd4cPfI9kKw0eTXNL61/Fnedzp06dbaTqpv1wul0iOj4//gWS3250mWa/XfzWMXsuyYFHf92FRblLKQ7CwYUBPq9mcwu9dWrop8oSRLR6Q9mP/bwFQSr2b/nmt9fPSQBimXyn1SxoXBMErIkt+cZjn+o2xLGs/9Zn5/J/hIZ3O3SKLn9mJXqXUl+ABmQfAtu17RZb6SRxRVa2+HJbsdI5H/QvDIG7b9jyNC8Pw55Glzsefs2376bCoaeK+67qwRFqzbftRkV6M53eeZ/uxsbF30v1ms4lVht/1fnrnlDoCD8g8AP0Qsm37mUA8n18D4rXaJ+NjZ2dn70jXIyMjB0h6nvf9NCtSv63Ua0gaudyfSGqtPxB/bmZm5rZ0XSgULkSWHhgPbMYZpdINkQe8hOTx48ehn5uU8uH0+fz5898leerUqX/AA24BAMZAIIR10ff9gYgzYDxH5MLwYbCk616fANOk6+npaehdXl5eH8ZDlFI/o3FBLofVo671q+LPTU1NQV+xWAxJcuTXT/eRI0fGqO+aiQlEnhvttk2y0Wj8lD0g2wBIKRHbC8N4S2RJvINDNFi4XC4DwKQlHMd5G90Phbg79NZqDxxCJ+Uad6VxZ8+exTqfjCiV4/wAeoT4cqQXOUZa44hzZWXln/GxIvMAHDt2bIIQGR0dnSTped6JOEJzUt6HrncZxkNIuq776jS0qb9Sqdy5ZyiBSG5hYaFnuahJKR8cfdwdfe9nhtFrWdb9aFy73f4dyRMnTvw1/pxS6sV0HYYhVi/P894/SK/IPABpqDPipmn2ZnutX5p4pjeJKoV33Nf621F/d5BuKeWzIg9BNqi1fmt8PL+ze/fuvQPdr9friCzTmlLq+dEYrPPJOOOoUreBh+RyW/mAfoozBwDH1sOu25Zl3ZvAM/P5H5LsdjqH4Qm+j/z+ahvnDIZpPgOWdN3y1eqKP6eU+giuDQMeerNIMLMAxCy5SMg019exHidj6n5W4Mk0OStLKREhCiE+TPLSpUszJFdWVv6eYlHEGZOTk2B8kvGAlFJCr2G8PvKQY8N4yPVK3ZrGFZrN9hYPyDwAHGMfPHgQLKrneV+IEEXMzU0p9Ur63M7lvkpyUetTg5BnsjWfzyPidF0XnkDTBf2xLAvZpCgUXkZy7cKF1w7jIVLKO9G4MAzhUfV6/ePx3zGr1F3oelcuB/5Ba40skb+Xx27OAZkFgPl13/cxi6c15TiIwTth+B6SC1rXt0N+SevfRPe3eFBSP88dxWLxgzBPt/tkkr7vb2GS5ubmrqX7i4uL59J+I/XPKzVH0hQCOclNZ86AqeK5ZDNSzTwAqlr9KCFzZW3tOSRPnjyJGHqbJXKgJWO0+RVYstOpRpb0h7FYvzHMEI0Wi+Dz20GAVWXR8360E738f4vMA9APRSnlC9FnGHiXPNfF6pDWbNtG/l+v11ejsew5WNeV49QiD0Hs7/v+d9J0Uj9zkEtLS8gCucX2DTAXdcIQuUBybtrmO7AA9OUEMw+AZVn36DmAAb7A8zwvjiLzBPkwPBhZ/FvDWJKzwE6no2l8o9H4xRaLVqtPouuw3Ub2l+QRkt/By/e1hw49DZ61sfG5yLN4FUG2qqrVT0X974j6ser19YDMAFAulwuExNjYGLK4RqPB6/dAgzqO86JowD1Juq77xPgDnM+PjY0h/240Gr8fxkNiO1I/3s6zLMsCc7W+vg4mKLZq9VMPIzuOg52jjSDAvsCC54G3EJkHIJZVoeJDuy44up02pdTjoSOKxLTrDss2D/xqZoVFLoecwnXd9+3ktxIrzGllNgHobdMhK4OFkkzOvFKo2MgLgSxNuy4ivLTGr9aePXswByT1xvYNLkNvrQb9QzTEE73NI7QtEaqU8nXRffANnue9fZBOmiAyDwAjui2LW6lUbkcIFgqFx8JSN2dv99H9/fv3PyXqx2yb1qSU94cZhejtSWr9jfgzTMYahrE3siRm77RmWdYDaIwQAtVi9Xod8QY39mgjCMYxjjLGqDObAPD++vLyMvbj+ZWIvWMDQZ9XCnNCnrm5Wg07N7F3E+vwzMwM8vlhOUbbtsELGKYJT9Gu+5iEh4ArNAwDc4zneX9M8w7q5/ilK0SPico8AIxaLKvCrmy300Hlpu/77jDI9htjWdYs9Zn5PN5h7bp7Br1yw34XzyHCML5Jz7RbLaxiscrWoVTFK0W5HC2bAPC7b9s23rVmswnuj3eIyuVyb7YfH0dW2AlD7O0taL2cAjWW2XmlwN4uaI19B26VSgW5RGFkBCx0u9WCx6RZkrPAAwcOgB1OZpXzSqESJC/EeyPPA0+RbPFsED80cwBwvVwavx+jzcEdrq+vIxaPrR4A13Ec7B53u114ULLmN2kB3heI7RuAbWb+nrfqisUiPDMIAtQRpNUyMYM0Ojr6CBrvui7YYW48N4nMA+A4Dio+kpUfbPF9+/YhUBp2t1g5DipMumHY4/y0/koc+f+2mrxSqaA+oFAowKNarRbe7aWlpYtxvVwdHgTBXyIP2VI9nvQ85Tgfonsi8wAkkeFrWymcGDGEAOenXRex/k6bUgpMz79JKLyTWmtwdVfb+LyAGVW0doXAXmCysrWf/v6VolkHYHZ29vaE2sjICJKkZKzNjE8YhtdE/Th3kNa4mnxtbQ2ewHUCzB/sGx//LN3vhiH0JeOGfvo5e8zlctDLqwSvIqVSCWxxq9VC/MLV5H09IDMAMMuaM03sAyRn7X6ISynBDwSmiVpcv1bD7i43rvgUQlwXeUhaPo/VRkqJio92uw2uL1n3L6VEJciGENiDTItfNiPcahXnCDaCALM/n3UStwCg1IMIEfM/nB8qQ3faVLXaOycYhrCY57pWXCdXjhiGgdNdnuf9dpjvVI7zMXieENj5qddqL0joBavt+z7XBDN3uK16YWUdgDTUN/NuIRCjnzt3DmdtVldXUWU1REOSlWSYYucNMCv/D/cNcPYpDAKwwZ7nfWLQb+y7CvBDmQfg6NGjYGVLpRLminq9/uk4ojzbG6aJs0DdTgdneX3fxyzdr3GuMTExgbPFvu/jXCC3zSqvyPOuXL6MU2Npe4Gc5XU6Hewub5MzoO7BMAzsG6R6QJYAABiqWsX6G3a72GFJY1vnlMKZ3BEhnkvyxjNnwBdwNRZbclSId9H9ixcvPo5kWqUoZ3eGYeBEq+u6XKWOyHTzew2jV0tcq3GV+MAqdatahYcS6ZX0gEwC8C9qksFEHMJ2VQAAAABJRU5ErkJggg==",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAACnFJREFUeF7tW2lsG1sV9p2x09jpFugLfVTwCoRFAQrC6JU0iTNz7xghxCoQq0CIVUJsYl+E2Pf1ISRAYt9B7Lvw3PHESRsKBEGBsBXoewXKUrUlLcR27Bk4n+eEybzYYxp+Me/+yPHMvXPsfOfMved891yRi5plWaP00TTNN5Nst9tvILm4uPi3aIggadv2E0iGYfg1kr7vX2Id28np6elb0f3S7t1vxHPd7ptIep53Y1yvlPKRdB0Ewdcjvc1Bei3Lui9+b6HwVJKXLlx4NsmVlZUNktPT00WSu0qlh0Kf1p8nOTU1lSe5urraIYl/ilrmARiENvVNTk7uInnd4cPfI9kKw0eTXNL61/Fnedzp06dbaTqpv1wul0iOj4//gWS3250mWa/XfzWMXsuyYFHf92FRblLKQ7CwYUBPq9mcwu9dWrop8oSRLR6Q9mP/bwFQSr2b/nmt9fPSQBimXyn1SxoXBMErIkt+cZjn+o2xLGs/9Zn5/J/hIZ3O3SKLn9mJXqXUl+ABmQfAtu17RZb6SRxRVa2+HJbsdI5H/QvDIG7b9jyNC8Pw55Glzsefs2376bCoaeK+67qwRFqzbftRkV6M53eeZ/uxsbF30v1ms4lVht/1fnrnlDoCD8g8AP0Qsm37mUA8n18D4rXaJ+NjZ2dn70jXIyMjB0h6nvf9NCtSv63Ua0gaudyfSGqtPxB/bmZm5rZ0XSgULkSWHhgPbMYZpdINkQe8hOTx48ehn5uU8uH0+fz5898leerUqX/AA24BAMZAIIR10ff9gYgzYDxH5MLwYbCk616fANOk6+npaehdXl5eH8ZDlFI/o3FBLofVo671q+LPTU1NQV+xWAxJcuTXT/eRI0fGqO+aiQlEnhvttk2y0Wj8lD0g2wBIKRHbC8N4S2RJvINDNFi4XC4DwKQlHMd5G90Phbg79NZqDxxCJ+Uad6VxZ8+exTqfjCiV4/wAeoT4cqQXOUZa44hzZWXln/GxIvMAHDt2bIIQGR0dnSTped6JOEJzUt6HrncZxkNIuq776jS0qb9Sqdy5ZyiBSG5hYaFnuahJKR8cfdwdfe9nhtFrWdb9aFy73f4dyRMnTvw1/pxS6sV0HYYhVi/P894/SK/IPABpqDPipmn2ZnutX5p4pjeJKoV33Nf621F/d5BuKeWzIg9BNqi1fmt8PL+ze/fuvQPdr9friCzTmlLq+dEYrPPJOOOoUreBh+RyW/mAfoozBwDH1sOu25Zl3ZvAM/P5H5LsdjqH4Qm+j/z+ahvnDIZpPgOWdN3y1eqKP6eU+giuDQMeerNIMLMAxCy5SMg019exHidj6n5W4Mk0OStLKREhCiE+TPLSpUszJFdWVv6eYlHEGZOTk2B8kvGAlFJCr2G8PvKQY8N4yPVK3ZrGFZrN9hYPyDwAHGMfPHgQLKrneV+IEEXMzU0p9Ur63M7lvkpyUetTg5BnsjWfzyPidF0XnkDTBf2xLAvZpCgUXkZy7cKF1w7jIVLKO9G4MAzhUfV6/ePx3zGr1F3oelcuB/5Ba40skb+Xx27OAZkFgPl13/cxi6c15TiIwTth+B6SC1rXt0N+SevfRPe3eFBSP88dxWLxgzBPt/tkkr7vb2GS5ubmrqX7i4uL59J+I/XPKzVH0hQCOclNZ86AqeK5ZDNSzTwAqlr9KCFzZW3tOSRPnjyJGHqbJXKgJWO0+RVYstOpRpb0h7FYvzHMEI0Wi+Dz20GAVWXR8360E738f4vMA9APRSnlC9FnGHiXPNfF6pDWbNtG/l+v11ejsew5WNeV49QiD0Hs7/v+d9J0Uj9zkEtLS8gCucX2DTAXdcIQuUBybtrmO7AA9OUEMw+AZVn36DmAAb7A8zwvjiLzBPkwPBhZ/FvDWJKzwE6no2l8o9H4xRaLVqtPouuw3Ub2l+QRkt/By/e1hw49DZ61sfG5yLN4FUG2qqrVT0X974j6ser19YDMAFAulwuExNjYGLK4RqPB6/dAgzqO86JowD1Juq77xPgDnM+PjY0h/240Gr8fxkNiO1I/3s6zLMsCc7W+vg4mKLZq9VMPIzuOg52jjSDAvsCC54G3EJkHIJZVoeJDuy44up02pdTjoSOKxLTrDss2D/xqZoVFLoecwnXd9+3ktxIrzGllNgHobdMhK4OFkkzOvFKo2MgLgSxNuy4ivLTGr9aePXswByT1xvYNLkNvrQb9QzTEE73NI7QtEaqU8nXRffANnue9fZBOmiAyDwAjui2LW6lUbkcIFgqFx8JSN2dv99H9/fv3PyXqx2yb1qSU94cZhejtSWr9jfgzTMYahrE3siRm77RmWdYDaIwQAtVi9Xod8QY39mgjCMYxjjLGqDObAPD++vLyMvbj+ZWIvWMDQZ9XCnNCnrm5Wg07N7F3E+vwzMwM8vlhOUbbtsELGKYJT9Gu+5iEh4ArNAwDc4zneX9M8w7q5/ilK0SPico8AIxaLKvCrmy300Hlpu/77jDI9htjWdYs9Zn5PN5h7bp7Br1yw34XzyHCML5Jz7RbLaxiscrWoVTFK0W5HC2bAPC7b9s23rVmswnuj3eIyuVyb7YfH0dW2AlD7O0taL2cAjWW2XmlwN4uaI19B26VSgW5RGFkBCx0u9WCx6RZkrPAAwcOgB1OZpXzSqESJC/EeyPPA0+RbPFsED80cwBwvVwavx+jzcEdrq+vIxaPrR4A13Ec7B53u114ULLmN2kB3heI7RuAbWb+nrfqisUiPDMIAtQRpNUyMYM0Ojr6CBrvui7YYW48N4nMA+A4Dio+kpUfbPF9+/YhUBp2t1g5DipMumHY4/y0/koc+f+2mrxSqaA+oFAowKNarRbe7aWlpYtxvVwdHgTBXyIP2VI9nvQ85Tgfonsi8wAkkeFrWymcGDGEAOenXRex/k6bUgpMz79JKLyTWmtwdVfb+LyAGVW0doXAXmCysrWf/v6VolkHYHZ29vaE2sjICJKkZKzNjE8YhtdE/Th3kNa4mnxtbQ2ewHUCzB/sGx//LN3vhiH0JeOGfvo5e8zlctDLqwSvIqVSCWxxq9VC/MLV5H09IDMAMMuaM03sAyRn7X6ISynBDwSmiVpcv1bD7i43rvgUQlwXeUhaPo/VRkqJio92uw2uL1n3L6VEJciGENiDTItfNiPcahXnCDaCALM/n3UStwCg1IMIEfM/nB8qQ3faVLXaOycYhrCY57pWXCdXjhiGgdNdnuf9dpjvVI7zMXieENj5qddqL0joBavt+z7XBDN3uK16YWUdgDTUN/NuIRCjnzt3DmdtVldXUWU1REOSlWSYYucNMCv/D/cNcPYpDAKwwZ7nfWLQb+y7CvBDmQfg6NGjYGVLpRLminq9/uk4ojzbG6aJs0DdTgdneX3fxyzdr3GuMTExgbPFvu/jXCC3zSqvyPOuXL6MU2Npe4Gc5XU6Hewub5MzoO7BMAzsG6R6QJYAABiqWsX6G3a72GFJY1vnlMKZ3BEhnkvyxjNnwBdwNRZbclSId9H9ixcvPo5kWqUoZ3eGYeBEq+u6XKWOyHTzew2jV0tcq3GV+MAqdatahYcS6ZX0gEwC8C9qksFEHMJ2VQAAAABJRU5ErkJggg==)",
+                        "background-size": "32px 32px"
+                    }
+                },
+                {
+                    "x": 64,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Special area of interest/Rock or gravel",
+                    "centerColor": {
+                        "0": 0,
+                        "1": 0,
+                        "2": 0,
+                        "3": 0
+                    },
+                    "imageData": "data:image/png;base64,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",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,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)",
+                        "background-size": "32px 32px"
+                    }
+                },
+                {
+                    "x": 0,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Special area of interest/Sand",
+                    "centerColor": {
+                        "0": 50,
+                        "1": 51,
+                        "2": 51,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAABRhJREFUeF7tm+lSG0EMhBnMaXMZDA8SrmAqxLz/m3CYw+a+UlHxbbEyKmmI/8QDf7bs2dWanh51Szubfmxvv019+FteXpZPNzc3cnx9ff04PLWwsCCfHx4e5Pj2Vru8du7fDykl+W5paUmOt7e3cnx5eamdOz8/X4s7Ekh9MTMzI98sLi7KcTAY1M7gvsS9v7//NGT6BkAxwEN+fX1dTrm6uvp0Jr3r9Tgz1el0ZKjf748l7vT0tMQh7tnZmXzWjB5hgPcPTBwAv3s9WcR6DXlAWOMbGxsyNBwOs9a0FQ+GbG5uyinn5+djYcjq6qrEScUDsLe/Lwx4fn6uTUKr1ZLPj4+Pcnx6egqRYnZ2tjZDes2RtfkeNfGCWyqhVcZSLx0fFUnFA6BlEKSYKXRe62ij0ZBTybZRhsAsGHB3d1ebHOJp5ng5Av9C7tHXwyAYzf9lqkDxAHhrkpkEWfRbX8ca9Rwj16EiMI417f0ejyH4gYuLCzmVnJftA7jRxADQPTwUFWANnZ6efhXs2nV4f7Lt5eVlKC65RdcKXIwRQz2iDLGYmIoHYGd3VxgA8jqbM4Os9SjixAN57TOIx7hVrWnaeD6j2WzKJeQcrTIjOap4ACwfAFIgzoyhsxrJ3HoemYUB9AmIy/cwSTPISigeA/AZrg8oFoBc3SZHoN+oSNTJWTMJQzhaPiMkLR9OWllZqV0y4gOKBYCZRGetDoqFuOXhySEgz0xGnaF1v7m5ORnCb0QZwgRXuYYkWDwAIOJlcywwTiyanVnLVvVH9sZneAxBHWCYVa1yX0u9RnJAcQBYDRFr7a2trckQuk19zfmel9dxyR3kiOvrazlFq0hunwBmUOPoHFE51eIB6B0f17rC3trzdHdra0tOoe6Odoo8ddFd4WjuseLCuFQ8AFYtQFZGb6P1PHJqzVC73ZZJIdvrHGLNmJVb0HXiku2jcc2OUPEAMJNkX42oN+55fOLpzg9Pn2FQdK2j9/gTrSI8CYJ5bk/Q+we98f8OgFz9ZokABPqt63kYZPX4NFA4TdTD8hnMcFS18AMwhLhVDigWgJ8HB+IDcHgnJyee1IfGWcvj7jZTrVJTeD0/78em4gHAB3j1PHU3Ds9DlnErLvFYw9Fus3df4pIjdK9RX1/lgOIB8Lw4a9rq3qLDHuLcB4eJk9P7BKjmGI86O+JyH32djus+G4QZEwvA9s6OqEBUTzVTor253HoeRhGfXWlWPyHahca/8HtS8QCgAnq/HohH156VQ1hzVGvj8hkwA/+S28WuHOs3AGqnqLUXWNfd7CuMdnxggvX0mWoNnxFd05aFhyE4UfYXmj6AgeIAyG2KkkXx4Fo9qObo03tVYFRmvV3femZhBtdpf1L5geIB+HV0JD7A8uK5D0up1ogX3Qnq9QLJ9tazxVyfUXWFiwfA6gpTVYGs7vh4VZk1zj4CGBLdG+Tdj+cR/M5oXLMWKB4AZh7krXeHOC9aBZJ96cpqFcEPEO9ffQY5jLj62aPJgGIA2N3bExWguxvN2hgmENa9OXSYY7Sm0G+XaebBIJgTfW5AXH4n/iQVD8BBtysMwMFF99p4WRnEmTGrl5jbjke/YYbe+ZHrW1LxAHg7RaNVlccI6wkQtcW4dqnn+gy3J1g8AN47uKxh1jw6G+0xWh6euNTzdKi8uJ7P0HuJXQYUB4D39vhI3f3+FnfrfZ++rhm+OpMwgxnT2b7xft+m8fa4lZP0y2DZb49PGgB/AFWursjFdg4fAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAABRhJREFUeF7tm+lSG0EMhBnMaXMZDA8SrmAqxLz/m3CYw+a+UlHxbbEyKmmI/8QDf7bs2dWanh51Szubfmxvv019+FteXpZPNzc3cnx9ff04PLWwsCCfHx4e5Pj2Vru8du7fDykl+W5paUmOt7e3cnx5eamdOz8/X4s7Ekh9MTMzI98sLi7KcTAY1M7gvsS9v7//NGT6BkAxwEN+fX1dTrm6uvp0Jr3r9Tgz1el0ZKjf748l7vT0tMQh7tnZmXzWjB5hgPcPTBwAv3s9WcR6DXlAWOMbGxsyNBwOs9a0FQ+GbG5uyinn5+djYcjq6qrEScUDsLe/Lwx4fn6uTUKr1ZLPj4+Pcnx6egqRYnZ2tjZDes2RtfkeNfGCWyqhVcZSLx0fFUnFA6BlEKSYKXRe62ij0ZBTybZRhsAsGHB3d1ebHOJp5ng5Av9C7tHXwyAYzf9lqkDxAHhrkpkEWfRbX8ca9Rwj16EiMI417f0ejyH4gYuLCzmVnJftA7jRxADQPTwUFWANnZ6efhXs2nV4f7Lt5eVlKC65RdcKXIwRQz2iDLGYmIoHYGd3VxgA8jqbM4Os9SjixAN57TOIx7hVrWnaeD6j2WzKJeQcrTIjOap4ACwfAFIgzoyhsxrJ3HoemYUB9AmIy/cwSTPISigeA/AZrg8oFoBc3SZHoN+oSNTJWTMJQzhaPiMkLR9OWllZqV0y4gOKBYCZRGetDoqFuOXhySEgz0xGnaF1v7m5ORnCb0QZwgRXuYYkWDwAIOJlcywwTiyanVnLVvVH9sZneAxBHWCYVa1yX0u9RnJAcQBYDRFr7a2trckQuk19zfmel9dxyR3kiOvrazlFq0hunwBmUOPoHFE51eIB6B0f17rC3trzdHdra0tOoe6Odoo8ddFd4WjuseLCuFQ8AFYtQFZGb6P1PHJqzVC73ZZJIdvrHGLNmJVb0HXiku2jcc2OUPEAMJNkX42oN+55fOLpzg9Pn2FQdK2j9/gTrSI8CYJ5bk/Q+we98f8OgFz9ZokABPqt63kYZPX4NFA4TdTD8hnMcFS18AMwhLhVDigWgJ8HB+IDcHgnJyee1IfGWcvj7jZTrVJTeD0/78em4gHAB3j1PHU3Ds9DlnErLvFYw9Fus3df4pIjdK9RX1/lgOIB8Lw4a9rq3qLDHuLcB4eJk9P7BKjmGI86O+JyH32djus+G4QZEwvA9s6OqEBUTzVTor253HoeRhGfXWlWPyHahca/8HtS8QCgAnq/HohH156VQ1hzVGvj8hkwA/+S28WuHOs3AGqnqLUXWNfd7CuMdnxggvX0mWoNnxFd05aFhyE4UfYXmj6AgeIAyG2KkkXx4Fo9qObo03tVYFRmvV3femZhBtdpf1L5geIB+HV0JD7A8uK5D0up1ogX3Qnq9QLJ9tazxVyfUXWFiwfA6gpTVYGs7vh4VZk1zj4CGBLdG+Tdj+cR/M5oXLMWKB4AZh7krXeHOC9aBZJ96cpqFcEPEO9ffQY5jLj62aPJgGIA2N3bExWguxvN2hgmENa9OXSYY7Sm0G+XaebBIJgTfW5AXH4n/iQVD8BBtysMwMFF99p4WRnEmTGrl5jbjke/YYbe+ZHrW1LxAHg7RaNVlccI6wkQtcW4dqnn+gy3J1g8AN47uKxh1jw6G+0xWh6euNTzdKi8uJ7P0HuJXQYUB4D39vhI3f3+FnfrfZ++rhm+OpMwgxnT2b7xft+m8fa4lZP0y2DZb49PGgB/AFWursjFdg4fAAAAAElFTkSuQmCC)",
+                        "background-size": "32px 32px"
+                    }
+                },
+                {
+                    "x": 0,
+                    "y": 0,
+                    "width": 128,
+                    "height": 128,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Water area/Inundated area",
+                    "centerColor": {
+                        "0": 29,
+                        "1": 34,
+                        "2": 36,
+                        "3": 211
+                    },
+                    "imageData": "data:image/png;base64,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",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,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)",
+                        "background-size": "64px 64px"
+                    }
+                },
+                {
+                    "x": 128,
+                    "y": 0,
+                    "width": 128,
+                    "height": 128,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Water area/Lake or river intermittent",
+                    "centerColor": {
+                        "0": 46,
+                        "1": 48,
+                        "2": 48,
+                        "3": 255
+                    },
+                    "imageData": "data:image/png;base64,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",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,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)",
+                        "background-size": "64px 64px"
+                    }
+                },
+                {
+                    "x": 64,
+                    "y": 128,
+                    "width": 64,
+                    "height": 64,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Water area/Playa",
+                    "centerColor": {
+                        "0": 0,
+                        "1": 0,
+                        "2": 0,
+                        "3": 0
+                    },
+                    "imageData": "data:image/png;base64,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",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,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)",
+                        "background-size": "32px 32px"
+                    }
+                },
+                {
+                    "x": 256,
+                    "y": 0,
+                    "width": 128,
+                    "height": 128,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Water area/Swamp or marsh",
+                    "centerColor": {
+                        "0": 77,
+                        "1": 79,
+                        "2": 79,
+                        "3": 181
+                    },
+                    "imageData": "data:image/png;base64,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",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,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)",
+                        "background-size": "64px 64px"
+                    }
+                },
+                {
+                    "x": 160,
+                    "y": 222,
+                    "width": 16,
+                    "height": 22,
+                    "pixelRatio": 2,
+                    "sdf": false,
+                    "id": "Water line/Levee/0",
+                    "centerColor": {
+                        "0": 0,
+                        "1": 0,
+                        "2": 0,
+                        "3": 0
+                    },
+                    "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAAAXNSR0IArs4c6QAAAK1JREFUOE9jZKAQMFKon2HUAIbRMGAYtGGgrKa58j/Df2v0ZP6fgWHa/Vs32pDFsSZlJXV1E4b/jKeQvfifgeHtX3ZW1UeXL78naABIgZKaxnwGBoYEmOL/DIw5929dn4ruKpyZSUFLS4Lpz79bDAwMvAwMDFfv3bqhz8DA8JdoA8CuUNcsZ/j/v4PhP6PrvdvX92DL+nizs5aWFtuPP//a7926UYyr3BgtDxgYAKveLhcPM+OgAAAAAElFTkSuQmCC",
+                    "style": {
+                        "background-image": "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAAAXNSR0IArs4c6QAAAK1JREFUOE9jZKAQMFKon2HUAIbRMGAYtGGgrKa58j/Df2v0ZP6fgWHa/Vs32pDFsSZlJXV1E4b/jKeQvfifgeHtX3ZW1UeXL78naABIgZKaxnwGBoYEmOL/DIw5929dn4ruKpyZSUFLS4Lpz79bDAwMvAwMDFfv3bqhz8DA8JdoA8CuUNcsZ/j/v4PhP6PrvdvX92DL+nizs5aWFtuPP//a7926UYyr3BgtDxgYAKveLhcPM+OgAAAAAElFTkSuQmCC)",
+                        "background-size": "8px 11px"
+                    }
+                }
+            ]
+        }
+    }
+}

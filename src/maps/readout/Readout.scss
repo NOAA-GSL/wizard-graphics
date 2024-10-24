@@ -1,0 +1,54 @@
+:root {
+    // If defined values are not available, fallback to the second color
+    --_x4d-overlay-translucent: var(--x4d-overlay-translucent, rgba(30, 30, 30, 0.6));
+    --_primary-color: var(--primary-color, #2e94fa);
+    --_main-font-color: var(--main-font-color, #e5e5e5);
+}
+
+#x4d-right-click-menu {
+    position: fixed;
+    display: none;
+    color: var(--_main-font-color);
+    padding: 5px 1px;
+    font-size: 14px;
+    z-index: 2;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    background-color: var(--_x4d-overlay-translucent);
+}
+.x4d-right-click-menu-label {
+    width: 150px;
+    display: inline-block;
+}
+.x4d-right-click-menu-div {
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s ease-out;
+}
+.x4d-right-click-menu-div:hover {
+    background-color: var(--_primary-color);
+}
+
+.x4d-readout {
+    z-index: 2;
+    width: 200px;
+    color: var(--_main-font-color);
+    pointer-events: none;
+    text-align: left;
+    font-size: 0.85rem;
+    padding: 1px 7px;
+    white-space: nowrap; /*Don't wrap text*/
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    background-color: var(--_x4d-overlay-translucent);
+}
+.x4d-readout table {
+    border-collapse: separate;
+    border-spacing: 0px;
+}
+.x4d-readout hr {
+    border: none;
+    width: 95%;
+    margin: 3px;
+    border-top: 1px solid var(--_main-font-color);
+}
