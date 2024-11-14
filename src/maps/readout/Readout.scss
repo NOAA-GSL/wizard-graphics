@@ -17,7 +17,7 @@
     background-color: var(--_x4d-overlay-translucent);
 }
 .x4d-right-click-menu-label {
-    width: 150px;
+    min-width: 150px;
     display: inline-block;
 }
 .x4d-right-click-menu-div {
@@ -31,7 +31,7 @@
 
 .x4d-readout {
     z-index: 2;
-    width: 200px;
+    min-width: 200px;
     color: var(--_main-font-color);
     pointer-events: none;
     text-align: left;

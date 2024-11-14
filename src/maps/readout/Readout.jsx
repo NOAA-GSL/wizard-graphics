@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { some } from 'lodash';
 import deckUtilities from '../../utilities/deckUtilities';
 import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.scss';
@@ -12,14 +13,119 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
         readoutChecked: true,
         readoutLatLonChecked: false,
     });
+    const [position, setPosition] = useState({ x: 0, y: 0 });
     const rightClickMenuRef = useRef(null);
 
+    // Update the readout data
+    useEffect(() => {
+        const { lon, lat, x, y } = position;
+        if (!lon || !lat || !x || !y) return;
+
+        // Gridded Readout
+        const readoutArray = [];
+        const uniqueArray = [];
+        for (const layer of layers) {
+            const { projection, readout } = layer.props;
+            if (projection && readout) {
+                for (const i in readout) {
+                    const { data, prependText, decimals, units, interpolate } = readout[i];
+                    let value = gUtilities.getreadoutvalue(
+                        lat,
+                        lon,
+                        projection,
+                        data,
+                        units,
+                        interpolate,
+                    );
+                    value = value ? `${gUtilities.roundto(value, decimals)}${units}` : 'NaN';
+                    const key = `${prependText}-${value}-${interpolate}`;
+                    if (!uniqueArray.includes(key)) {
+                        uniqueArray.push(key);
+                        readoutArray.push({ prependText, value });
+                    }
+                }
+            }
+        }
+
+        // Sort by prependText
+        readoutArray.sort((a, b) => a.prependText.localeCompare(b.prependText));
+        const griddedReadout = readoutArray.map((d, i) => {
+            const { prependText, value } = d;
+            return (
+                <tr key={i}>
+                    <td>{`${prependText}: `}</td>
+                    <td>{value}</td>
+                </tr>
+            );
+        });
+        // Done Gridded Readout
+
+        // Pickable Readout
+        const pickingArr = [];
+        const objects = overlayRef.current.pickMultipleObjects({ x, y });
+        for (const o in objects) {
+            const object = objects[o];
+            const pickingFunction = object.sourceLayer.props?.pickingFunction;
+            if (pickingFunction) {
+                const { readout } = pickingFunction(object);
+                // Don't allow duplicates
+                if (!some(pickingArr, readout)) {
+                    pickingArr.push(readout);
+                }
+            }
+        }
+        // Done Pickable Readout
+
+        const div = (
+            <div className="x4d-readout">
+                {title}
+                {
+                    /* Conditional Rendering of extra HR for title */
+                    title && <hr />
+                }
+
+                <table>
+                    <tbody>{griddedReadout}</tbody>
+                </table>
+
+                {pickingArr.map((item, index) => (
+                    <div key={index}>
+                        <div>{item}</div>
+                        {index < pickingArr.length - 1 && <br />}
+                    </div>
+                ))}
+
+                {
+                    /* Conditional Rendering of extra HR line */
+                    readoutMenu.readoutLatLonChecked && <hr />
+                }
+                {
+                    /* Conditional Rendering of lat/lon readoutDiv */
+                    readoutMenu.readoutLatLonChecked && (
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>{`Lat/Lon: ${lat.toFixed(2)}, ${lon.toFixed(2)}`}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    )
+                }
+            </div>
+        );
+        setReadoutDiv((prevState) => ({ ...prevState, content: div }));
+    }, [layers, overlayRef, position, readoutMenu.readoutLatLonChecked, title]);
+
+    // Update the mouse position and display block/none
+    // - before I had it query the readout data in here but the readout div was slow to move since
+    // picking was being done.  Now the readout div is smooth and the data updates when it can
     useEffect(() => {
         const mouseOffset = {
             x: 5,
             y: 5,
         };
 
+        // Update
         const handleMouseMove = (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -28,91 +134,11 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
             const x = e.offsetX;
             const y = e.offsetY;
             const [lon, lat] = viewport.unproject([x, y]);
-
-            console.log('overlayref', overlayRef.current.pickMultipleObjects({ x, y }));
-
-            const readoutArray = [];
-            const uniqueArray = [];
-            for (const layer of layers) {
-                const { projection, readout } = layer.props;
-                if (projection && readout) {
-                    for (const i in readout) {
-                        const { data, prependText, decimals, units, interpolate } = readout[i];
-                        let value = gUtilities.getreadoutvalue(
-                            lat,
-                            lon,
-                            projection,
-                            data,
-                            units,
-                            interpolate,
-                        );
-                        value = value ? `${gUtilities.roundto(value, decimals)}${units}` : 'NaN';
-                        const key = `${prependText}-${value}-${interpolate}`;
-                        if (!uniqueArray.includes(key)) {
-                            uniqueArray.push(key);
-                            readoutArray.push({ prependText, value });
-                        }
-                    }
-                }
-            }
-
-            // Sort by prependText
-            readoutArray.sort((a, b) => a.prependText.localeCompare(b.prependText));
-
-            const readoutContent = readoutArray.map((d, i) => {
-                const { prependText, value } = d;
-                return (
-                    <tr key={i}>
-                        <td>{`${prependText}: `}</td>
-                        <td>{value}</td>
-                    </tr>
-                );
-            });
-
-            const div = (
-                <div
-                    className="x4d-readout"
-                    style={{
-                        position: 'relative',
-                        left: x + mouseOffset.x,
-                        top: y + mouseOffset.y,
-                        pointerEvents: 'none',
-                    }}
-                >
-                    {title}
-                    {
-                        /* Conditional Rendering of extra HR for title */
-                        title && <hr />
-                    }
-
-                    <table>
-                        <tbody>{readoutContent}</tbody>
-                    </table>
-
-                    {
-                        /* Conditional Rendering of extra HR line */
-                        readoutMenu.readoutLatLonChecked && <hr />
-                    }
-                    {
-                        /* Conditional Rendering of lat/lon readoutDiv */
-                        readoutMenu.readoutLatLonChecked && (
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td>{`Lat/Lon: ${lat.toFixed(2)}, ${lon.toFixed(2)}`}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        )
-                    }
-                </div>
-            );
-            setReadoutDiv({ ...readoutDiv, content: div });
-            // Your logic here
+            setPosition({ x, y, lon, lat });
         };
 
         const handleMouseLeave = () => {
-            setReadoutDiv({ ...readoutDiv, content: null });
+            setReadoutDiv((prevState) => ({ ...prevState, content: null }));
         };
 
         const rightClickMenuOpen = (event) => {
@@ -122,7 +148,7 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
                 top: `${event.layerY + mouseOffset.y}px`,
                 left: `${event.layerX + mouseOffset.x}px`,
             });
-            setReadoutDiv({ ...readoutDiv, display: 'none' });
+            setReadoutDiv((prevState) => ({ ...prevState, display: 'none' }));
         };
 
         const rightClickMenuClose = () => {
@@ -161,19 +187,20 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
                 rightClickMenuElement.removeEventListener('mousemove', stopMouseMovePropagation);
             }
         };
-    }, [readoutDiv, readoutMenu, mapContainer, overlayRef, displayNum, layers, title]);
+    }, [readoutMenu, mapContainer, overlayRef, displayNum]);
 
     return (
         <>
+            {/* Right Click Menu */}
             <div
                 id="x4d-right-click-menu"
                 ref={rightClickMenuRef}
                 style={{
                     position: 'absolute',
-                    display: readoutMenu.display,
                     top: readoutMenu.top,
                     left: readoutMenu.left,
-                    width: '150px',
+                    display: readoutMenu.display,
+                    minWidth: '150px',
                 }}
             >
                 <div className="x4d-right-click-menu-div">
@@ -209,7 +236,18 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
                     </label>
                 </div>
             </div>
-            {readoutMenu.display === 'none' && readoutDiv.content}
+
+            {/* Readout Div */}
+            <div
+                style={{
+                    position: 'absolute',
+                    top: position.y,
+                    left: position.x,
+                    pointerEvents: 'none',
+                }}
+            >
+                {readoutMenu.display === 'none' && readoutDiv.content}
+            </div>
         </>
     );
 }

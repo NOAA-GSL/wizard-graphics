@@ -119,6 +119,19 @@ export default class gUtilities {
         return null;
     }
 
+    static hexToRgb(hex) {
+        // Remove the hash at the start if it's there
+        const hexNoHash = hex.replace(/^#/, '');
+
+        // Parse the r, g, b values
+        const bigint = parseInt(hexNoHash, 16);
+        const r = Math.floor(bigint / (256 * 256)) % 256;
+        const g = Math.floor(bigint / 256) % 256;
+        const b = bigint % 256;
+
+        return [r, g, b];
+    }
+
     static closestceilvalue(inArr, val) {
         // convert arr to numbers
         const arr = inArr.map(Number);
@@ -235,11 +248,11 @@ export default class gUtilities {
         // done in the fragment shader
         // However, values > 1 && < 0 are transparent in the fragment shader
         // So you have to cap!
-        if (nvalue >= 1) {
+        if (nvalue >= 0.999) {
             // value of 1 has weird lines using linear colorbar
             nvalue = 0.999;
         }
-        if (nvalue <= 0) {
+        if (nvalue <= 0.001) {
             // value of 0 has weird lines using linear colorbar
             nvalue = 0.001;
         }

@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
 import { Maps, DeckGLOverlay, Readout } from 'desi-graphics/maps';
@@ -6,11 +6,21 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
 import { IconClusterLayer, CitiesLayer } from 'desi-graphics/layers';
-import iconMapping from './icon/location-icon-mapping.json?url';
-import iconAtlas from './icon/location-icon-atlas.png?url';
 import temperatures from 'demo-data/temp';
 import projDict from 'demo-data/projection';
 import { Projection } from 'desi-graphics/utilities';
+import {
+    SpotLayer,
+    NIFCLayer,
+    CPCLayer,
+    SPCLayer,
+    WPCLayer,
+    WWALayer,
+} from 'desi-graphics/layers/canned';
+import URLdata from './URLdata';
+import iconMapping from './icon/location-icon-mapping.json?url';
+import iconAtlas from './icon/location-icon-atlas.png?url';
+import { Legend } from '../../src/maps';
 
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
@@ -19,12 +29,19 @@ function MapContainer() {
     const mapStyle = useMemo(() => Maps.getStyle(style, mapToken), [style, mapToken]);
     const [state, setState] = useState({
         iconLayerCheckbox: false,
-        citiesLayerCheckbox: true,
+        citiesLayerCheckbox: false,
         citiesDataLabelsCheckbox: true,
+        spotLayerCheckbox: true,
+        nifcLayerCheckbox: false,
+        cpcLayerCheckbox: false,
+        spcLayerCheckbox: false,
+        wpcLayerCheckbox: false,
+        wwaLayerCheckbox: false,
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
-
+    const mapRef = useRef();
+    const [viewState, setViewState] = useState({});
     const layers = [];
 
     // Make the LonLatGrid of Data
@@ -71,43 +88,93 @@ function MapContainer() {
         });
         layers.push(citiesLayer);
     }
+    if (state.spotLayerCheckbox) {
+        const spotLayer = new SpotLayer({
+            id: 'spotLayer',
+            pickable: true,
+        });
+        layers.push(spotLayer);
+    }
+    if (state.nifcLayerCheckbox) {
+        const nifcLayer = new NIFCLayer({
+            id: 'nifcLayer',
+            data: URLdata['NIFC-active'],
+            incidents: 'active', // 'active' or 'last24Hours'
+            pickable: true,
+        });
+        layers.push(nifcLayer);
+    }
+    if (state.cpcLayerCheckbox) {
+        const cpcLayer = new CPCLayer({
+            id: 'cpcLayer',
+            data: URLdata['CPC-day6-10Temp'],
+            pickable: true,
+        });
+        layers.push(cpcLayer);
+    }
+    if (state.spcLayerCheckbox) {
+        const spcLayer = new SPCLayer({
+            id: 'spcLayer',
+            data: URLdata['SPC-day1Outlook'],
+            pickable: true,
+        });
+        layers.push(spcLayer);
+    }
+
+    if (state.wpcLayerCheckbox) {
+        const wpcLayer = new WPCLayer({
+            id: 'wpcLayer',
+            data: URLdata['WPC-day3Outlook'],
+            pickable: true,
+        });
+        layers.push(wpcLayer);
+    }
+    if (state.wwaLayerCheckbox) {
+        const wwaLayer = new WWALayer({
+            id: 'wwaLayer',
+            data: URLdata.WWA,
+            pickable: true,
+        });
+        layers.push(wwaLayer);
+    }
+
+    const checkboxes = [
+        { key: 'citiesLayerCheckbox', label: 'Cities Layer', break: false },
+        { key: 'citiesDataLabelsCheckbox', label: 'Cities Data Labels', break: true },
+        { key: 'iconLayerCheckbox', label: 'Icon Cluster Layer', break: true },
+        { key: 'spotLayerCheckbox', label: 'Spot Layer', break: true },
+        { key: 'nifcLayerCheckbox', label: 'NIFC Layer', break: true },
+        { key: 'cpcLayerCheckbox', label: 'CPC Layer', break: true },
+        { key: 'spcLayerCheckbox', label: 'SPC Layer', break: true },
+        { key: 'wpcLayerCheckbox', label: 'WPC Layer', break: true },
+        { key: 'wwaLayerCheckbox', label: 'WWA Layer', break: true },
+    ];
+
+    function onViewStateChange(props) {
+        const { viewState: viewStateNew } = props;
+        if (viewState) {
+            setViewState(viewStateNew);
+        }
+    }
 
     return (
         <>
-            <label htmlFor="iconLayerCheckbox">
-                <input
-                    id="iconLayerCheckbox"
-                    type="checkbox"
-                    checked={state.iconLayerCheckbox}
-                    onChange={(e) => {
-                        setState({ ...state, iconLayerCheckbox: e.target.checked });
-                    }}
-                />
-                Icon Cluster Layer
-            </label>
-            <br />
-            <label htmlFor="citiesLayerCheckbox">
-                <input
-                    id="citiesLayerCheckbox"
-                    type="checkbox"
-                    checked={state.citiesLayerCheckbox}
-                    onChange={(e) => {
-                        setState({ ...state, citiesLayerCheckbox: e.target.checked });
-                    }}
-                />
-                Cities Layer
-            </label>
-            <label htmlFor="citiesDataLabelsCheckbox">
-                <input
-                    id="citiesDataLabelsCheckbox"
-                    type="checkbox"
-                    checked={state.citiesDataLabelsCheckbox}
-                    onChange={(e) => {
-                        setState({ ...state, citiesDataLabelsCheckbox: e.target.checked });
-                    }}
-                />
-                Cities Data Labels
-            </label>
+            {checkboxes.map((checkbox) => (
+                <span key={checkbox.key}>
+                    <label htmlFor={checkbox.key}>
+                        <input
+                            id={checkbox.key}
+                            type="checkbox"
+                            checked={state[checkbox.key]}
+                            onChange={(e) => {
+                                setState({ ...state, [checkbox.key]: e.target.checked });
+                            }}
+                        />
+                        {checkbox.label}
+                    </label>
+                    {checkbox.break && <br />}
+                </span>
+            ))}
 
             <div ref={mapContainer} id="mapContainer">
                 <Map
@@ -116,6 +183,8 @@ function MapContainer() {
                         latitude: 37.8,
                         zoom: 3,
                     }}
+                    ref={mapRef}
+                    onMoveEnd={onViewStateChange}
                     antialias
                     reuseMaps
                     mapStyle={mapStyle}
@@ -127,6 +196,7 @@ function MapContainer() {
                         layers={layers}
                         title="Wed 06:00 am PST, Oct 21"
                     />
+                    <Legend mapRef={mapRef} overlayRef={overlayRef} viewState={viewState} />
                 </Map>
             </div>
         </>

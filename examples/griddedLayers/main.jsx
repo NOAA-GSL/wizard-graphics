@@ -10,6 +10,7 @@ import wdir from 'demo-data/wdir';
 import wmag from 'demo-data/wmag';
 import { Projection } from 'desi-graphics/utilities';
 import { ContourLayer, ShadedLayer, VectorLayer } from 'desi-graphics/layers';
+import { Legend } from '../../src/maps';
 
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
@@ -257,6 +258,7 @@ function MapContainer() {
                         layers={layers}
                         title="Wed 06:00 am PST, Oct 21"
                     />
+                    <Legend overlayRef={overlayRef} layers={layers} />
                 </Map>
             </div>
         </>
