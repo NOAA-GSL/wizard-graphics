@@ -1,7 +1,7 @@
-import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, DeckGLOverlay, Readout } from 'desi-graphics/maps';
+import { Maps, DeckGLOverlay, Readout, Legend } from 'desi-graphics/maps';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import projDict from 'demo-data/projection';
@@ -10,7 +10,6 @@ import wdir from 'demo-data/wdir';
 import wmag from 'demo-data/wmag';
 import { Projection } from 'desi-graphics/utilities';
 import { ContourLayer, ShadedLayer, VectorLayer } from 'desi-graphics/layers';
-import { Legend } from '../../src/maps';
 
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
@@ -20,7 +19,7 @@ function MapContainer() {
     const [state, setState] = useState({
         contourCheckbox: true,
         contourLabels: true,
-        shadedCheckbox: false,
+        shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
     });
@@ -110,6 +109,11 @@ function MapContainer() {
                     interpolate: true,
                 },
             ],
+            legend: {
+                type: 'staticBar', // 'staticBar', 'staticItems', 'dynamicItems'
+                title: 'Temperature',
+                units: '°F',
+            },
         });
         layers.push(shadedLayer);
     }
@@ -138,6 +142,12 @@ function MapContainer() {
                     interpolate: true,
                 },
             ],
+            // same legend in two places (shaded/contour) will not produce duplicate legends
+            legend: {
+                type: 'staticBar', // 'staticBar', 'staticItems', 'dynamicItems'
+                title: 'Temperature',
+                units: '°F',
+            },
         });
         layers.push(contourLayer);
     }
@@ -255,10 +265,9 @@ function MapContainer() {
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}
-                        layers={layers}
                         title="Wed 06:00 am PST, Oct 21"
                     />
-                    <Legend overlayRef={overlayRef} layers={layers} />
+                    <Legend overlayRef={overlayRef} />
                 </Map>
             </div>
         </>
@@ -267,6 +276,6 @@ function MapContainer() {
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <MapContainer />,
+        <MapContainer />
     </StrictMode>,
 );

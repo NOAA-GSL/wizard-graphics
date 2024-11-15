@@ -31,12 +31,12 @@ function MapContainer() {
         iconLayerCheckbox: false,
         citiesLayerCheckbox: false,
         citiesDataLabelsCheckbox: true,
-        spotLayerCheckbox: true,
+        spotLayerCheckbox: false,
         nifcLayerCheckbox: false,
         cpcLayerCheckbox: false,
         spcLayerCheckbox: false,
         wpcLayerCheckbox: false,
-        wwaLayerCheckbox: false,
+        wwaLayerCheckbox: true,
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
@@ -134,6 +134,10 @@ function MapContainer() {
             id: 'wwaLayer',
             data: URLdata.WWA,
             pickable: true,
+            legend: {
+                type: 'dynamicItems', // 'staticBar', 'staticItems', 'dynamicItems'
+                title: 'Weather Watches/Warnings',
+            },
         });
         layers.push(wwaLayer);
     }

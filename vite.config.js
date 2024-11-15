@@ -46,6 +46,7 @@ export default defineConfig({
                 /^@math.gl.*/,
                 'maplibre-gl',
                 'd3',
+                'lodash',
                 /^react-map-gl.*/,
                 'proj4',
             ],

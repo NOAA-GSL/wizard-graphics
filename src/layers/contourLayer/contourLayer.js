@@ -1,10 +1,10 @@
 /* eslint-disable max-len */
 import { PathLayer } from '@deck.gl/layers';
 import { CompositeLayer } from '@deck.gl/core';
-import Legend from '../../utilities/Legend';
 import gUtilities from '../../utilities/graphicsUtilities';
 import { ContourLabels } from './contourLabels';
 import { isolines } from './raster-marching-squares';
+import { getcolors } from '../../maps/legend/LegendStaticBar';
 
 const defaultProps = {
     elevation: 0,
@@ -28,7 +28,7 @@ export default class ContourLayer extends CompositeLayer {
     updateState({ props }) {
         // Get colors, set contour Levels
         const isoLines = [];
-        const colorscale = Legend.getcolors(props.colorLevels, props.colors, props.colorType);
+        const colorscale = getcolors(props.colorLevels, props.colors, props.colorType);
         const contourLevels = props.contourLevels || props.colorLevels;
 
         // Get isolines

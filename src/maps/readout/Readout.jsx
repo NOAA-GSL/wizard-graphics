@@ -4,7 +4,7 @@ import deckUtilities from '../../utilities/deckUtilities';
 import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.scss';
 
-export default function Readout({ layers, mapContainer, overlayRef, title, displayNum = 0 }) {
+export default function Readout({ mapContainer, overlayRef, title, displayNum = 0 }) {
     const [readoutDiv, setReadoutDiv] = useState({
         content: undefined,
     });
@@ -13,6 +13,8 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
         readoutChecked: true,
         readoutLatLonChecked: false,
     });
+    // eslint-disable-next-line no-underscore-dangle
+    const layers = overlayRef?.current?._props?.layers;
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const rightClickMenuRef = useRef(null);
 
@@ -135,6 +137,7 @@ export default function Readout({ layers, mapContainer, overlayRef, title, displ
             const y = e.offsetY;
             const [lon, lat] = viewport.unproject([x, y]);
             setPosition({ x, y, lon, lat });
+            return null;
         };
 
         const handleMouseLeave = () => {
