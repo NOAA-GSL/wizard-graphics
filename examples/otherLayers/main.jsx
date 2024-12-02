@@ -1,7 +1,7 @@
 import { StrictMode, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, DeckGLOverlay, Readout } from 'desi-graphics/maps';
+import { Maps, DeckGLOverlay, Readout, mapStyles, Legend } from 'desi-graphics/maps';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
@@ -20,13 +20,12 @@ import {
 import URLdata from './URLdata';
 import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
-import { Legend } from '../../src/maps';
 
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
     const { mapToken } = process.env;
-    const style = Maps.getMaps()[1];
-    const mapStyle = useMemo(() => Maps.getStyle(style, mapToken), [style, mapToken]);
+    const style = Object.keys(mapStyles)[1];
+    const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
     const [state, setState] = useState({
         iconLayerCheckbox: false,
         citiesLayerCheckbox: false,

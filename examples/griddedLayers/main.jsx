@@ -1,7 +1,7 @@
 import { StrictMode, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, DeckGLOverlay, Readout, Legend } from 'desi-graphics/maps';
+import { mapStyles, Maps, DeckGLOverlay, Readout, Legend } from 'desi-graphics/maps';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import projDict from 'demo-data/projection';
@@ -12,10 +12,10 @@ import { Projection } from 'desi-graphics/utilities';
 import { ContourLayer, ShadedLayer, VectorLayer } from 'desi-graphics/layers';
 
 function MapContainer() {
-    // memoizing so that it doesn't re-run when moving the map or other re-renders
     const { mapToken } = process.env;
-    const style = Maps.getMaps()[0];
-    const mapStyle = useMemo(() => Maps.getStyle(style, mapToken), [style, mapToken]);
+    const style = Object.keys(mapStyles)[0];
+    // memoizing so that it doesn't rerun on rerenders
+    const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
     const [state, setState] = useState({
         contourCheckbox: true,
         contourLabels: true,
@@ -25,6 +25,7 @@ function MapContainer() {
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
+    const mapRef = useRef();
     // Make the LonLatGrid of Data
     // This is HREF data sampled every 4 points (resLevel = 4)
     const resLevel = 4;
@@ -88,12 +89,10 @@ function MapContainer() {
     );
 
     const layers = [];
-    //
-
     if (state.shadedCheckbox) {
         const shadedLayer = new ShadedLayer({
             id: 'shadedLayer',
-            // beforeId: getBeforeID(plottype),
+            beforeId: mapStyles[style].beforeId,
             data,
             colors,
             colorLevels,
@@ -122,7 +121,7 @@ function MapContainer() {
     if (state.contourCheckbox) {
         const contourLayer = new ContourLayer({
             id: 'contourLayer',
-            // beforeId: getBeforeID(plottype),
+            beforeId: mapStyles[style].beforeId,
             data,
             colors,
             colorLevels,
@@ -155,6 +154,7 @@ function MapContainer() {
     if (state.vectorCheckbox) {
         const vectorLayer = new VectorLayer({
             id: 'vectorLayer',
+            beforeId: mapStyles[style].beforeId,
             dataDir: wdir,
             dataMag: wmag,
             projection,
@@ -174,7 +174,6 @@ function MapContainer() {
                     interpolate: true,
                 },
             ],
-            // beforeId: getBeforeID(layer.plottype),
         });
         layers.push(vectorLayer);
     }
@@ -257,6 +256,7 @@ function MapContainer() {
                         latitude: 37.8,
                         zoom: 3,
                     }}
+                    ref={mapRef}
                     antialias
                     reuseMaps
                     mapStyle={mapStyle}

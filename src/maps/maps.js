@@ -3,7 +3,7 @@ import lightGrayStyle from './custom-maps/lightGray.json';
 // Basemap layers
 // List of basemaps can be found here: https://developers.arcgis.com/documentation/mapping-apis-and-services/maps/services/basemap-layer-service/
 
-const mapLayers = {
+export const mapStyles = {
     Classic: {
         isJson: false,
         url: 'ArcGIS:Navigation',
@@ -90,22 +90,16 @@ function updateToken(item, mapToken) {
     return item;
 }
 
-export default class Maps {
-    constructor() {
-        this.style = 'Topography';
-        this.loaded = false;
-        this.beforeId = mapLayers[this.style].beforeId;
-        this.beforeIdLines = mapLayers[this.style].beforeIdLines;
+export class Maps {
+    constructor(styles, mapToken) {
+        this.mapStyles = styles;
+        this.mapToken = mapToken;
     }
 
-    static getMaps() {
-        return Object.keys(mapLayers);
-    }
-
-    static getStyle(style, mapToken) {
-        if (mapLayers[style].isJson) {
+    static loadMapStyle(style, mapToken) {
+        if (mapStyles[style].isJson) {
             // it's actually a regular js object since it is being imported
-            const jsonStyle = mapLayers[style].url;
+            const jsonStyle = mapStyles[style].url;
 
             // find instances of `token=` in jsonStyle and append the correct API token
             // Recursive function to update token in strings
@@ -120,7 +114,28 @@ export default class Maps {
             return jsonStyle;
         }
         return `https://basemaps-api.arcgis.com/arcgis/rest/services/styles/${
-            mapLayers[style].url
+            mapStyles[style].url
         }?type=style&token=${mapToken}`;
+    }
+
+    static getBeforeID(plottype) {
+        if (getMaptype(chartOptions) == 'Mapbox') {
+            const beforeID =
+                MapBoxLayers[chartOptions.x4dMaps.mapboxBasemap.value][
+                    plotorder[plottype].beforeId
+                ];
+            const mapLayers = mapRef?.current?.getStyle()?.layers ?? [];
+            for (let layer of mapLayers) {
+                if (layer.id == beforeID) {
+                    return beforeID;
+                }
+            }
+            console.log(
+                `\n\nWarning: Could not find beforeID ${beforeID} in mapbox layers.  Please set correct beforeID.\n\n`,
+            );
+            return undefined;
+        } else {
+            return undefined;
+        }
     }
 }
