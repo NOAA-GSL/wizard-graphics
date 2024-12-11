@@ -1,74 +1,73 @@
 import * as d3 from 'd3';
+import { useEffect, useRef } from 'react';
 
 /*
-//position relative to the div container
-let loptions = {
-	x: 0,
-	y: 0,
-	length : length,
-	class : 'x4d-legend',
-	tickValues : tickValues,
-	tickAngle  : tickAngle,
-	orient     : 'vertical',
-	animationspeed: 1000,
-	title: title,
-	colorbar_ticks: layers[id]['colorbar_ticks'],
-	colorbar_type : layers[id]['colorbar_type'],
-	colorbar_levels:layers[id]['colorbar_levels'],
-	colorbar_colors:layers[id]['colorbar_colors']
-}
-             
-Legends.legendbar("legend-id",loptions)
+options = {
+    // required variables
+	colorType : layers[id]['colorType'],
+	colorLevels:layers[id]['colorLevels'],
+	colors:layers[id]['colors']
+
+    // optional variables
+    x: 0, // position relative to the div container
+	y: 0, // position relative to the div container
+    length : 600, // how long is the bar
+    thickness : 10, // how thick is the bar
+    class: 'x4d-legend', // className
+    orient     : 'vertical', // vertical or horizontal
+    animationspeed: 1000, // speed of the animation (ms)
+    title: undefined, // title on legend
+    units: undefined, // units on legend
+    colorbarTicks: 'linear', // 'linear', 'byvalue'
+    tickValues : [0,1,2,3,4,.etc], // specific tick values for the colorbar
+    tickAngle: 0, // angle of the tick-text values.  colorbarTicks must be 'byvalue' or tickValues must be defined
+}         
 */
 
-export default class Legend {
-    static getcolors(colorbar_levels, colorbar_colors, colorbar_type) {
-        const clen = colorbar_colors.length;
-        const llen = colorbar_levels.length;
-        if (colorbar_type === 'threshold') {
-            if (llen + 1 !== clen) {
-                console.log(
-                    `ERROR: When using the threshold colorbar the number of colors must be one greater than the number of levels.` +
-                        `\nColors Length: ${clen}\nLevels Length: ${llen}
-                        \nLevels: ${colorbar_levels}
-                        \nColors: ${colorbar_colors}`,
-                );
-            }
-        } else if (colorbar_type === 'linear') {
-            if (llen != clen) {
-                console.log(
-                    `ERROR: When using the linear colorbar the number of colors and levels must be equal` +
-                        `\nColors Length: ${clen}\nLevels Length: ${llen}
-                        \nLevels: ${colorbar_levels}
-                        \nColors: ${colorbar_colors}`,
-                );
-            }
-        } else {
-            console.log('ERROR: Colorbar of type', colorbar, 'not found in field', field);
+export function getcolors(colorLevels, colors, colorType) {
+    const clen = colors.length;
+    const llen = colorLevels.length;
+    if (colorType === 'scaleThreshold') {
+        if (llen + 1 !== clen) {
+            console.log(
+                `ERROR: When using the threshold colorbar the number of colors must be one greater than the number of levels.` +
+                    `\nColors Length: ${clen}\nLevels Length: ${llen}
+                    \nLevels: ${colorLevels}
+                    \nColors: ${colors}`,
+            );
         }
-
-        const colors = colorbar_type === 'linear' ? d3.scaleLinear() : d3.scaleThreshold();
-
-        colors.domain(colorbar_levels).range(colorbar_colors);
-        return colors;
+    } else if (colorType === 'scaleLinear') {
+        if (llen !== clen) {
+            console.log(
+                `ERROR: When using the linear colorbar the number of colors and levels must be equal` +
+                    `\nColors Length: ${clen}\nLevels Length: ${llen}
+                    \nLevels: ${colorLevels}
+                    \nColors: ${colors}`,
+            );
+        }
+    } else {
+        console.log('ERROR: Colorbar of type', colorType, 'not found');
     }
 
-    static legendbarUpdatePositon(svgid, options) {
-        const svg = d3.select(`#${svgid}`).select('#legend').selectAll('svg.colorbar');
+    const colorScale = colorType === 'scaleLinear' ? d3.scaleLinear() : d3.scaleThreshold();
 
-        // Update the x & y position in case the graph has moved
-        svg.transition().duration(options.animationspeed).attr('x', options.x).attr('y', options.y);
-    }
+    colorScale.domain(colorLevels).range(colors);
+    return colorScale;
+}
+
+export default function LegendStaticBar({ options }) {
+    const { colors, colorLevels, colorType } = options;
+    const svgRef = useRef();
 
     // End caps can introduce ticks that are outside the original values
     // This function will prevent those ticks from showing up
-    static filterTicks(domain, ticks) {
+    function filterTicks(domain, ticks) {
         const min = domain[0];
         const max = domain[domain.length - 1];
         return ticks.filter((x) => x >= min && x <= max);
     }
 
-    static legendbar(svgid, options) {
+    useEffect(() => {
         /*
 		Copyright (c) 2013, Benjamin Schmidt
 		All rights reserved.
@@ -101,35 +100,31 @@ export default class Legend {
 		*/
 
         let origin;
-        const barlength = options.length; // how long is the bar
-        const thickness = 10; // how thick is the bar
-        let fillLegend;
-        let fillLegendScale;
+        const barlength = options.length ?? 600; // how long is the bar
+        const thickness = options.thickness ?? 10; // how thick is the bar
+        const animationSpeed = options.animationspeed ?? 1000;
+        const colorbarTicks = options.colorbarTicks ?? 'linear';
 
-        let thickness_attr;
-        let length_attr;
-        let axis_orient;
-        let position_variable;
-        let non_position_variable;
-        let axis_transform;
-        let rect_transform;
-        let text_dx;
-        let text_dy;
-        let text_rotate;
+        let thicknessAttr;
+        let lengthAttr;
+        let axisOrient;
+        let positionVariable;
+        let nonPositionVariable;
+        let axisTransform;
+        let rectTransform;
+        let textDx;
+        let textDy;
+        let textRotate;
         let additionalTextRotate = 0;
         let additionalTextTranslate = 'translate(0,0)';
 
-        const leftCap = options.colorbar_type == 'linear' ? false : !!options.colorbar_lcap;
-        const rightCap = options.colorbar_type == 'linear' ? false : !!options.colorbar_rcap;
+        const leftCap = options.colorType === 'linear' ? false : !!options.colorbar_lcap;
+        const rightCap = options.colorType === 'linear' ? false : !!options.colorbar_rcap;
 
         // Grab the color scale
-        const colorScale = Legends.getcolors(
-            options.colorbar_levels,
-            options.colorbar_colors,
-            options.colorbar_type,
-        );
+        const colorScale = getcolors(options.colorLevels, options.colors, options.colorType);
 
-        const titlepadding = options.title == '' ? 0 : 17;
+        const titlepadding = options.title ? 17 : 0;
 
         // Margin
         const margin = {
@@ -146,73 +141,78 @@ export default class Legend {
                 y: options.y,
             };
             margin.bottom = 15; // Don't need the bottom padding as much since numbers are horizonal
-            thickness_attr = 'height';
-            length_attr = 'width';
-            axis_orient = 'bottom';
-            position_variable = 'x';
-            non_position_variable = 'y';
-            text_dx = barlength / 2;
-            text_dy = -5;
-            text_rotate = 0;
-            axis_transform = `translate (${(margin.left + margin.right) / 2},${
+            thicknessAttr = 'height';
+            lengthAttr = 'width';
+            axisOrient = 'bottom';
+            positionVariable = 'x';
+            nonPositionVariable = 'y';
+            textDx = barlength / 2;
+            textDy = -5;
+            textRotate = 0;
+            axisTransform = `translate (${(margin.left + margin.right) / 2},${
                 thickness + margin.top
             })`;
-            rect_transform = `translate (${(margin.left + margin.right) / 2},${margin.top})`;
+            rectTransform = `translate (${(margin.left + margin.right) / 2},${margin.top})`;
         } else {
             origin = {
                 x: options.x,
                 y: options.y,
             };
-            thickness_attr = 'width';
-            length_attr = 'height';
-            axis_orient = 'right';
-            position_variable = 'y';
-            non_position_variable = 'x';
-            text_dx = -barlength / 2;
-            text_dy = -5;
-            text_rotate = -90;
-            axis_transform = `translate (${thickness + margin.top},${
+            thicknessAttr = 'width';
+            lengthAttr = 'height';
+            axisOrient = 'right';
+            positionVariable = 'y';
+            nonPositionVariable = 'x';
+            textDx = -barlength / 2;
+            textDy = -5;
+            textRotate = -90;
+            axisTransform = `translate (${thickness + margin.top},${
                 (margin.left + margin.right) / 2
             })`;
-            rect_transform = `translate (${margin.top},${(margin.left + margin.right) / 2})`;
+            rectTransform = `translate (${margin.top},${(margin.left + margin.right) / 2})`;
         }
 
-        // Only make if it doesn't exists
-        d3.select(`#${svgid}`).select('#legend').node()
-            ? d3.select(`#${svgid}`).select('#legend')
-            : d3
-                  .select(`#${svgid}`)
-                  .append('g')
-                  .attr('id', 'legend')
-                  .attr('class', `legendbar ${options.class}`);
+        const divContainer = d3.select(svgRef.current);
 
-        const container = d3.select(`#${svgid}`).select('#legend');
-        var svg = container.selectAll('svg.colorbar').data([origin]);
+        // Only make if it doesn't exists
+        if (!divContainer.select('#legend').node()) {
+            divContainer
+                .append('g')
+                .attr('id', 'legend')
+                .attr('class', `legendbar ${options.class}`);
+        }
 
         // otherwise create the skeletal chart
-        const new_colorbars = svg
+        const newColorbars = divContainer
+            .select('#legend')
+            .selectAll('svg.colorbar')
+            .data([origin])
             .enter()
             .append('svg')
             .classed('colorbar', true)
             .attr('x', origin.x) // Set the inital x and y position
             .attr('y', origin.y)
             .attr('charttype', 'chicletlegend')
-            .attr(thickness_attr, thickness + titlepadding + margin.bottom) // gets overwritten later once we know what the label size is
-            .attr(length_attr, barlength + 5 + 5);
+            .attr(thicknessAttr, thickness + titlepadding + margin.bottom) // gets overwritten later once we know what the label size is
+            .attr(lengthAttr, barlength + 5 + 5);
         // <text dy="12" dx="18" class="legendtext">Grand Ensemble</text>
 
         // Always update the x, y and, field attributes
-        svg.transition()
-            .duration(options.animationspeed)
+        divContainer
+            .select('#legend')
+            .selectAll('svg.colorbar')
+            .data([origin])
+            .transition()
+            .duration(animationSpeed)
             .attr('x', origin.x) // Update the x and y position if graph has moved
             .attr('y', origin.y)
-            .attr(length_attr, barlength + 5 + 5); // Update the length since that may have changed
+            .attr(lengthAttr, barlength + 5 + 5); // Update the length since that may have changed
 
-        new_colorbars.append('g').attr('transform', rect_transform).classed('colorbar', true);
+        newColorbars.append('g').attr('transform', rectTransform).classed('colorbar', true);
 
-        var svg = d3.select(`#${svgid}`).select('#legend').select('svg');
-        let text = d3.select(`#${svgid}`).select('#legend').select('.legendtext_colorbar');
-        let axis = d3.select(`#${svgid}`).select('#legend').select('.axis.color');
+        const svg = divContainer.select('#legend').select('svg');
+        let text = divContainer.select('#legend').select('.legendtext_colorbar');
+        let axis = divContainer.select('#legend').select('.axis.color');
 
         // Make axis if it doesn't exist
         if (!axis.node()) {
@@ -224,29 +224,29 @@ export default class Legend {
                 .append('text')
                 .attr('class', 'legendtext_colorbar')
                 .style('text-anchor', 'middle')
-                .attr('dx', text_dx)
-                .attr('dy', text_dy);
-            // .attr("transform","rotate(" + text_rotate + ")")
+                .attr('dx', textDx)
+                .attr('dy', textDy);
+            // .attr("transform","rotate(" + textRotate + ")")
         }
 
         // Set the title
-        text.attr('transform', `${rect_transform} rotate(${text_rotate})`)
-            .attr('dx', text_dx) // Update the position in case that has changed
-            .attr('dy', text_dy)
-            .text(options.title);
+        text.attr('transform', `${rectTransform} rotate(${textRotate})`)
+            .attr('dx', textDx) // Update the position in case that has changed
+            .attr('dy', textDy)
+            .text(`${options.title} (${options.units})`);
 
         // This either creates, or updates, a fill legend, and drops it
         // on the screen. A fill legend includes a pointer chart can be
         // updated in response to mouseovers, because that's way cool.
 
-        fillLegend = svg.selectAll('g.colorbar');
+        const fillLegend = svg.selectAll('g.colorbar');
 
         // Make the fillLegendScale
         const domain = colorScale.domain();
         // If left or right cap, just add another value to the array
         if (rightCap) domain.push(domain[domain.length - 1] + 1);
         if (leftCap) domain.unshift(domain[0] - 1);
-        fillLegendScale = d3.scaleLinear().domain(domain);
+        const fillLegendScale = d3.scaleLinear().domain(domain);
 
         // Is this needed?
         // fillLegendScale = scale.copy();
@@ -259,11 +259,11 @@ export default class Legend {
             barlength,
             barlength / (fillLegendScale.domain().length - 1),
         );
-        if (legendRange[legendRange.length - 1] != barlength) {
+        if (legendRange[legendRange.length - 1] !== barlength) {
             legendRange.push(barlength);
         }
 
-        if (options.orient == 'vertical') {
+        if (options.orient === 'vertical') {
             // Vertical should go bottom to top, horizontal from left to right.
             // This should be changeable in the options, ideally.
             legendRange.reverse();
@@ -287,28 +287,29 @@ export default class Legend {
         // Switch to using the original selection so that the transition will be inheirited
         svg.selectAll('rect.legendbars')
             .style('opacity', 1)
-            .attr(thickness_attr, thickness)
-            .attr(length_attr, 2) // single pixel thickness produces ghosting on some browsers
-            .attr(position_variable, (d) => d)
-            .attr(non_position_variable, 0)
+            .attr(thicknessAttr, thickness)
+            .attr(lengthAttr, 2) // single pixel thickness produces ghosting on some browsers
+            .attr(positionVariable, (d) => d)
+            .attr(nonPositionVariable, 0)
             .transition()
-            .duration(options.animationspeed)
+            .duration(animationSpeed)
             .style('fill', (d) => colorScale(fillLegendScale.invert(d)));
 
-        if (axis_orient == 'right') {
-            var colorAxisFunction = d3.axisRight();
+        let colorAxisFunction;
+        if (axisOrient === 'right') {
+            colorAxisFunction = d3.axisRight();
         }
-        if (axis_orient == 'bottom') {
-            var colorAxisFunction = d3.axisBottom();
+        if (axisOrient === 'bottom') {
+            colorAxisFunction = d3.axisBottom();
         }
 
         colorAxisFunction.scale(fillLegendScale).tickFormat(d3.format(',.2~f'));
 
         // If we supply specific values to the legend, use those labels (paintball plots)
-        if (options.colorbar_ticks == 'byvalue' && options.tickValues) {
+        if (colorbarTicks === 'byvalue' && options.tickValues) {
             let ticks = fillLegendScale.domain();
-            ticks = this.filterTicks(colorScale.domain(), ticks);
-            additionalTextRotate = options.tickAngle;
+            ticks = filterTicks(colorScale.domain(), ticks);
+            additionalTextRotate = options.tickAngle ?? 0;
             colorAxisFunction.tickValues(ticks);
             colorAxisFunction.tickFormat((d, i) => options.tickValues[i]);
             if (additionalTextRotate < -80) {
@@ -316,10 +317,10 @@ export default class Legend {
             }
         }
         // If we want to plot tics by the values supplied
-        else if (options.colorbar_ticks == 'byvalue') {
+        else if (colorbarTicks === 'byvalue') {
             const maxTicks = 20; // Only have this many ticks
             let ticks = fillLegendScale.domain();
-            ticks = this.filterTicks(colorScale.domain(), ticks);
+            ticks = filterTicks(colorScale.domain(), ticks);
             // If ticks are greater than the max length, remove every nth value
             if (ticks.length > maxTicks) {
                 const removeNth = (arr, n) => {
@@ -335,14 +336,14 @@ export default class Legend {
         // Default tick values
         else {
             let ticks = colorAxisFunction.scale().ticks();
-            ticks = this.filterTicks(colorScale.domain(), ticks);
+            ticks = filterTicks(colorScale.domain(), ticks);
             colorAxisFunction.tickValues(ticks);
         }
 
         // Now update the axis
-        axis.attr('transform', axis_transform)
+        axis.attr('transform', axisTransform)
             .transition()
-            .duration(options.animationspeed)
+            .duration(animationSpeed)
             .call(colorAxisFunction)
             .selectAll('text')
             .attr('transform', `rotate(${additionalTextRotate}) ${additionalTextTranslate}`)
@@ -366,14 +367,18 @@ export default class Legend {
                 }
 
                 const bufferPadding = 5;
-                // probably don't want to hardcode width in there and use thickness_attr, but this works for now
+                // probably don't want to hardcode width in there and use thicknessAttr, but this works for now
                 svg.transition().attr(
                     'width',
                     thickness + titlepadding + axisBBox.width + bufferPadding,
                 );
             })
+            // eslint-disable-next-line no-unused-vars
             .catch((error) => {
+                // eslint-disable-next-line spaced-comment
                 //console.error('Error:', error);
             });
-    }
+    }, [colors, colorLevels, colorType, options]);
+
+    return <div ref={svgRef} />;
 }

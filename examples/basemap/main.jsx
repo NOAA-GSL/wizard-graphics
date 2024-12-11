@@ -1,17 +1,16 @@
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps } from 'desi-graphics/maps';
+import { Maps, mapStyles } from 'desi-graphics/maps';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 function MapContainer() {
-    const mapStyles = Maps.getMaps();
-    const [state, setState] = useState(mapStyles[0]);
+    const [state, setState] = useState(Object.keys(mapStyles)[0]);
 
     // memoizing so that it doesn't re-run when moving the map or other re-renders
     const { mapToken } = process.env;
-    const mapStyle = useMemo(() => Maps.getStyle(state, mapToken), [state, mapToken]);
+    const mapStyle = useMemo(() => Maps.loadMapStyle(state, mapToken), [state, mapToken]);
 
     return (
         <div id="mapContainer">
@@ -22,7 +21,7 @@ function MapContainer() {
                     setState(e.target.value);
                 }}
             >
-                {mapStyles.map((style, index) => (
+                {Object.keys(mapStyles).map((style, index) => (
                     <option key={index} value={style}>
                         {style}
                     </option>

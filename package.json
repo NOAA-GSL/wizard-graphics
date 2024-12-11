@@ -33,10 +33,11 @@
         "sass": "^1.80.3",
         "vite-plugin-static-copy": "^1.0.6"
     },
-    "comment": "Remember to put peer dependecies in vite.config.js, run npm run size to make sure they are out of the package",
+    "//": "Remember to put peer dependecies in vite.config.js, run npm run size to make sure they are out of the package",
     "peerDependencies": {
         "d3": "^7.9.0",
         "deck.gl": "^9.0.33",
+        "lodash": "^4.17.21",
         "maplibre-gl": "^4.7.1",
         "proj4": "^2.12.1",
         "react": "^18.3.1",
