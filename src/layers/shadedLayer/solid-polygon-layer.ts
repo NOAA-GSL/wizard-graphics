@@ -630,7 +630,6 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         // When the geometry config  or the data is changed,
         // tessellator needs to be invoked
         if (geometryConfigChanged) {
-            console.log('YES!');
             const { polygonTesselator } = this.state;
             const buffers = (props.data as any).attributes || {};
             polygonTesselator.updateGeometry({

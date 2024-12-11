@@ -27,7 +27,7 @@ options = {
 export function getcolors(colorLevels, colors, colorType) {
     const clen = colors.length;
     const llen = colorLevels.length;
-    if (colorType === 'threshold') {
+    if (colorType === 'scaleThreshold') {
         if (llen + 1 !== clen) {
             console.log(
                 `ERROR: When using the threshold colorbar the number of colors must be one greater than the number of levels.` +
@@ -36,7 +36,7 @@ export function getcolors(colorLevels, colors, colorType) {
                     \nColors: ${colors}`,
             );
         }
-    } else if (colorType === 'linear') {
+    } else if (colorType === 'scaleLinear') {
         if (llen !== clen) {
             console.log(
                 `ERROR: When using the linear colorbar the number of colors and levels must be equal` +
@@ -49,7 +49,7 @@ export function getcolors(colorLevels, colors, colorType) {
         console.log('ERROR: Colorbar of type', colorType, 'not found');
     }
 
-    const colorScale = colorType === 'linear' ? d3.scaleLinear() : d3.scaleThreshold();
+    const colorScale = colorType === 'scaleLinear' ? d3.scaleLinear() : d3.scaleThreshold();
 
     colorScale.domain(colorLevels).range(colors);
     return colorScale;

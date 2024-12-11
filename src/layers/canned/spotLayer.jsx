@@ -55,7 +55,7 @@ const defaultProps = {
     getTextBorderWidth: 4,
     getElevation: 0,
     elevationScale: 1,
-    pickingFunction: function addNumbers(d) {
+    pickingFunction: (d) => {
         if (d.object) {
             // eslint-disable-next-line no-unused-vars
             const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } =
