@@ -1,12 +1,14 @@
+import * as d3 from 'd3';
 import { debounce, over, some } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
+import gUtilities from '../../utilities/graphicsUtilities';
 
 // Legend types
 // 'staticBar', 'staticItems', 'dynamicItems'
 
 export default function LegendDynamicItems({ mapRef, viewState, overlayRef, options }) {
     const [dynamicLegendItems, setDynamicLegendItems] = useState([]);
-
+    const svgRef = useRef();
     // Debounce for dynamicItems
     const debouncedEffect = useRef(
         debounce(() => {
@@ -56,40 +58,112 @@ export default function LegendDynamicItems({ mapRef, viewState, overlayRef, opti
         };
     }, [mapRef, viewState, overlayRef, debouncedEffect]);
 
-    return (
-        <div
-            style={{
-                position: 'absolute',
-                right: 0,
-                backgroundColor: 'white',
-                padding: '10px',
-                borderRadius: '5px',
-            }}
-        >
-            <h3>{options.title}</h3>
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {dynamicLegendItems.map((item) => (
-                    <li
-                        key={item.text + item.color}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            marginBottom: '5px',
-                        }}
-                    >
-                        <span
-                            style={{
-                                width: '20px',
-                                height: '20px',
-                                backgroundColor: item.color,
-                                display: 'inline-block',
-                                marginRight: '10px',
-                            }}
-                        />
-                        {item.text}
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
+    useEffect(() => {
+        if (!svgRef.current || dynamicLegendItems.length === 0) return;
+        const divContainer = d3.select(svgRef.current);
+
+        /// Step 1: Check if the SVG exists in the divContainer, otherwise create one
+        let svg = divContainer.select('svg');
+        if (svg.empty()) {
+            svg = divContainer
+                .append('svg')
+                .attr('width', 250) // Initial width, will adjust later
+                .attr('height', 500); // Initial height, will adjust later
+        }
+
+        // Create or select the legend group
+        let container = svg.select('#dynamicLegend');
+        if (container.empty()) {
+            container = svg.append('g').attr('id', 'dynamicLegend');
+        } else {
+            // Remove existing legend items and title
+            container.selectAll('g.dynamicLegend-item').remove();
+            container.selectAll('text.title').remove();
+        }
+
+        const PADDING = 10; // Increased padding for more space at the top
+        const ITEM_SPACING = 10; // Space between legend items vertically
+        const BOX_SIZE = 10; // Size of the color rectangle
+        const FONT_SIZE = '12px';
+
+        let titleHeight = 0;
+
+        const legendItems = dynamicLegendItems.map(item => ({
+            color: item.color,
+            text: item.text,
+        }));
+
+        // Calculate the maximum width needed for the legend (based on text labels)
+        const itemWidths = legendItems.map((item) => {
+            const labelTextElement = svg
+                .append('text')
+                .text(item.text)
+                .style('font-size', FONT_SIZE)
+                .style('visibility', 'hidden');
+
+            const width = BOX_SIZE + labelTextElement.node().getBBox().width + PADDING;
+            labelTextElement.remove(); // Clean up
+            return width;
+        });
+        const maxWidth = d3.max(itemWidths);
+
+        // Add title if provided
+        //const validTimes = gUtilities.formatValidTime(options); // Assuming gUtilities is defined
+        if (options.title) {
+            const titleText = `${options.title}`;
+            const title = container
+                .append('text')
+                .attr('class', 'title')
+                .attr('x', maxWidth / 2) // Center the title
+                .attr('y', PADDING) // Start title at PADDING (e.g., 10px from top)
+                .style('font-size', FONT_SIZE)
+                .style('font-weight', 'bold') // Add bold style
+                .attr('text-anchor', 'middle')
+                .text(titleText);
+
+            titleHeight = title.node().getBBox().height + PADDING; // Include padding below title
+        }
+
+        // Create legend items
+        const legendGroup = container
+            .selectAll('g.dynamicLegend-item')
+            .data(legendItems)
+            .join('g')
+            .attr('class', 'dynamicLegend-item')
+            .attr('transform', (d, i) => {
+                const x = PADDING; // Fixed horizontal position
+                const y = titleHeight + (BOX_SIZE + ITEM_SPACING) * i; // Stack below title
+                return `translate(${x}, ${y})`;
+            });
+
+        // Add color rectangles
+        legendGroup
+            .append('rect')
+            .attr('width', BOX_SIZE)
+            .attr('height', BOX_SIZE)
+            .style('fill', (d) => d.color);
+
+        // Add text labels
+        legendGroup
+            .append('text')
+            .attr('x', BOX_SIZE + PADDING)
+            .attr('y', BOX_SIZE / 2 + 3) // Vertically center text with rectangle
+            .style('font-size', FONT_SIZE)
+            .text((d) => d.text);
+
+        // Calculate the total dimensions and update SVG
+        const legendBBox = container.node().getBBox();
+        const totalSVGWidth = maxWidth + PADDING * 2; // Width includes padding on both sides
+        const totalSVGHeight = legendBBox.height + PADDING; // Height includes top padding and all content
+
+        // Move the container down to ensure the title isn’t cut off
+        container.attr('transform', `translate(0, ${PADDING})`);
+
+        // Update SVG dimensions
+        svg.attr('width', totalSVGWidth)
+            .attr('height', totalSVGHeight);
+        
+    }, [dynamicLegendItems, svgRef, options]);
+
+    return <div ref={svgRef} />
 }

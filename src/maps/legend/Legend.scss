@@ -6,3 +6,56 @@
     display: flex;
     align-items: center;
 }
+
+#dynamicLegendItems {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    background: white;
+    fill: black;
+    border: 2px solid black;
+}
+
+#staticLegendItems {
+    flex: 1;
+    flex-direction: column;
+    display: flex;
+    z-index: 10;
+    background: var(--x4d-overlay-translucent);
+    pointer-events: none;
+    gap: 10px;
+    position: absolute;
+    top:0;
+    left: 0;
+    right: auto; 
+    background: white;
+    fill: black;
+    border: 2px solid black;
+}
+
+#dynamicLegendItems {
+    background: white;
+    fill: black;
+    border: 2px solid black;
+}
+
+/* Styles for each staticLegend item */
+.staticLegend-item {
+    cursor: default; /* Change cursor to default when hovering over staticLegend items */
+}
+
+/* Styles for the color boxes */
+.staticLegend-item rect {
+    stroke: #fff; /* White stroke around color boxes */
+    stroke-width: 1px; /* Width of the stroke */
+    fill: black;
+}
+
+.staticLegend-item text {
+    fill: black; /* Sets the text color to white */
+    font-family: Arial, sans-serif; /* Optional: sets font family */
+    font-size: 12px; /* Optional: sets font size */
+}

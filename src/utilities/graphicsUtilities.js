@@ -177,6 +177,67 @@ export default class gUtilities {
         return nvalues;
     }
 
+    static formatValidTime(currentLayer) {
+        const date = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+
+        const outlookDays = {
+            day1outlook: 0,
+            day2outlook: 1,
+            day3outlook: 2,
+            day4outlook: 3,
+            day5outlook: 4,
+        };
+
+        if (outlookDays.hasOwnProperty(currentLayer.dataType)) {
+            const offset = outlookDays[currentLayer.dataType];
+            const start = this.getCurrentDayAndHour(offset, offset !== 0);
+            const endDate = new Date(date.setUTCDate(date.getUTCDate() + offset));
+            endDate.setUTCHours(12);
+            const end = this.formatSpcDate(endDate);
+            return `Valid: ${start} - ${end}`;
+        }
+
+        if (currentLayer.layerType === 'prcp' || currentLayer.layerType === 'temp') {
+            const rangeOffset = currentLayer.range === '6-10' ? [6, 10] : [8, 14];
+            const [startOffset, endOffset] = rangeOffset;
+            const startDate = new Date(date.setUTCDate(date.getUTCDate() + startOffset));
+            const endDate = new Date(date.setUTCDate(date.getUTCDate() + endOffset - startOffset));
+            return `Valid: ${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
+        }
+
+        return '';
+    }
+
+    static formatSpcDate(dateUTC) {
+        // Ensure the input is a valid Date object
+        if (!(dateUTC instanceof Date) || isNaN(dateUTC)) {
+            throw new Error('Input must be a valid Date object.');
+        }
+
+        // Add one day to the input date
+        const nextDay = new Date(dateUTC);
+        nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+        // Format the output as DD/1200Z
+        const day = String(nextDay.getUTCDate()).padStart(2, '0'); // Ensure two digits
+        const formattedOutput = `${day}/12Z`;
+
+        return formattedOutput;
+    }
+
+    static getCurrentDayAndHour = (offset = 0, isStartAt12Z = false) => {
+        const date = new Date();
+        const adjustedDate = new Date(date);
+        if (isStartAt12Z) {
+            adjustedDate.setUTCDate(date.getUTCDate() + offset);
+            adjustedDate.setUTCHours(12); // Set to 12Z for days 2 and 3
+        } else {
+            adjustedDate.setUTCDate(date.getUTCDate() + offset);
+        }
+        return `${String(adjustedDate.getUTCDate()).padStart(2, '0')}/${String(adjustedDate.getUTCHours()).padStart(2, '0')}Z`;
+    };
+
     static normalize1D(value, max, min, clevels, ctype) {
         // Not sure if this top info is relevant anymore
         // For webGL if you have 3 colors, they change as followed
