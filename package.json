@@ -2,8 +2,11 @@
     "name": "desi-graphics",
     "private": true,
     "version": "1.0.0",
+    "description": "An extension of deck.gl for producing weather graphics",
     "type": "module",
+    "license": "ISC",
     "main": "src/index.js",
+    "homepage": "https://vlab.noaa.gov/gitlab-community/OAR/GSL/DESI/desi-graphics",
     "scripts": {
         "predev": "node src/generateJson.js",
         "dev": "vite",
