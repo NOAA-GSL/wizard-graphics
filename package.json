@@ -11,7 +11,7 @@
             "import": "./dist/desi-graphics.js",
             "require": "./dist/desi-graphics.umd.cjs"
         },
-        "./style.css": "./dist/desi-graphics.css"
+        "./style.css": "./dist/style.css"
     },
     "files": [
         "dist"
