@@ -34,7 +34,7 @@ export default defineConfig({
             name: 'desi-graphics',
             // A function that generates the output file
             // name for different formats during the build
-            fileName: (format) => `index.${format}.js`,
+            fileName: (format) => `desi-graphics.${format}.js`,
         },
         rollupOptions: {
             // put all peer dependencies here
