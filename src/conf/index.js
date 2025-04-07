@@ -17,4 +17,4 @@ for (const field in configFields) {
     configFields[field] = mergeWith(cloneDeep(mergeWithDict), configFields[field], customizer);
 }
 
-export default configFields;
+export { configFields, defaults as configFieldsDefaults };

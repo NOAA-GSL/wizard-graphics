@@ -10,7 +10,7 @@ import wdir from 'demo-data/wdir';
 import wmag from 'demo-data/wmag';
 import { Projection } from 'desi-graphics/utilities';
 import { ContourLayer, ShadedLayer, VectorLayer } from 'desi-graphics/layers';
-import configFields from '../../src/conf';
+import { configFields } from 'desi-graphics';
 
 function MapContainer() {
     const { mapToken } = process.env;
@@ -46,6 +46,7 @@ function MapContainer() {
 
     const layers = [];
     if (state.shadedCheckbox) {
+        console.log('data:', data);
         const shadedLayer = new ShadedLayer({
             id: 'shadedLayer',
             beforeId: mapStyles[style].beforeId,
@@ -217,6 +218,7 @@ function MapContainer() {
                     reuseMaps
                     mapStyle={mapStyle}
                 >
+                    {console.log('layers:', layers)}
                     <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
                     <Readout
                         mapContainer={mapContainer}
