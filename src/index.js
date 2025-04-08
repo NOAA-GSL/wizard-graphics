@@ -8,3 +8,6 @@ export * from './maps';
 
 // Exporting utilities
 export * from './utilities';
+
+// Exporting from config
+export * from './conf';

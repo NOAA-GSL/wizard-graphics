@@ -50,7 +50,6 @@ import type {
 import type { PolygonGeometry } from './polygon';
 import gUtilities from '../../utilities/graphicsUtilities';
 import TriangulateGrid from './TriangulateGrid';
-import { color } from 'd3';
 
 // Where all the verticies, indicies, rgbValues, and startIndicies
 // are stored so we only have to caluclate once per model
@@ -590,7 +589,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         this.props.colors.forEach((c) => {
             colors.push(...gUtilities.string_to_rgb(c));
         });
-        const ctype = this.props.colorType === 'linear' ? 'linear' : 'nearest';
+        const ctype = this.props.colorType === 'scaleLinear' ? 'linear' : 'nearest';
         const texture = this.context.device.createTexture({
             width: colors.length / 4,
             height: 1,
