@@ -1,6 +1,6 @@
 {
     "name": "desi-graphics",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "An extension of deck.gl for producing weather graphics",
     "type": "module",
     "license": "MIT",
