@@ -46,7 +46,6 @@ function MapContainer() {
 
     const layers = [];
     if (state.shadedCheckbox) {
-        console.log('data:', data);
         const shadedLayer = new ShadedLayer({
             id: 'shadedLayer',
             beforeId: mapStyles[style].beforeId,
@@ -218,7 +217,6 @@ function MapContainer() {
                     reuseMaps
                     mapStyle={mapStyle}
                 >
-                    {console.log('layers:', layers)}
                     <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
                     <Readout
                         mapContainer={mapContainer}
