@@ -39,7 +39,11 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                         units,
                         interpolate,
                     );
-                    value = value ? `${gUtilities.roundto(value, decimals)}${units}` : 'NaN';
+                    // needed to add logic because values of 0 were being displayed as NaN
+                    value =
+                        value !== undefined && value !== null && !Number.isNaN(value)
+                            ? `${gUtilities.roundto(value, decimals)}${units}`
+                            : 'NaN';
                     const key = `${prependText}-${value}-${interpolate}`;
                     if (!uniqueArray.includes(key)) {
                         uniqueArray.push(key);

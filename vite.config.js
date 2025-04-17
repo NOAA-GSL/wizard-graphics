@@ -1,21 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [
-        react(),
-        viteStaticCopy({
-            targets: [
-                {
-                    src: 'src/generated.json',
-                    dest: './static/.',
-                },
-            ],
-        }),
-    ],
+    plugins: [react()],
     resolve: {
         alias: {
             'desi-graphics': path.resolve('./src'),
@@ -34,7 +23,7 @@ export default defineConfig({
             name: 'desi-graphics',
             // A function that generates the output file
             // name for different formats during the build
-            fileName: (format) => `index.${format}.js`,
+            fileName: (format) => `desi-graphics.${format}.js`,
         },
         rollupOptions: {
             // put all peer dependencies here

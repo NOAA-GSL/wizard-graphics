@@ -6,7 +6,7 @@ import lightGrayStyle from './custom-maps/lightGray.json';
 export const mapStyles = {
     Classic: {
         isJson: false,
-        url: 'ArcGIS:Navigation',
+        url: 'arcgis/navigation',
         beforeId: 'Ferry/Ferry',
         beforeIdLines: 'Water point/Sea or ocean',
     },
@@ -18,42 +18,22 @@ export const mapStyles = {
     },
     Dark: {
         isJson: false,
-        url: 'ArcGIS:DarkGray',
+        url: 'arcgis/dark-gray',
         beforeId: 'Railroad/2',
         beforeIdLines: 'Water point/Sea or ocean',
     },
     'Dark (streets)': {
         isJson: false,
-        url: 'ArcGIS:StreetsNight',
+        url: 'arcgis/streets-night',
         beforeId: 'Ferry/Ferry',
         beforeIdLines: 'Ferry/label/Ferry',
     },
     Light: {
         isJson: false,
-        url: 'ArcGIS:LightGray',
+        url: 'arcgis/light-gray',
         beforeId: 'Railroad/2',
         beforeIdLines: 'Water point/Sea or ocean',
     },
-    /*
-    Midcentury: {
-        isJson: false,
-        url: 'ArcGIS:Imagery',
-        beforeId: 'Railroad/casing',
-        beforeIdLines: 'Water point/Stream or river',
-    },
-    Newspaper: {
-        isJson: false,
-        url: 'ArcGIS:Imagery',
-        beforeId: 'Railroad/casing',
-        beforeIdLines: 'Water point/Stream or river',
-    },
-    Nova: {
-        isJson: false,
-        url: 'ArcGIS:Imagery',
-        beforeId: 'Railroad/casing',
-        beforeIdLines: 'Water point/Stream or river',
-    },
-    */
     Platinum: {
         isJson: true,
         url: lightGrayStyle,
@@ -62,13 +42,13 @@ export const mapStyles = {
     },
     Satellite: {
         isJson: false,
-        url: 'ArcGIS:Imagery',
+        url: 'arcgis/imagery',
         beforeId: 'Railroad/casing',
         beforeIdLines: 'Water point/Stream or river',
     },
     Topography: {
         isJson: false,
-        url: 'ArcGIS:Topographic',
+        url: 'arcgis/topographic',
         beforeId: 'Ferry/Ferry',
         beforeIdLines: 'Tree/Elm',
     },
@@ -113,9 +93,9 @@ export class Maps {
 
             return jsonStyle;
         }
-        return `https://basemaps-api.arcgis.com/arcgis/rest/services/styles/${
+        return `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/${
             mapStyles[style].url
-        }?type=style&token=${mapToken}`;
+        }?type=style&token=${mapToken}&worldview=unitedStatesOfAmerica`;
     }
 
     static getBeforeID(plottype) {

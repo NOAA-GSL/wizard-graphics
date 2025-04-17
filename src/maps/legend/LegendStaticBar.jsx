@@ -118,8 +118,8 @@ export default function LegendStaticBar({ options }) {
         let additionalTextRotate = 0;
         let additionalTextTranslate = 'translate(0,0)';
 
-        const leftCap = options.colorType === 'linear' ? false : !!options.colorbar_lcap;
-        const rightCap = options.colorType === 'linear' ? false : !!options.colorbar_rcap;
+        const leftCap = options.colorType === 'scaleLinear' ? false : !!options.colorbar_lcap;
+        const rightCap = options.colorType === 'scaleLinear' ? false : !!options.colorbar_rcap;
 
         // Grab the color scale
         const colorScale = getcolors(options.colorLevels, options.colors, options.colorType);
@@ -141,6 +141,7 @@ export default function LegendStaticBar({ options }) {
                 y: options.y,
             };
             margin.bottom = 15; // Don't need the bottom padding as much since numbers are horizonal
+            margin.right = 0; // something is adding unnecessary padding on the right side
             thicknessAttr = 'height';
             lengthAttr = 'width';
             axisOrient = 'bottom';
@@ -192,7 +193,6 @@ export default function LegendStaticBar({ options }) {
             .classed('colorbar', true)
             .attr('x', origin.x) // Set the inital x and y position
             .attr('y', origin.y)
-            .attr('charttype', 'chicletlegend')
             .attr(thicknessAttr, thickness + titlepadding + margin.bottom) // gets overwritten later once we know what the label size is
             .attr(lengthAttr, barlength + 5 + 5);
         // <text dy="12" dx="18" class="legendtext">Grand Ensemble</text>
@@ -229,11 +229,13 @@ export default function LegendStaticBar({ options }) {
             // .attr("transform","rotate(" + textRotate + ")")
         }
 
+        // don't include the () when no units are provided
+        const titleText = `${options.title} ${options.units ? `(${options.units})` : ''}`;
         // Set the title
         text.attr('transform', `${rectTransform} rotate(${textRotate})`)
             .attr('dx', textDx) // Update the position in case that has changed
             .attr('dy', textDy)
-            .text(`${options.title} (${options.units})`);
+            .text(titleText);
 
         // This either creates, or updates, a fill legend, and drops it
         // on the screen. A fill legend includes a pointer chart can be
@@ -366,11 +368,13 @@ export default function LegendStaticBar({ options }) {
                     axisBBox.height = rotatedHeight + 10;
                 }
 
+                // hack to make the resizing work for horizontal and vertical legends
+                const legendBarDimension = options.orient === 'horizontal' ? 'height' : 'width';
                 const bufferPadding = 5;
                 // probably don't want to hardcode width in there and use thicknessAttr, but this works for now
                 svg.transition().attr(
-                    'width',
-                    thickness + titlepadding + axisBBox.width + bufferPadding,
+                    legendBarDimension,
+                    thickness + titlepadding + axisBBox[legendBarDimension] + bufferPadding,
                 );
             })
             // eslint-disable-next-line no-unused-vars

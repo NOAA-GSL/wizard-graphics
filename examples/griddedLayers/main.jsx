@@ -10,7 +10,7 @@ import wdir from 'demo-data/wdir';
 import wmag from 'demo-data/wmag';
 import { Projection } from 'desi-graphics/utilities';
 import { ContourLayer, ShadedLayer, VectorLayer } from 'desi-graphics/layers';
-import configFields from '../../src/conf';
+import { configFields } from 'desi-graphics';
 
 function MapContainer() {
     const { mapToken } = process.env;
