@@ -19,56 +19,44 @@
     padding: 0.25rem 0.5rem;
     gap: 0.25rem;
     pointer-events: none;
-}
-
-.dynamic-legend-title {
-    font-weight: 700;
-    text-align: center;
-    border-bottom: 1px solid #00000088;
-}
-
-.dynamic-legend-items {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.dynamic-legend-items-color {
-    width: 0.75rem;
-    height: 0.75rem;
+    cursor: default;
 }
 
 #staticLegendItems {
-    flex: 1;
-    flex-direction: column;
-    display: flex;
-    z-index: 10;
-    background: var(--x4d-overlay-translucent);
-    pointer-events: none;
-    gap: 10px;
     position: absolute;
     top: 0;
     left: 0;
-    right: auto;
-    background: white;
-    fill: black;
-    border: 2px solid black;
+    display: flex;
+    flex-direction: column;
+    background: #fefefe;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    gap: 1rem;
+    pointer-events: none;
+    cursor: default;
 }
 
-/* Styles for each staticLegend item */
-.staticLegend-item {
-    cursor: default; /* Change cursor to default when hovering over staticLegend items */
+.static-legend-title,
+.dynamic-legend-title {
+    font-weight: 700;
+    text-align: center;
+    border-bottom: 1px solid #000000aa;
 }
 
-/* Styles for the color boxes */
-.staticLegend-item rect {
-    stroke: #fff; /* White stroke around color boxes */
-    stroke-width: 1px; /* Width of the stroke */
-    fill: black;
+.dynamic-legend-items,
+.static-legend-items {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
 }
 
-.staticLegend-item text {
-    fill: black; /* Sets the text color to white */
-    font-family: Arial, sans-serif; /* Optional: sets font family */
-    font-size: 12px; /* Optional: sets font size */
+.static-legend-container {
+    display: flex;
+    gap: 1rem;
+}
+
+.dynamic-legend-items-color,
+.static-legend-items-color {
+    width: 0.75rem;
+    height: 0.75rem;
 }

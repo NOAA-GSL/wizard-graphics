@@ -7,22 +7,18 @@ import { useEffect, useRef, useState } from 'react';
 export default function LegendDynamicItems({ mapRef, viewState, overlayRef, options }) {
     const [dynamicLegendItems, setDynamicLegendItems] = useState([]);
 
+    // TODO: need to add some logic to allow flexible positioning of the legend
+    // const legendPosition = options.position || 'left';
+
     // Debounce for dynamicItems
     const debouncedEffect = useRef(
         debounce(() => {
-            console.log('made it2');
-
             if (overlayRef?.current) {
-                console.log('made it3');
-
-                const t0 = performance.now();
                 // eslint-disable-next-line no-underscore-dangle
-                const { width, height, layers } = overlayRef.current._deck;
-                console.log('layers:', layers);
+                const { width, height } = overlayRef.current._deck;
                 if (!width || !height) return;
                 // Pick all pickable objects (20-50 ms, ouch!)
                 const objects = overlayRef.current.pickObjects({ x: 0, y: 0, width, height });
-                console.log('objects:', objects);
 
                 // Load legend items into array
                 const arr = [];
@@ -43,7 +39,6 @@ export default function LegendDynamicItems({ mapRef, viewState, overlayRef, opti
     ).current;
 
     useEffect(() => {
-        console.log('made it');
         debouncedEffect();
         // Cleanup function to cancel the debounce on unmount
         return () => {
@@ -60,7 +55,7 @@ export default function LegendDynamicItems({ mapRef, viewState, overlayRef, opti
                         className="dynamic-legend-items-color"
                         style={{ backgroundColor: item.color }}
                     />
-                    <div className="dynamic-legend-items-text">{item.text}</div>
+                    <div>{item.text}</div>
                 </div>
             ))}
         </>
