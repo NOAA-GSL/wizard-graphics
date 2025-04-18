@@ -13,10 +13,29 @@
     right: 0;
     transform: translateY(-50%);
     display: flex;
+    flex-direction: column;
+    background: #fefefe;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    gap: 0.25rem;
+    pointer-events: none;
+}
+
+.dynamic-legend-title {
+    font-weight: 700;
+    text-align: center;
+    border-bottom: 1px solid #00000088;
+}
+
+.dynamic-legend-items {
+    display: flex;
+    gap: 0.5rem;
     align-items: center;
-    background: white;
-    fill: black;
-    border: 2px solid black;
+}
+
+.dynamic-legend-items-color {
+    width: 0.75rem;
+    height: 0.75rem;
 }
 
 #staticLegendItems {
@@ -28,15 +47,9 @@
     pointer-events: none;
     gap: 10px;
     position: absolute;
-    top:0;
+    top: 0;
     left: 0;
-    right: auto; 
-    background: white;
-    fill: black;
-    border: 2px solid black;
-}
-
-#dynamicLegendItems {
+    right: auto;
     background: white;
     fill: black;
     border: 2px solid black;
