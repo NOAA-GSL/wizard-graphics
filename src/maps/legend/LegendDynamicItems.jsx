@@ -5,12 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 // 'staticBar', 'staticItems', 'dynamicItems'
 
 export default function LegendDynamicItems({ mapRef, viewState, overlayRef, options }) {
-    console.log('options:', options);
-    console.log('overlayRef:', overlayRef);
-    console.log('viewState:', viewState);
-    console.log('mapRef:', mapRef);
     const [dynamicLegendItems, setDynamicLegendItems] = useState([]);
-    console.log('dynamicLegendItems:', dynamicLegendItems);
 
     // Debounce for dynamicItems
     const debouncedEffect = useRef(
