@@ -1,4 +1,4 @@
-import { debounce, over, some } from 'lodash';
+import { debounce, some } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
 // Legend types
@@ -7,22 +7,13 @@ import { useEffect, useRef, useState } from 'react';
 export default function LegendDynamicItems({ mapRef, viewState, overlayRef, options }) {
     const [dynamicLegendItems, setDynamicLegendItems] = useState([]);
 
+    // TODO: need to add some logic to allow flexible positioning of the legend
+    // const legendPosition = options.position || 'left';
+
     // Debounce for dynamicItems
     const debouncedEffect = useRef(
         debounce(() => {
-            console.log('made it2');
-
-            if (mapRef?.current) {
-                const t0 = performance.now();
-                const map = mapRef.current.getMap();
-                console.log('Complete code here');
-                // const visibleFeatures = map.queryRenderedFeatures();
-                // Korri's console.log('visible features maplibre: ', visibleFeatures);
-            }
             if (overlayRef?.current) {
-                console.log('made it3');
-
-                const t0 = performance.now();
                 // eslint-disable-next-line no-underscore-dangle
                 const { width, height } = overlayRef.current._deck;
                 if (!width || !height) return;
@@ -48,7 +39,6 @@ export default function LegendDynamicItems({ mapRef, viewState, overlayRef, opti
     ).current;
 
     useEffect(() => {
-        console.log('made it');
         debouncedEffect();
         // Cleanup function to cancel the debounce on unmount
         return () => {
@@ -57,39 +47,17 @@ export default function LegendDynamicItems({ mapRef, viewState, overlayRef, opti
     }, [mapRef, viewState, overlayRef, debouncedEffect]);
 
     return (
-        <div
-            style={{
-                position: 'absolute',
-                right: 0,
-                backgroundColor: 'white',
-                padding: '10px',
-                borderRadius: '5px',
-            }}
-        >
-            <h3>{options.title}</h3>
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {dynamicLegendItems.map((item) => (
-                    <li
-                        key={item.text + item.color}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            marginBottom: '5px',
-                        }}
-                    >
-                        <span
-                            style={{
-                                width: '20px',
-                                height: '20px',
-                                backgroundColor: item.color,
-                                display: 'inline-block',
-                                marginRight: '10px',
-                            }}
-                        />
-                        {item.text}
-                    </li>
-                ))}
-            </ul>
-        </div>
+        <>
+            <div className="dynamic-legend-title">{options.title}</div>
+            {dynamicLegendItems.map((item, index) => (
+                <div key={index} className="dynamic-legend-items">
+                    <div
+                        className="dynamic-legend-items-color"
+                        style={{ backgroundColor: item.color }}
+                    />
+                    <div>{item.text}</div>
+                </div>
+            ))}
+        </>
     );
 }

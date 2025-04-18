@@ -5,6 +5,7 @@ import { VectorLayer } from './vectorLayer/vectorLayer';
 import ParticleLayer from './particleLayer/particle-layer';
 import IconClusterLayer from './iconClusterLayer/iconClusterLayer.ts';
 import CitiesLayer from './citiesLayer/citiesLayer';
+import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from './canned';
 
 export {
     ContourLayer,
@@ -14,4 +15,10 @@ export {
     ParticleLayer,
     IconClusterLayer,
     CitiesLayer,
+    SpotLayer,
+    NIFCLayer,
+    CPCLayer,
+    SPCLayer,
+    WPCLayer,
+    WWALayer,
 };

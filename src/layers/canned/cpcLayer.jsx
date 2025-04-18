@@ -73,7 +73,7 @@ const getFillColor = (idpSource, category, probability) => {
 
 const defaultProps = {
     getFillColor: (f) =>
-        getFillColor(f.properties.idp_source, f.properties.cat, f.properties.prob, f),
+        getFillColor(this.legend.layerType, f.properties.cat, f.properties.prob, f),
     getLineColor: [0, 0, 0],
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
@@ -119,6 +119,7 @@ class CPCLayer extends CompositeLayer {
     renderLayers() {
         return new GeoJsonLayer(this.props, {
             id: `${this.props.id}-geojson`,
+            getFillColor: (f) => getFillColor(this.props.legend.layerType, f.properties.cat, f.properties.prob),
         });
     }
 }
