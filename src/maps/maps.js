@@ -1,7 +1,5 @@
-import darkGrayStyle from './custom-maps/darkGray.json';
-import lightGrayStyle from './custom-maps/lightGray.json';
 // Basemap layers
-// List of basemaps can be found here: https://developers.arcgis.com/documentation/mapping-apis-and-services/maps/services/basemap-layer-service/
+// List of basemaps can be found here: https://developers.arcgis.com/rest/basemap-styles/
 
 export const mapStyles = {
     Classic: {
@@ -9,12 +7,6 @@ export const mapStyles = {
         url: 'arcgis/navigation',
         beforeId: 'Ferry/Ferry',
         beforeIdLines: 'Water point/Sea or ocean',
-    },
-    Charcoal: {
-        isJson: true,
-        url: darkGrayStyle,
-        beforeId: 'Water area/Dam or weir',
-        beforeIdLines: 'Water area/Dam or weir',
     },
     Dark: {
         isJson: false,
@@ -33,12 +25,6 @@ export const mapStyles = {
         url: 'arcgis/light-gray',
         beforeId: 'Railroad/2',
         beforeIdLines: 'Water point/Sea or ocean',
-    },
-    Platinum: {
-        isJson: true,
-        url: lightGrayStyle,
-        beforeId: 'Water area/Dam or weir',
-        beforeIdLines: 'Water area/Dam or weir',
     },
     Satellite: {
         isJson: false,
