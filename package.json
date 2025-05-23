@@ -19,7 +19,8 @@
     "homepage": "https://vlab.noaa.gov/gitlab-community/OAR/GSL/DESI/desi-graphics",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build:dev": "vite build --config vite.config.dev.js",
+        "build": "vite build --config vite.config.prod.js",
         "lint": "eslint .",
         "preview": "vite preview",
         "size": "npx vite-bundle-visualizer"
