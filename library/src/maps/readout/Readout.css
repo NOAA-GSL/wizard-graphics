@@ -1,5 +1,5 @@
 :root {
-    // If defined values are not available, fallback to the second color
+    /* If defined values are not available, fallback to the second color */
     --_x4d-overlay-translucent: var(--x4d-overlay-translucent, rgba(30, 30, 30, 0.6));
     --_primary-color: var(--primary-color, #2e94fa);
     --_main-font-color: var(--main-font-color, #e5e5e5);

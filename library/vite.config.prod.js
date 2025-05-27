@@ -4,22 +4,14 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    mode: 'development',
+    mode: 'production',
     plugins: [react()],
     resolve: {
         alias: {
             'desi-graphics': path.resolve('./src'),
-            'demo-data': path.resolve('./examples/demo-data'),
         },
     },
-    define: {
-        'process.env.mapToken': JSON.stringify(process.env.mapToken),
-    },
     build: {
-        // Disables minification of the output files
-        minify: false,
-        // Rebuilds the project when files change
-        watch: {},
         // Specifies that the output of the build will be a library.
         lib: {
             // Defines the entry point for the library build. It resolves
@@ -53,7 +45,7 @@ export default defineConfig({
         },
         // Generates sourcemaps for the built files,
         // aiding in debugging.
-        sourcemap: 'inline',
+        sourcemap: true,
         // Clears the output directory before building.
         emptyOutDir: true,
     },

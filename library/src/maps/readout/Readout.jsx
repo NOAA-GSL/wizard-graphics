@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { some } from 'lodash';
 import deckUtilities from '../../utilities/deckUtilities';
 import gUtilities from '../../utilities/graphicsUtilities';
-import './Readout.scss';
+import './Readout.css';
 
 export default function Readout({ mapContainer, overlayRef, title, displayNum = 0 }) {
     const [readoutDiv, setReadoutDiv] = useState({
