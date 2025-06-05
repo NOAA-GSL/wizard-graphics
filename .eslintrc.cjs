@@ -28,9 +28,8 @@ module.exports = {
                 devDependencies: true,
                 optionalDependencies: true,
                 peerDependencies: true,
-                // deck.gl in in our package.json, but it's not in the root of our project
-                // so we need to include it for checking dependencies
-                packageDir: ['./', './node_modules/deck.gl'],
+                // This tells ESLint to look for package.json in both root and subfolders
+                packageDir: ['.', './library', './demo'],
             },
         ],
     },

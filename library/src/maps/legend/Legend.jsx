@@ -37,7 +37,6 @@ export default function Legend({ mapRef, viewState, overlayRef }) {
             }
         }
     }
-    console.log('TEST THIS BRO');
 
     return (
         <>
