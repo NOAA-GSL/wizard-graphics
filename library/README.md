@@ -4,28 +4,10 @@ An extension of of deck.gl along with other mapping tools.
 
 ## Getting Started
 
-This is a monorepo setup using NPM Workspaces. The `/library` directory contains the `desi-graphics` package and the `/demo` directory contains the examples, which can be run with [Vite](https://vitejs.dev/).
-
-In order for the basemaps to load in the examples, you need an [ESRI API key](https://developers.arcgis.com/documentation/security-and-authentication/api-key-authentication/tutorials/migrate-to-api-key-credentials/). You can either set an environment variable:
+### To install:
 
 ```bash
-export mapToken=<ESRI_API_KEY>
-```
-
-Or set `TOKEN` directly in `main.jsx`.
-
-### To install dependencies:
-
-```bash
-# root directory
-npm install
-```
-
-### To run the Vite dev server with examples:
-
-```bash
-# root directory
-npm run dev
+npm install desi-graphics
 ```
 
 ## Library

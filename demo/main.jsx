@@ -1,6 +1,6 @@
-import React from 'react';
 import { createRoot } from 'react-dom/client';
-import './main.scss';
+import './main.css';
+
 function App() {
     const { mapToken } = process.env;
     return (

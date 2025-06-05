@@ -4,15 +4,12 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+    mode: 'production',
     plugins: [react()],
     resolve: {
         alias: {
             'desi-graphics': path.resolve('./src'),
-            'demo-data': path.resolve('./examples/demo-data'),
         },
-    },
-    define: {
-        'process.env.mapToken': JSON.stringify(process.env.mapToken),
     },
     build: {
         // Specifies that the output of the build will be a library.

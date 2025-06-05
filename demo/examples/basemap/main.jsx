@@ -1,7 +1,7 @@
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, mapStyles } from 'desi-graphics/maps';
+import { Maps, mapStyles } from 'desi-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 

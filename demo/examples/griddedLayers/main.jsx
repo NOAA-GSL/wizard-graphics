@@ -1,16 +1,24 @@
 import { StrictMode, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { mapStyles, Maps, DeckGLOverlay, Readout, Legend } from 'desi-graphics/maps';
+import {
+    mapStyles,
+    Maps,
+    DeckGLOverlay,
+    Readout,
+    Legend,
+    Projection,
+    ContourLayer,
+    ShadedLayer,
+    VectorLayer,
+    configFields,
+} from 'desi-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import projDict from 'demo-data/projection';
 import temperatures from 'demo-data/temp';
 import wdir from 'demo-data/wdir';
 import wmag from 'demo-data/wmag';
-import { Projection } from 'desi-graphics/utilities';
-import { ContourLayer, ShadedLayer, VectorLayer } from 'desi-graphics/layers';
-import { configFields } from 'desi-graphics';
 
 function MapContainer() {
     const { mapToken } = process.env;

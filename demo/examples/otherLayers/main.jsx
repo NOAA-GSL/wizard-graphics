@@ -1,22 +1,15 @@
 import { StrictMode, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, DeckGLOverlay, Readout, mapStyles, Legend } from 'desi-graphics/maps';
+import { Maps, DeckGLOverlay, Readout, mapStyles, Legend } from 'desi-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
-import { IconClusterLayer, CitiesLayer } from 'desi-graphics/layers';
+import { IconClusterLayer, CitiesLayer } from 'desi-graphics';
 import temperatures from 'demo-data/temp';
 import projDict from 'demo-data/projection';
-import { Projection } from 'desi-graphics/utilities';
-import {
-    SpotLayer,
-    NIFCLayer,
-    CPCLayer,
-    SPCLayer,
-    WPCLayer,
-    WWALayer,
-} from 'desi-graphics/layers/canned';
+import { Projection } from 'desi-graphics';
+import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from 'desi-graphics';
 import URLdata from './URLdata';
 import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
@@ -113,21 +106,21 @@ function MapContainer() {
                 title: 'CPC 6-10 Temperature Outlook',
                 colors: {
                     temp: [
-                        'rgb(28, 19, 66)', 
-                        'rgb(34, 24, 82)', 
-                        'rgb(47, 64, 111)', 
-                        'rgb(0, 92, 161)', 
-                        'rgb(56, 159, 219)', 
-                        'rgb(119, 181, 226)', 
+                        'rgb(28, 19, 66)',
+                        'rgb(34, 24, 82)',
+                        'rgb(47, 64, 111)',
+                        'rgb(0, 92, 161)',
+                        'rgb(56, 159, 219)',
+                        'rgb(119, 181, 226)',
                         'rgb(160, 192, 223)',
                         'rgb(0, 0, 0, 0)',
-                        'rgb(231, 177, 104)', 
-                        'rgb(227, 139, 74)', 
-                        'rgb(220, 86, 47)', 
-                        'rgb(199, 46, 40)', 
-                        'rgb(204, 48, 71)', 
-                        'rgb(138, 47, 56)', 
-                        'rgb(98, 34, 40)', 
+                        'rgb(231, 177, 104)',
+                        'rgb(227, 139, 74)',
+                        'rgb(220, 86, 47)',
+                        'rgb(199, 46, 40)',
+                        'rgb(204, 48, 71)',
+                        'rgb(138, 47, 56)',
+                        'rgb(98, 34, 40)',
                     ],
                     prcp: [
                         'rgb(79, 47, 47)',
@@ -144,26 +137,26 @@ function MapContainer() {
                         'rgb(58, 123, 95)',
                         'rgb(0, 142, 64)',
                         'rgb(40, 85, 61)',
-                        'rgb(40, 85, 23)'
+                        'rgb(40, 85, 23)',
                     ],
                 },
                 labels: {
                     labels: [
-                    '90-100%', 
-                    '80-90%', 
-                    '70-80%', 
-                    '60-70%', 
-                    '50-60%', 
-                    '40-50%', 
-                    '33-40%', 
-                    'Near Normal', 
-                    '33-40%', 
-                    '40-50%', 
-                    '50-60%', 
-                    '60-70%', 
-                    '70-80%', 
-                    '80-90%', 
-                    '90-100%'
+                        '90-100%',
+                        '80-90%',
+                        '70-80%',
+                        '60-70%',
+                        '50-60%',
+                        '40-50%',
+                        '33-40%',
+                        'Near Normal',
+                        '33-40%',
+                        '40-50%',
+                        '50-60%',
+                        '60-70%',
+                        '70-80%',
+                        '80-90%',
+                        '90-100%',
                     ],
                 },
                 layerType: 'temp', // 'temp', 'prcp'
@@ -181,15 +174,15 @@ function MapContainer() {
                 type: 'staticItems', // 'staticBar', 'staticItems', 'dynamicItems'
                 title: 'SPC Day 1 Convective Outlook', //match day to data received
                 colors: [
-                    "rgb(192, 232, 192)",
-                    "rgb(127, 197, 127)",
-                    "rgb(246, 246, 127)",
-                    "rgb(230, 194, 127)",
-                    "rgb(230, 127, 127)",
-                    "rgb(255, 127, 255)"
+                    'rgb(192, 232, 192)',
+                    'rgb(127, 197, 127)',
+                    'rgb(246, 246, 127)',
+                    'rgb(230, 194, 127)',
+                    'rgb(230, 127, 127)',
+                    'rgb(255, 127, 255)',
                 ],
                 labels: [
-                    "General Thunderstorms",
+                    'General Thunderstorms',
                     'Marginal',
                     'Slight',
                     'Enhanced',
@@ -210,16 +203,16 @@ function MapContainer() {
                 type: 'staticItems', // 'staticBar', 'staticItems', 'dynamicItems'
                 title: 'WPC Day 1 Excessive Rainfall Outlook', //match day to data received
                 colors: [
-                    "rgb(0, 205, 0)",
-                    "rgb(238, 238, 0)",
-                    "rgb(255, 0, 0)",
-                    "rgb(255, 0, 255)",
+                    'rgb(0, 205, 0)',
+                    'rgb(238, 238, 0)',
+                    'rgb(255, 0, 0)',
+                    'rgb(255, 0, 255)',
                 ],
                 labels: [
-                    "Marginal (At Least 5%)",
-                    "Slight (At Least 15%)",
-                    "Moderate (At Least 40%)",
-                    "High (At Least 70%)",
+                    'Marginal (At Least 5%)',
+                    'Slight (At Least 15%)',
+                    'Moderate (At Least 40%)',
+                    'High (At Least 70%)',
                 ],
                 dataType: 'day1outlook', // day1outlook, day2outlook, day3outlook, day4outlook, day5outlook
             },
