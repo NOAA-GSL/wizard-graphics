@@ -12,19 +12,28 @@ In order for the basemaps to load in the examples, you need an [ESRI API key](ht
 export mapToken=<ESRI_API_KEY>
 ```
 
-Or set `TOKEN` directly in `main.jsx`.
+Or set `TOKEN` directly in `main.jsx`. However, this is not recommended.
 
 ### To install dependencies:
 
-```bash
-# root directory
-npm install
-```
+_**Note:** Following commands are all from the root directory_
+
+1. Install `npm` packages
+
+    ```bash
+    npm install
+    ```
+
+2. Build the `desi-graphics` package
+    ```bash
+    npm run build
+    ```
+    - This only needs to be done once after cloning the repo. But if any changes are made to files in `/library` that need to be reflected in the demo project, a new build must be created.
 
 ### To run the Vite dev server with examples:
 
 ```bash
-# root directory
+# root directory or /demo
 npm run dev
 ```
 

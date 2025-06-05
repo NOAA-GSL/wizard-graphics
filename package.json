@@ -1,5 +1,5 @@
 {
-    "private": true,  
+    "private": true,
     "name": "desi-graphics-workspace",
     "version": "1.0.0",
     "description": "",
@@ -9,7 +9,12 @@
     "main": "index.js",
     "scripts": {
         "dev": "npm run dev --workspace=demo",
+        "build": "npm run build --workspace=library",
+        "build:dev": "npm run build:dev --workspace=library",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "workspaces": ["library", "demo"]
+    "workspaces": [
+        "library",
+        "demo"
+    ]
 }
