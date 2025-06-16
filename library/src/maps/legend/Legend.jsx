@@ -19,6 +19,7 @@ export default function Legend({ mapRef, viewState, overlayRef }) {
     const dynamicItems = [];
     const staticItems = [];
     const staticBars = [];
+
     if (layers) {
         for (const layer of layers) {
             const legend = layer.props?.legend;

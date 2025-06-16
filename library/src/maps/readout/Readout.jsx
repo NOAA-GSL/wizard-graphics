@@ -21,7 +21,7 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
     // Update the readout data
     useEffect(() => {
         const { lon, lat, x, y } = position;
-        if (!lon || !lat || !x || !y) return;
+        if (!lon || !lat || !x || !y || !layers) return;
 
         // Gridded Readout
         const readoutArray = [];
@@ -30,7 +30,9 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
             const { projection, readout } = layer.props;
             if (projection && readout) {
                 for (const i in readout) {
-                    const { data, prependText, decimals, units, interpolate } = readout[i];
+                    // added value formatter to allow custom formatting (ie timing/paintball)
+                    const { data, prependText, decimals, units, interpolate, valueFormatter } =
+                        readout[i];
                     let value = gUtilities.getreadoutvalue(
                         lat,
                         lon,
@@ -40,10 +42,14 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                         interpolate,
                     );
                     // needed to add logic because values of 0 were being displayed as NaN
-                    value =
-                        value !== undefined && value !== null && !Number.isNaN(value)
-                            ? `${gUtilities.roundto(value, decimals)}${units}`
-                            : 'NaN';
+                    if (valueFormatter) {
+                        value = valueFormatter(value);
+                    } else {
+                        value =
+                            value !== undefined && value !== null && !Number.isNaN(value)
+                                ? `${gUtilities.roundto(value, decimals)}${units}`
+                                : 'NaN';
+                    }
                     const key = `${prependText}-${value}-${interpolate}`;
                     if (!uniqueArray.includes(key)) {
                         uniqueArray.push(key);
@@ -71,7 +77,7 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
         const objects = overlayRef.current.pickMultipleObjects({ x, y });
         for (const o in objects) {
             const object = objects[o];
-            const pickingFunction = object.sourceLayer.props?.pickingFunction;
+            const pickingFunction = object.sourceLayer?.props?.pickingFunction;
             if (pickingFunction) {
                 const { readout } = pickingFunction(object);
                 // Don't allow duplicates
