@@ -1,28 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { some } from 'lodash';
 import deckUtilities from '../../utilities/deckUtilities';
 import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.css';
 
 export default function Readout({ mapContainer, overlayRef, title, displayNum = 0 }) {
-    const [readoutDiv, setReadoutDiv] = useState({
-        content: undefined,
-    });
-    const [readoutMenu, setReadoutMenu] = useState({
-        display: 'none',
+    const [readoutDivDisplay, setReadoutDivDisplay] = useState('none');
+    const [rightClickMenu, setRightClickMenu] = useState({
+        isOpen: false,
         readoutChecked: true,
         readoutLatLonChecked: false,
+        top: '0px',
+        left: '0px',
     });
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+
     // eslint-disable-next-line no-underscore-dangle
     const layers = overlayRef?.current?._props?.layers;
-    const [position, setPosition] = useState({ x: 0, y: 0 });
     const rightClickMenuRef = useRef(null);
 
     // Update the readout data
-    useEffect(() => {
-        const { lon, lat, x, y } = position;
-        if (!lon || !lat || !x || !y || !layers) return;
-
+    const { lon, lat, x, y } = position;
+    let content;
+    if (!lon || !lat || !x || !y || !layers) {
+        content = null;
+    } else {
         // Gridded Readout
         const readoutArray = [];
         const uniqueArray = [];
@@ -89,7 +91,7 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
         // Done Pickable Readout
 
         const div = (
-            <div className="x4d-readout">
+            <div className="x4d-readout" style={{ display: readoutDivDisplay }}>
                 {title}
                 {
                     /* Conditional Rendering of extra HR for title */
@@ -109,11 +111,11 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
 
                 {
                     /* Conditional Rendering of extra HR line */
-                    readoutMenu.readoutLatLonChecked && <hr />
+                    rightClickMenu.readoutLatLonChecked && <hr />
                 }
                 {
                     /* Conditional Rendering of lat/lon readoutDiv */
-                    readoutMenu.readoutLatLonChecked && (
+                    rightClickMenu.readoutLatLonChecked && (
                         <table>
                             <tbody>
                                 <tr>
@@ -125,58 +127,56 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                 }
             </div>
         );
-        setReadoutDiv((prevState) => ({ ...prevState, content: div }));
-    }, [layers, overlayRef, position, readoutMenu.readoutLatLonChecked, title]);
+        content = div;
+    }
 
-    // Update the mouse position and display block/none
-    // - before I had it query the readout data in here but the readout div was slow to move since
-    // picking was being done.  Now the readout div is smooth and the data updates when it can
-    useEffect(() => {
-        const mouseOffset = {
-            x: 5,
-            y: 5,
-        };
+    const mouseOffset = {
+        x: 5,
+        y: 5,
+    };
 
-        // Update
-        const handleMouseMove = (e) => {
+    const stopMouseMovePropagation = (event) => {
+        event.stopPropagation();
+    };
+
+    const handleMouseMove = useCallback(
+        (e) => {
             e.preventDefault();
             e.stopPropagation();
             const viewport = deckUtilities.getViewport(overlayRef, displayNum);
-            if (!viewport) return null;
-            const x = e.offsetX;
-            const y = e.offsetY;
-            const [lon, lat] = viewport.unproject([x, y]);
-            setPosition({ x, y, lon, lat });
+            if (!viewport || rightClickMenu.isOpen) return null;
+
+            const { offsetX, offsetY } = e;
+            const [newLon, newLat] = viewport.unproject([offsetX, offsetY]);
+            setPosition({ x: offsetX, y: offsetY, lon: newLon, lat: newLat });
+            setReadoutDivDisplay('block');
             return null;
-        };
+        },
+        [displayNum, overlayRef, rightClickMenu.isOpen],
+    );
+
+    const rightClickMenuClose = () => {
+        setTimeout(() => {
+            setRightClickMenu((prevState) => ({ ...prevState, isOpen: false }));
+            setReadoutDivDisplay('block');
+        }, 100);
+    };
+
+    useEffect(() => {
+        const overlayElement = mapContainer.current;
 
         const handleMouseLeave = () => {
-            setReadoutDiv((prevState) => ({ ...prevState, content: null }));
+            setReadoutDivDisplay('none');
         };
 
         const rightClickMenuOpen = (event) => {
-            setReadoutMenu({
-                ...readoutMenu,
-                display: 'block',
+            setRightClickMenu({
+                ...rightClickMenu,
+                isOpen: true,
                 top: `${event.layerY + mouseOffset.y}px`,
                 left: `${event.layerX + mouseOffset.x}px`,
             });
-            setReadoutDiv((prevState) => ({ ...prevState, display: 'none' }));
         };
-
-        const rightClickMenuClose = () => {
-            setTimeout(() => {
-                setReadoutMenu((prevState) => ({ ...prevState, display: 'none' }));
-                setReadoutDiv((prevState) => ({ ...prevState, display: 'block' }));
-            }, 100);
-        };
-
-        const stopMouseMovePropagation = (event) => {
-            event.stopPropagation();
-        };
-
-        const overlayElement = mapContainer.current;
-        const rightClickMenuElement = rightClickMenuRef.current;
 
         if (overlayElement) {
             overlayElement.addEventListener('contextmenu', rightClickMenuOpen, false);
@@ -184,83 +184,86 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
             overlayElement.addEventListener('mousemove', handleMouseMove, false);
             overlayElement.addEventListener('mouseleave', handleMouseLeave, false);
         }
-
-        if (rightClickMenuElement) {
-            rightClickMenuElement.addEventListener('mousemove', stopMouseMovePropagation);
-        }
-
         return () => {
             if (overlayElement) {
-                overlayElement.removeEventListener('contextmenu', rightClickMenuOpen);
-                overlayElement.removeEventListener('click', rightClickMenuClose);
+                overlayElement.removeEventListener('contextmenu', rightClickMenuOpen, false);
+                overlayElement.removeEventListener('click', rightClickMenuClose, false);
                 overlayElement.removeEventListener('mousemove', handleMouseMove, false);
                 overlayElement.removeEventListener('mouseleave', handleMouseLeave, false);
             }
-            if (rightClickMenuElement) {
-                rightClickMenuElement.removeEventListener('mousemove', stopMouseMovePropagation);
-            }
         };
-    }, [readoutMenu, mapContainer, overlayRef, displayNum]);
+    }, [
+        mapContainer,
+        overlayRef,
+        displayNum,
+        rightClickMenu,
+        mouseOffset.y,
+        mouseOffset.x,
+        handleMouseMove,
+    ]);
 
     return (
-        <>
+        <div onMouseMove={stopMouseMovePropagation}>
             {/* Right Click Menu */}
-            <div
-                id="x4d-right-click-menu"
-                ref={rightClickMenuRef}
-                style={{
-                    position: 'absolute',
-                    top: readoutMenu.top,
-                    left: readoutMenu.left,
-                    display: readoutMenu.display,
-                    minWidth: '150px',
-                }}
-            >
-                <div className="x4d-right-click-menu-div">
-                    <label className="x4d-right-click-menu-label" htmlFor="x4d_data_readout">
-                        <input
-                            type="checkbox"
-                            id="x4d_data_readout"
-                            onChange={() => {
-                                setReadoutMenu({
-                                    ...readoutMenu,
-                                    readoutChecked: !readoutMenu.readoutChecked,
-                                });
-                            }}
-                            checked={readoutMenu.readoutChecked}
-                        />
-                        Sample
-                    </label>
+            {rightClickMenu.isOpen && (
+                <div
+                    id="x4d-right-click-menu"
+                    ref={rightClickMenuRef}
+                    style={{
+                        position: 'absolute',
+                        top: rightClickMenu.top,
+                        left: rightClickMenu.left,
+                        display: 'block',
+                        minWidth: '150px',
+                    }}
+                >
+                    <div className="x4d-right-click-menu-div">
+                        <label className="x4d-right-click-menu-label" htmlFor="x4d_data_readout">
+                            <input
+                                type="checkbox"
+                                id="x4d_data_readout"
+                                onChange={() => {
+                                    setRightClickMenu({
+                                        ...rightClickMenu,
+                                        readoutChecked: !rightClickMenu.readoutChecked,
+                                    });
+                                }}
+                                checked={rightClickMenu.readoutChecked}
+                            />
+                            Sample
+                        </label>
+                    </div>
+                    <div className="x4d-right-click-menu-div">
+                        <label className="x4d-right-click-menu-label" htmlFor="x4d_latlon_readout">
+                            <input
+                                type="checkbox"
+                                id="x4d_latlon_readout"
+                                onChange={() => {
+                                    setRightClickMenu({
+                                        ...rightClickMenu,
+                                        readoutLatLonChecked: !rightClickMenu.readoutLatLonChecked,
+                                    });
+                                }}
+                                checked={rightClickMenu.readoutLatLonChecked}
+                            />
+                            Lat/Lon Readout
+                        </label>
+                    </div>
                 </div>
-                <div className="x4d-right-click-menu-div">
-                    <label className="x4d-right-click-menu-label" htmlFor="x4d_latlon_readout">
-                        <input
-                            type="checkbox"
-                            id="x4d_latlon_readout"
-                            onChange={() => {
-                                setReadoutMenu({
-                                    ...readoutMenu,
-                                    readoutLatLonChecked: !readoutMenu.readoutLatLonChecked,
-                                });
-                            }}
-                            checked={readoutMenu.readoutLatLonChecked}
-                        />
-                        Lat/Lon Readout
-                    </label>
+            )}
+            {/* Readout */}
+            {!rightClickMenu.isOpen && rightClickMenu.readoutChecked ? (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: position.y,
+                        left: position.x,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    {content}
                 </div>
-            </div>
-
-            {/* Readout Div */}
-            <div
-                style={{
-                    position: 'absolute',
-                    top: position.y,
-                    left: position.x,
-                    pointerEvents: 'none',
-                }}
-            >
-                {readoutMenu.display === 'none' && readoutDiv.content}
-            </div>
-        </>
+            ) : null}
+        </div>
     );
 }

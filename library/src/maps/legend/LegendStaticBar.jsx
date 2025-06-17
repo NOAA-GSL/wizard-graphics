@@ -161,14 +161,13 @@ export default function LegendStaticBar({ options }) {
 
         const divContainer = d3.select(svgRef.current);
 
-        // Only make if it doesn't exists
-        if (!divContainer.select('#legend').node()) {
-            divContainer.append('g').attr('id', 'legend').attr('class', `legendbar ${className}`);
-        }
+        // // Only make if it doesn't exists
+        // if (!divContainer.select('#legend').node()) {
+        //     divContainer.append('g').attr('id', 'legend').attr('class', `legendbar ${className}`);
+        // }
 
         // otherwise create the skeletal chart
         const newColorbars = divContainer
-            .select('#legend')
             .selectAll('svg.colorbar')
             .data([origin])
             .enter()
@@ -182,7 +181,6 @@ export default function LegendStaticBar({ options }) {
 
         // Always update the x, y and, field attributes
         divContainer
-            .select('#legend')
             .selectAll('svg.colorbar')
             .data([origin])
             .transition()
@@ -193,9 +191,9 @@ export default function LegendStaticBar({ options }) {
 
         newColorbars.append('g').attr('transform', rectTransform).classed('colorbar', true);
 
-        const svg = divContainer.select('#legend').select('svg');
-        let text = divContainer.select('#legend').select('.legendtext_colorbar');
-        let axis = divContainer.select('#legend').select('.axis.color');
+        const svg = divContainer.select('svg');
+        let text = divContainer.select('.legendtext_colorbar');
+        let axis = divContainer.select('.axis.color');
 
         // Make axis if it doesn't exist
         if (!axis.node()) {
@@ -368,5 +366,5 @@ export default function LegendStaticBar({ options }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [colors, colorLevels, colorType, barLength, thickness, title, units, x, y]);
 
-    return <div ref={svgRef} />;
+    return <div ref={svgRef} className={`legendbar ${className}`} />;
 }
