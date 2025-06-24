@@ -13,6 +13,7 @@ import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from 'de
 import URLdata from './URLdata';
 import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
+import 'desi-graphics/desi-graphics.css';
 
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
@@ -172,7 +173,7 @@ function MapContainer() {
             pickable: true,
             legend: {
                 type: 'staticItems', // 'staticBar', 'staticItems', 'dynamicItems'
-                title: 'SPC Day 1 Convective Outlook', //match day to data received
+                title: 'SPC Day 1 Convective Outlook', // match day to data received
                 colors: [
                     'rgb(192, 232, 192)',
                     'rgb(127, 197, 127)',
@@ -201,7 +202,7 @@ function MapContainer() {
             data: URLdata['WPC-day3Outlook'],
             legend: {
                 type: 'staticItems', // 'staticBar', 'staticItems', 'dynamicItems'
-                title: 'WPC Day 1 Excessive Rainfall Outlook', //match day to data received
+                title: 'WPC Day 1 Excessive Rainfall Outlook', // match day to data received
                 colors: [
                     'rgb(0, 205, 0)',
                     'rgb(238, 238, 0)',

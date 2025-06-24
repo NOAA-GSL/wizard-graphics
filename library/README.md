@@ -38,7 +38,9 @@ Example of the properties contained in a weather field configuration:
       "colorType": "scaleLinear", // scaleLinear, scaleThreshold
       "contourLevels": [5, 25, 50, ...],
       "isLeftCap": false,
-      "ticks": "linear"
+      "tickAngle": -90,
+      "ticks": "byColorLevels", // `byColorLevels`, `linear`
+      "tickValues": []
     },
     "difference": {
       "colorLevels": [-2, -1, -0.75, -0.5, ...],
@@ -55,4 +57,31 @@ Example of the properties contained in a weather field configuration:
   "roundtoReadout": 0,
   "units": "µg/m^3"
 }
+```
+
+## Legend Properties
+
+## Readout Properties
+
+```js
+const shadedLayer = new ShadedLayer({
+  ...
+  readout: [
+    {
+      // array - full data array
+      data,
+      // number - rounding of data in the readout
+      decimals,
+      // boolean - does readout use linear interpolated between points
+      interpolate,
+      // string - leading readout text such as `Mean Temperature`
+      prependText,
+      // string - will be appended to the end of the data value (ie `mph`)
+      units,
+      // function - this will alter the default readout text for the value. It takes `value` as
+      // an argument and should return a string
+      valueFormatter
+    }
+  ]
+})
 ```

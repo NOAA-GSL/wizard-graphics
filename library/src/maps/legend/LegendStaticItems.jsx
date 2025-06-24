@@ -30,9 +30,8 @@ export default function LegendStaticItems({ options }) {
         <div>
             {options.title && validTimes ? (
                 <div className="static-legend-title">
-                    <div>
-                        {options.title} {validTimes}
-                    </div>
+                    <div>{options.title}</div>
+                    <div>{validTimes}</div>
                 </div>
             ) : null}
             <div className="static-legend-container">
@@ -42,9 +41,17 @@ export default function LegendStaticItems({ options }) {
                         {item.label !== 'Near Normal' ? (
                             <div
                                 className="static-legend-items-color"
-                                style={{ backgroundColor: item.color }}
+                                style={{
+                                    backgroundColor: item.color,
+                                    border: '1px solid transparent',
+                                }}
                             />
-                        ) : null}
+                        ) : (
+                            <div
+                                className="static-legend-items-color"
+                                style={{ backgroundColor: item.color, border: '1px solid #000' }}
+                            />
+                        )}
                         <div>{item.label}</div>
                     </div>
                 ))}

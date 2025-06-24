@@ -189,13 +189,13 @@ export default class gUtilities {
             day5outlook: 4,
         };
 
-        if (outlookDays.hasOwnProperty(currentLayer.dataType)) {
+        if (Object.keys(outlookDays).includes(currentLayer.dataType)) {
             const offset = outlookDays[currentLayer.dataType];
             const start = this.getCurrentDayAndHour(offset, offset !== 0);
             const endDate = new Date(date.setUTCDate(date.getUTCDate() + offset));
             endDate.setUTCHours(12);
             const end = this.formatSpcDate(endDate);
-            return `Valid: ${start} - ${end}`;
+            return `${start} - ${end}`;
         }
 
         if (currentLayer.layerType === 'prcp' || currentLayer.layerType === 'temp') {
@@ -203,7 +203,7 @@ export default class gUtilities {
             const [startOffset, endOffset] = rangeOffset;
             const startDate = new Date(date.setUTCDate(date.getUTCDate() + startOffset));
             const endDate = new Date(date.setUTCDate(date.getUTCDate() + endOffset - startOffset));
-            return `Valid: ${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
+            return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
         }
 
         return '';
@@ -211,7 +211,7 @@ export default class gUtilities {
 
     static formatSpcDate(dateUTC) {
         // Ensure the input is a valid Date object
-        if (!(dateUTC instanceof Date) || isNaN(dateUTC)) {
+        if (!(dateUTC instanceof Date) || Number.isNaN(dateUTC)) {
             throw new Error('Input must be a valid Date object.');
         }
 

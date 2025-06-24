@@ -4,6 +4,7 @@ import { Map } from 'react-map-gl/maplibre';
 import { Maps, mapStyles } from 'desi-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import 'desi-graphics/desi-graphics.css';
 
 function MapContainer() {
     const [state, setState] = useState(Object.keys(mapStyles)[0]);

@@ -13,12 +13,14 @@ import {
     VectorLayer,
     configFields,
 } from 'desi-graphics';
-import './style.css';
-import 'maplibre-gl/dist/maplibre-gl.css';
 import projDict from 'demo-data/projection';
 import temperatures from 'demo-data/temp';
 import wdir from 'demo-data/wdir';
 import wmag from 'demo-data/wmag';
+
+import './style.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import 'desi-graphics/desi-graphics.css'; // Import the desi-graphics CSS
 
 function MapContainer() {
     const { mapToken } = process.env;
