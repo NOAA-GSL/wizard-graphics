@@ -23,7 +23,9 @@ export default `\
 uniform bool extruded;
 uniform bool isWireframe;
 uniform float elevationScale;
-uniform float opacity;
+// uniform layerUniforms {
+//   float opacity;
+// } layer;
 
 in vec4 fillColors;
 in vec4 lineColors;
@@ -87,9 +89,9 @@ void calculatePosition(PolygonProps props) {
   #endif
     geometry.normal = normal;
     vec3 lightColor = lighting_getLightColor(colors.rgb, project_uCameraPosition, geometry.position.xyz, geometry.normal);
-    vColor = vec4(lightColor, colors.a * opacity);
+    vColor = vec4(lightColor, colors.a * layer.opacity);
   } else {
-    vColor = vec4(colors.rgb, colors.a * opacity);
+    vColor = vec4(colors.rgb, colors.a * layer.opacity);
   }
   DECKGL_FILTER_COLOR(vColor, geometry);
 }

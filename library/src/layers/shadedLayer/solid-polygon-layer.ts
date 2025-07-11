@@ -416,19 +416,19 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         // Note - the order is important
         if (wireframeModel && wireframe) {
             wireframeModel.setInstanceCount(polygonTesselator.instanceCount - 1);
-            wireframeModel.setUniforms(renderUniforms);
+            wireframeModel.shaderInputs.setProps(renderUniforms);
             wireframeModel.draw(this.context.renderPass);
         }
 
         if (sideModel && filled) {
             sideModel.setInstanceCount(polygonTesselator.instanceCount - 1);
-            sideModel.setUniforms(renderUniforms);
+            sideModel.shaderInputs.setProps(renderUniforms);
             sideModel.draw(this.context.renderPass);
         }
 
         if (topModel && filled) {
             topModel.setVertexCount(polygonTesselator.vertexCount);
-            topModel.setUniforms(renderUniforms);
+            topModel.shaderInputs.setProps(renderUniforms);
             topModel.draw(this.context.renderPass);
         }
     }
@@ -612,9 +612,14 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             topModel.setBindings({
                 sampler: texture || emptyTexture,
             });
-            topModel.setUniforms({
-                interpolateData: Boolean(this.props.interpolateData),
-                hasTexture: Boolean(texture),
+            topModel.shaderInputs.setProps({
+                // Looks like we need to provide a `ShaderModule` to get rid of the
+                // TypeScript error? Maybe revisit this later
+                // https://luma.gl/docs/api-reference/engine/shader-inputs/#shadermoduleinputs
+                uniforms: {
+                    interpolateData: Boolean(this.props.interpolateData),
+                    hasTexture: Boolean(texture),
+                },
             });
         }
     }

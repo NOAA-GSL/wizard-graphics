@@ -34,7 +34,9 @@ in float v3;
 uniform bool hasTexture;
 uniform bool interpolateData;
 uniform sampler2D sampler;
-uniform float opacity;
+// uniform layerUniforms {
+//   float opacity;
+// } layer;
 
 out vec4 fragColor;
 
@@ -53,10 +55,10 @@ void main(void) {
 
 
     if (odata >= 0.0 && odata <= 1.0) {
-      fragColor = vec4(fragColor.rgb, fragColor.a * opacity * odata );
+      fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity * odata );
     }
     else {
-      fragColor = vec4(fragColor.rgb, fragColor.a * opacity );
+      fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity );
     }
 
   }
@@ -75,7 +77,7 @@ void main(void) {
     else {
       fragColor = vec4(0,0,0,1);
     }
-    fragColor = vec4(fragColor.rgb, fragColor.a * opacity );
+    fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity );
 
   }
 
