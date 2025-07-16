@@ -50,10 +50,10 @@
         "d3": "~7.9.0",
         "deck.gl": ">=9.0.33",
         "lodash": "~4.17.21",
-        "maplibre-gl": "~4.7.1",
+        "maplibre-gl": ">=4.7.1",
         "proj4": "~2.12.1",
         "react": ">=18.0.0",
         "react-dom": ">=18.0.0",
-        "react-map-gl": "~7.1.7"
+        "react-map-gl": ">=7.1.7"
     }
 }
