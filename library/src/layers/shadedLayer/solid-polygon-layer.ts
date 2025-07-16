@@ -1,35 +1,21 @@
-// Copyright (c) 2015 - 2017 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// deck.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
-//
-// THW modified deck.gl v9.0.33
-// - In the future compare tag v9.0.33 with whatever version you are trying to upgrade
-//
+// THW modified deck.gl 
+// In the future compare tag v9.1.13 with whatever version you are trying to upgrade
+// - 7/15/2025: updated to deck.gl v9.1.13
+// - ?/?/2024: updated to deck.gl v9.0.33
 
-import { Layer, project32, gouraudLighting, picking, COORDINATE_SYSTEM } from '@deck.gl/core';
+import { Layer, project32, picking, COORDINATE_SYSTEM } from '@deck.gl/core';
 import { Model, Geometry } from '@luma.gl/engine';
+import {gouraudMaterial} from '@luma.gl/shadertools';
 import { Texture } from '@luma.gl/core';
 
 // Polygon geometry generation is managed by the polygon tesselator
 import PolygonTesselator from './polygon-tesselator';
 
+import {solidPolygonUniforms, SolidPolygonProps} from './solid-polygon-layer-uniforms';
 import vsTop from './solid-polygon-layer-vertex-top.glsl';
 import vsSide from './solid-polygon-layer-vertex-side.glsl';
 import fs from './solid-polygon-layer-fragment.glsl';
@@ -54,15 +40,6 @@ import TriangulateGrid from './TriangulateGrid';
 // Where all the verticies, indicies, rgbValues, and startIndicies
 // are stored so we only have to caluclate once per model
 const positions = {};
-
-type SimpleMeshProps = {
-    sizeScale?: number;
-    composeModelMatrix?: boolean;
-    hasTexture?: boolean;
-    interpolateData?: boolean;
-    flatShading?: boolean;
-    sampler?: Texture;
-};
 
 type _ShadedLayerProps<DataT> = {
     data: LayerDataSource<DataT>;
@@ -222,7 +199,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 RING_WINDING_ORDER_CW:
                     !this.props._normalize && this.props._windingOrder === 'CCW' ? 0 : 1,
             },
-            modules: [project32, gouraudLighting, picking],
+            modules: [project32, gouraudMaterial, picking, solidPolygonUniforms]
         });
     }
 
@@ -407,28 +384,28 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         const { extruded, filled, wireframe, elevationScale } = this.props;
         const { topModel, sideModel, wireframeModel, polygonTesselator } = this.state;
 
-        const renderUniforms = {
-            ...uniforms,
+        const renderUniforms: SolidPolygonProps = {
             extruded: Boolean(extruded),
             elevationScale,
+            isWireframe: false
         };
 
         // Note - the order is important
         if (wireframeModel && wireframe) {
             wireframeModel.setInstanceCount(polygonTesselator.instanceCount - 1);
-            wireframeModel.shaderInputs.setProps(renderUniforms);
+            wireframeModel.shaderInputs.setProps({solidPolygon: {...renderUniforms, isWireframe: true}});
             wireframeModel.draw(this.context.renderPass);
         }
 
         if (sideModel && filled) {
             sideModel.setInstanceCount(polygonTesselator.instanceCount - 1);
-            sideModel.shaderInputs.setProps(renderUniforms);
+            sideModel.shaderInputs.setProps({solidPolygon: renderUniforms});
             sideModel.draw(this.context.renderPass);
         }
 
         if (topModel && filled) {
             topModel.setVertexCount(polygonTesselator.vertexCount);
-            topModel.shaderInputs.setProps(renderUniforms);
+            topModel.shaderInputs.setProps({solidPolygon: renderUniforms});
             topModel.draw(this.context.renderPass);
         }
     }
@@ -466,7 +443,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             this.setState(this._getModels());
             attributeManager!.invalidateAll();
         }
-
+        
         if (colorsChanged) {
             console.log('Updating Texture!');
             this.setTexture();
@@ -616,7 +593,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 // Looks like we need to provide a `ShaderModule` to get rid of the
                 // TypeScript error? Maybe revisit this later
                 // https://luma.gl/docs/api-reference/engine/shader-inputs/#shadermoduleinputs
-                uniforms: {
+                solidPolygon: {
                     interpolateData: Boolean(this.props.interpolateData),
                     hasTexture: Boolean(texture),
                 },
@@ -682,9 +659,6 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 ...shaders,
                 id: `${id}-top`,
                 topology: 'triangle-list',
-                uniforms: {
-                    isWireframe: false,
-                },
                 bufferLayout,
                 isIndexed: true,
                 userData: {
@@ -701,9 +675,6 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 ...this.getShaders('side'),
                 id: `${id}-side`,
                 bufferLayout,
-                uniforms: {
-                    isWireframe: false,
-                },
                 geometry: new Geometry({
                     topology: 'triangle-strip',
                     attributes: {
@@ -724,9 +695,6 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 ...this.getShaders('side'),
                 id: `${id}-wireframe`,
                 bufferLayout,
-                uniforms: {
-                    isWireframe: true,
-                },
                 geometry: new Geometry({
                     topology: 'line-strip',
                     attributes: {
