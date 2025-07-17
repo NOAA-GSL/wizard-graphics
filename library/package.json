@@ -48,7 +48,7 @@
     "//": "Still figuring out best way to manage peerDependency versions",
     "peerDependencies": {
         "d3": "~7.9.0",
-        "deck.gl": ">=9.0.33",
+        "deck.gl": ">=9.1.0",
         "lodash": "~4.17.21",
         "maplibre-gl": ">=4.7.1",
         "proj4": "~2.12.1",
