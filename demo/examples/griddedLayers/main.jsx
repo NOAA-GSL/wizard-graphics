@@ -153,6 +153,22 @@ function MapContainer() {
             dataMag: wmag,
             color:[0,0,0,255],
             projection,
+            readout: [
+                {
+                    data: wmag,
+                    prependText: 'Wind Speed',
+                    decimals: 0,
+                    units: 'mph',
+                    interpolate: true,
+                },
+                {
+                    data: wdir,
+                    prependText: 'Wind Direction',
+                    decimals: 0,
+                    units: '°',
+                    interpolate: true,
+                },
+            ],
         });
         layers.push(particleLayer);
     }
