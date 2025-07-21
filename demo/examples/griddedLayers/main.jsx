@@ -11,6 +11,7 @@ import {
     ContourLayer,
     ShadedLayer,
     VectorLayer,
+    ParticleLayer,
     configFields,
 } from 'desi-graphics';
 import projDict from 'demo-data/projection';
@@ -33,6 +34,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
+        particleCheckbox: false,
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
@@ -143,17 +145,17 @@ function MapContainer() {
         });
         layers.push(vectorLayer);
     }
-
-    /*
-    Not working until deck.gl v9.1
-    const particleLayer = new ParticleLayer({
-        id: 'vectorLayer',
-        dataDir: wdir,
-        dataMag: wmag,
-        proj,
-        // beforeId: getBeforeID(layer.plottype),
-    });
-    */
+    if (state.particleCheckbox){
+        const particleLayer = new ParticleLayer({
+            id: 'particleLayer',
+            beforeId: mapStyles[style].beforeId,
+            dataDir: wdir,
+            dataMag: wmag,
+            color:[0,0,0,255],
+            projection,
+        });
+        layers.push(particleLayer);
+    }
 
     return (
         <>
@@ -215,6 +217,18 @@ function MapContainer() {
                 Vector Layer
             </label>
 
+            <label htmlFor="particleCheckbox">
+                <input
+                    id="particleCheckbox"
+                    type="checkbox"
+                    checked={state.particleCheckbox}
+                    onChange={(e) => {
+                        setState({ ...state, particleCheckbox: e.target.checked });
+                    }}
+                />
+                Particle Layer
+            </label>
+
             <div ref={mapContainer} id="mapContainer">
                 <Map
                     initialViewState={{
@@ -227,7 +241,11 @@ function MapContainer() {
                     reuseMaps
                     mapStyle={mapStyle}
                 >
-                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                    <DeckGLOverlay
+                        overlayRef={overlayRef}
+                        layers={layers}
+                        interleaved
+                    />
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}
