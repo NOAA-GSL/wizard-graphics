@@ -3,8 +3,8 @@ import { LineLayer, LineLayerProps } from "@deck.gl/layers";
 import { Buffer, Texture } from "@luma.gl/core";
 import { Model, BufferTransform } from "@luma.gl/engine";
 import { ShaderModule } from "@luma.gl/shadertools";
-import gUtilities from '../../utilities/graphicsUtilities';
-import shader from './particle-layer-update-transform.vs.glsl.js';
+import gUtilities from "../../utilities/graphicsUtilities";
+import updatedShader from "./particle-layer-update-transform.vs.glsl.js"; 
 
 // Shader Module
 export type UniformProps = {
@@ -15,7 +15,6 @@ export type UniformProps = {
   seed: number;
   viewportBounds: number[];
   viewportZoomChangeFactor: number;
-  imageUnscale: number[];
   bounds: number[];
   bitmapTexture: Texture;
 };
@@ -29,7 +28,6 @@ uniform bitmapUniforms {
   float seed;
   vec4 viewportBounds;
   float viewportZoomChangeFactor;
-  vec2 imageUnscale;
   vec4 bounds;
 } bitmap;
 `;
@@ -47,7 +45,6 @@ export const bitmapUniforms = {
     // @ts-ignore
     viewportBounds: "vec4<f32>",
     viewportZoomChangeFactor: "f32",
-    imageUnscale: "vec2<f32>",
     bounds: "vec4<f32>",
   },
 } as const satisfies ShaderModule<UniformProps>;
@@ -72,7 +69,6 @@ export type Bbox = [number, number, number, number];
 export type ParticleLayerProps<D = unknown> = LineLayerProps<D> & {
   image: string | Texture | null;
   bounds: number[];
-  imageUnscale: number[];
   numParticles: number;
   maxAge: number;
   speedFactor: number;
@@ -89,7 +85,6 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
   ...LineLayer.defaultProps,
 
   image: { type: "image", value: null, async: true },
-  imageUnscale: { type: "array", value: [-128,127]  },
 
   numParticles: { type: "number", min: 1, max: 1000000, value: 5000 },
   maxAge: { type: "number", min: 1, max: 255, value: 100 },
@@ -192,29 +187,30 @@ export default class ParticleLayer<
       const height = lonlatGrid.length;
       const dlon = (maxLng - minLng) / width;
       const dlat = (maxLat - minLat) / height;
-      const uvData = new Uint8Array(width * height * 4);
+      
+      // Use a Float32Array instead of Uint8Array for high precision
+      const uvData = new Float32Array(width * height * 4);
       let index = 0;
 
       for (let j = 0; j < height; j += 1) {
           for (let i = 0; i < width; i += 1) {
               const lat = maxLat - j * dlat;
               const lon = minLng + i * dlon;
-              const interpolate = true;
-              const units = '°';
-              const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, interpolate, units);
-              const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, interpolate, units);
-              
-              let uv = [0, 0];
-              if (!Number.isNaN(wmagnitude)) uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
-              const red = Math.min(255, uv[0] + 128);
-              const green = Math.min(255, uv[1] + 128);
-              const blue = 0;
+              const interpolate = false; // Using nearest neighbor for texture creation
+              const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
+              const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
+
+              let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
+              if (isNaN(wmagnitude)) uv = [0, 0];
               const startIndex = index * 4;
               
-              uvData[startIndex] = red;
-              uvData[startIndex + 1] = green;
-              uvData[startIndex + 2] = blue;
-              uvData[startIndex + 3] = 255;
+              // Store the raw U and V vector components as floats
+              uvData[startIndex] = uv[0];     // U component in Red channel
+              uvData[startIndex + 1] = uv[1]; // V component in Green channel
+              uvData[startIndex + 2] = 0;     // Blue channel is unused
+              // Use Alpha to flag if data exists at this point
+              uvData[startIndex + 3] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0; 
+              
               index += 1;
           }
       }
@@ -223,6 +219,8 @@ export default class ParticleLayer<
           width,
           height,
           data: uvData,
+          format: 'rgba32float', 
+          mipmaps: false, 
           sampler: {
               minFilter: 'linear',
               magFilter: 'linear',
@@ -260,6 +258,8 @@ export default class ParticleLayer<
   _setupState() {
       const { projection } = this.props;
       const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
+      // NOTE: No change here. We pass the original, potentially unwrapped bounds to the shader.
+      // The shader logic is now smart enough to handle this.
       const calculatedBounds = [minLng, minLat, maxLng, maxLat];
 
       this.setState({
@@ -276,8 +276,8 @@ export default class ParticleLayer<
       props.numParticles !== oldProps.numParticles ||
       props.maxAge !== oldProps.maxAge ||
       props.width !== oldProps.width ||
-      props.dataDir !== oldProps.dataDir || // Check source data
-      props.dataMag !== oldProps.dataMag;   // Check source data
+      props.dataDir !== oldProps.dataDir ||
+      props.dataMag !== oldProps.dataMag;
 
     if (shouldUpdate) {
         this._setupState();
@@ -353,7 +353,6 @@ export default class ParticleLayer<
     
     const { numParticles, color, maxAge, width } = this.props;
 
-    // Create the texture here
     const texture = this.props.image || this._createWindTexture();
     if (!texture || typeof texture === "string") {
       return;
@@ -382,7 +381,7 @@ export default class ParticleLayer<
       attributes: { sourcePosition: sourcePositions },
       bufferLayout: [{ name: "sourcePosition", format: "float32x3" }],
       feedbackBuffers: { targetPosition: targetPositions },
-      vs: shader,
+      vs: updatedShader, // Use the updated shader code
       varyings: ["targetPosition"],
       modules: [bitmapUniforms],
       vertexCount: numParticles,
@@ -411,7 +410,7 @@ export default class ParticleLayer<
     }
 
     const { viewport, timeline } = this.context;
-    const { imageUnscale, numParticles, speedFactor, maxAge } = this.props;
+    const { numParticles, speedFactor, maxAge } = this.props;
     const {
       previousTime,
       previousViewportZoom,
@@ -419,7 +418,7 @@ export default class ParticleLayer<
       sourcePositions,
       targetPositions,
       numAgedInstances,
-      texture, // <-- READ TEXTURE FROM STATE
+      texture,
     } = this.state;
 
     const time = timeline.getTime();
@@ -436,7 +435,6 @@ export default class ParticleLayer<
       bitmapTexture: texture,
       viewportBounds: viewportBounds || [0, 0, 0, 0],
       viewportZoomChangeFactor: viewportZoomChangeFactor || 0,
-      imageUnscale: imageUnscale || [0, 0],
       bounds,
       numParticles,
       maxAge,
@@ -447,13 +445,6 @@ export default class ParticleLayer<
     
     transform.model.shaderInputs.setProps({ bitmap: moduleUniforms });
     transform.run();
-    // transform.run({
-    //   clearColor: false,
-    //   clearDepth: false,
-    //   clearStencil: false,
-    //   depthReadOnly: true,
-    //   stencilReadOnly: true,
-    // });
 
     const encoder = this.context.device.createCommandEncoder();
     encoder.copyBufferToBuffer({
@@ -490,10 +481,8 @@ export default class ParticleLayer<
         targetPositions?.destroy();
         colors?.destroy();
         transform?.destroy();
-        // Only destroy the texture if it's not the one from props
         if (texture && texture !== this.props.image) {
-            // NOTE: Caching means we might not want to destroy it. 
-            // For simplicity, we assume we can. A more robust cache would handle this.
+            // Caching means we don't destroy the texture here
         }
         this.setState({ initialized: false });
     }
@@ -510,18 +499,6 @@ export default class ParticleLayer<
       this.state.stepRequested = false;
     });
   }
-
-  // requestStep() {
-  //   if (this.state.stepRequested) {
-  //     return;
-  //   }
-  //   this.setState({ stepRequested: true });
-  //   requestAnimationFrame(() => {
-  //     this.step();
-  //     // It's better to manage state via setState
-  //     this.setState({ stepRequested: false });
-  //   });
-  // }
 
   step() {
     this._runTransformFeedback();
@@ -546,21 +523,20 @@ function modulo(x: number, y: number): number {
   return ((x % y) + y) % y;
 }
 
-export function wrapLongitude(
-  lng: number,
-  minLng: number | undefined = undefined
-): number {
-  let wrappedLng = modulo(lng + 180, 360) - 180;
-  if (typeof minLng === "number" && wrappedLng < minLng) {
-    wrappedLng += 360;
-  }
-  return wrappedLng;
+export function wrapLongitude(lng: number): number {
+  return modulo(lng + 180, 360) - 180;
 }
 
-export function wrapBounds(bounds: GeoJSON.BBox): GeoJSON.BBox {
-  const minLng = bounds[2] - bounds[0] < 360 ? wrapLongitude(bounds[0]) : -180;
-  const maxLng = bounds[2] - bounds[0] < 360 ? wrapLongitude(bounds[2], minLng) : 180;
-  const minLat = Math.max(bounds[1], -90);
-  const maxLat = Math.min(bounds[3], 90);
-  return [minLng, minLat, maxLng, maxLat] as GeoJSON.BBox;
+export function wrapBounds(bounds: [number, number, number, number]): [number, number, number, number] {
+  const [west, south, east, north] = bounds;
+  // If the viewport is wider than the world, return the full world
+  if (east - west >= 360) {
+    return [-180, Math.max(south, -90), 180, Math.min(north, 90)];
+  }
+  const minLng = wrapLongitude(west);
+  const maxLng = wrapLongitude(east);
+  const minLat = Math.max(south, -90);
+  const maxLat = Math.min(north, 90);
+  
+  return [minLng, minLat, maxLng, maxLat];
 }
