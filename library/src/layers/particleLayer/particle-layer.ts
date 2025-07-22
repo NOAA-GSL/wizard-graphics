@@ -2,12 +2,11 @@ import { Color, DefaultProps, LayerContext, UpdateParameters } from "@deck.gl/co
 import { LineLayer, LineLayerProps } from "@deck.gl/layers";
 import { Buffer, Texture } from "@luma.gl/core";
 import { Model, BufferTransform } from "@luma.gl/engine";
-import shader from "./particle-layer-update-transform.vs.glsl.js";
 import { ShaderModule } from "@luma.gl/shadertools";
 import gUtilities from '../../utilities/graphicsUtilities';
+import shader from './particle-layer-update-transform.vs.glsl.js';
 
 // Shader Module
-
 export type UniformProps = {
   numParticles: number;
   maxAge: number;
@@ -53,9 +52,19 @@ export const bitmapUniforms = {
   },
 } as const satisfies ShaderModule<UniformProps>;
 
+// Simple cache for bounds calculations
+const positionsCache = new Map();
+const MAX_CACHE_SIZE = 50;
+
+function addToCache(key: string, value: any) {
+  if (positionsCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = positionsCache.keys().next().value;
+    positionsCache.delete(firstKey);
+  }
+  positionsCache.set(key, value);
+}
+
 // Particle Layer
-const positions = {};
-const FPS = 30;
 const DEFAULT_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 
 export type Bbox = [number, number, number, number];
@@ -71,6 +80,9 @@ export type ParticleLayerProps<D = unknown> = LineLayerProps<D> & {
   width: number;
   animate?: boolean;
   wrapLongitude: boolean;
+  dataDir?: any;
+  dataMag?: any;
+  projection?: any;
 };
 
 const defaultProps: DefaultProps<ParticleLayerProps> = {
@@ -79,7 +91,7 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
   image: { type: "image", value: null, async: true },
   imageUnscale: { type: "array", value: [-128,127]  },
 
-  numParticles: { type: "number", min: 1, max: 1000000, value: 10000 },
+  numParticles: { type: "number", min: 1, max: 1000000, value: 5000 },
   maxAge: { type: "number", min: 1, max: 255, value: 100 },
   speedFactor: { type: "number", min: 0, max: 255, value: 1 },
 
@@ -95,6 +107,9 @@ export default class ParticleLayer<
   D = any,
   ExtraPropsT = ParticleLayerProps<D>
 > extends LineLayer<D, ExtraPropsT & ParticleLayerProps<D>> {
+  
+  private boundsCache: { key: string; bounds: number[] } | null = null;
+
   state!: {
     model?: Model;
     initialized: boolean;
@@ -111,7 +126,7 @@ export default class ParticleLayer<
     previousTime: number;
     texture: Texture;
     stepRequested: boolean;
-    bounds:number[];
+    bounds: number[];
   };
 
   getShaders() {
@@ -137,116 +152,8 @@ export default class ParticleLayer<
   }
 
   initializeState() {
-    // Grab max,min lat/lon
-    let maxLng = -Infinity; let minLng = Infinity; let maxLat = -Infinity; let minLat = Infinity;
-
-    const { lonlatGrid } = this.props.projection;
-    const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
-    // Cached values
-    if (positions?.[key]?.bounds) {
-        ({ maxLng, minLng, maxLat, minLat } = positions[key].bounds);
-    }
-    // Calculated values (about 2 ms on Travis' computer)
-    else {
-        for (const outerArr of lonlatGrid) {
-            for (const innerArr of outerArr) {
-                const [longitude, latitude] = innerArr;
-                if (longitude > maxLng) maxLng = longitude;
-                if (longitude < minLng) minLng = longitude;
-                if (latitude > maxLat) maxLat = latitude;
-                if (latitude < minLat) minLat = latitude;
-            }
-        }
-        if (!positions[key]) positions[key] = {};
-        positions[key].bounds = { maxLng, minLng, maxLat, minLat };
-    }
-
-    const calculatedBounds = [ minLng, minLat, maxLng, maxLat ];
-    
-    // Update the props bounds with calculated bounds
-    //Object.assign(this.props, { bounds: calculatedBounds });
-
-    // Set bounds in state for getBounds() method
-    //this.setState({ bounds: calculatedBounds });
-
-    // Input grid must be mercator projection
-    const width = lonlatGrid[0].length;
-    const height = lonlatGrid.length;
-
-    // Grids that are rotated 45 degrees will be sampled least (we could over sample)
-    // Grids that are not rotated will be sampled correclty
-    const dlon = (maxLng - minLng) / width;
-    const dlat = (maxLat - minLat) / height;
-    let index = 0;
-    const uvData = new Uint8Array(width * height * 4);
-    for (let j = 0; j < height; j += 1) {
-        for (let i = 0; i < width; i += 1) {
-            const lat = maxLat - j * dlat;
-            const lon = minLng + i * dlon;
-            // const [i_local, j_local] = layer.projDict.LonLatToij(lon, lat, true);
-            // const ii = gUtilities.ijToIdx(i_local, j_local, width, height);
-            // Faster (don't interpolate 20ms; can result in bad directions at high zoom levels)
-            // const wdirection = wdir?.[ii];
-            // const wmagnitude = wmag?.[ii];
-            // Slower (interpolate 100ms)
-            const interpolate = true;
-            const units = '°';
-            const wdirection = gUtilities.getreadoutvalue(
-                lat,
-                lon,
-                this.props.projection,
-                this.props.dataDir,
-                interpolate,
-                units,
-            );
-            const wmagnitude = gUtilities.getreadoutvalue(
-                lat,
-                lon,
-                this.props.projection,
-                this.props.dataMag,
-                interpolate,
-                units,
-            );
-            let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
-            if (Number.isNaN(wmagnitude)) uv = [0, 0];
-
-            const red = uv[0] + 128 >= 255 ? 255 : uv[0] + 128;
-            const green = uv[1] + 128 >= 255 ? 255 : uv[1] + 128;
-            const blue = 0;
-            const startIndex = index * 4;
-            // Set the RGB color to the pixel in the array
-            uvData[startIndex] = red;
-            uvData[startIndex + 1] = green;
-            uvData[startIndex + 2] = blue;
-            uvData[startIndex + 3] = 255; // Alpha value set to 255 (opaque)
-            index += 1;
-        }
-    }
-    // console.log('DONE!', performance.now() - t0);
-
-    const texture = this.context.device.createTexture({
-        width,
-        height,
-        data: uvData,
-        sampler: {
-            minFilter: 'linear',
-            magFilter: 'linear',
-            addressModeU: 'clamp-to-edge',
-            addressModeV: 'clamp-to-edge',
-        },
-    });
-
-    // Update the props
-    Object.assign(this.props, { image: texture });
-
-    const color = this.props.color;
     super.initializeState();
 
-    this.setState({
-        bounds: calculatedBounds,
-        //texture: texture
-    });
-    this._setupTransformFeedback();
     const attributeManager = this.getAttributeManager();
     attributeManager!.remove([
       "instanceSourcePositions",
@@ -255,73 +162,151 @@ export default class ParticleLayer<
       "instanceWidths",
     ]);
     attributeManager!.addInstanced({
-      instanceSourcePositions: {
-        size: 3,
-        type: "float32",
-        noAlloc: !0,
-      },
-      instanceTargetPositions: {
-        size: 3,
-        type: "float32",
-        noAlloc: !0,
-      },
+      instanceSourcePositions: { size: 3, type: "float32", noAlloc: true },
+      instanceTargetPositions: { size: 3, type: "float32", noAlloc: true },
       instanceColors: {
         size: 4,
         type: "float32",
-        noAlloc: !0,
-        defaultValue: [color[0], color[1], color[2], color[3]],
+        noAlloc: true,
+        defaultValue: [...this.props.color.map(c => c / 255)],
       },
     });
+
+    this._setupState();
+  }
+  
+  _createWindTexture() {
+      const { projection, dataDir, dataMag } = this.props;
+      const { lonlatGrid } = projection;
+
+      const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
+      const textureKey = `${key}-texture`;
+      const cachedTexture = positionsCache.get(textureKey);
+
+      if (cachedTexture?.texture) {
+          return cachedTexture.texture;
+      }
+      
+      const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
+      const width = lonlatGrid[0].length;
+      const height = lonlatGrid.length;
+      const dlon = (maxLng - minLng) / width;
+      const dlat = (maxLat - minLat) / height;
+      const uvData = new Uint8Array(width * height * 4);
+      let index = 0;
+
+      for (let j = 0; j < height; j += 1) {
+          for (let i = 0; i < width; i += 1) {
+              const lat = maxLat - j * dlat;
+              const lon = minLng + i * dlon;
+              const interpolate = true;
+              const units = '°';
+              const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, interpolate, units);
+              const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, interpolate, units);
+              
+              let uv = [0, 0];
+              if (!Number.isNaN(wmagnitude)) uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
+              const red = Math.min(255, uv[0] + 128);
+              const green = Math.min(255, uv[1] + 128);
+              const blue = 0;
+              const startIndex = index * 4;
+              
+              uvData[startIndex] = red;
+              uvData[startIndex + 1] = green;
+              uvData[startIndex + 2] = blue;
+              uvData[startIndex + 3] = 255;
+              index += 1;
+          }
+      }
+
+      const texture = this.context.device.createTexture({
+          width,
+          height,
+          data: uvData,
+          sampler: {
+              minFilter: 'linear',
+              magFilter: 'linear',
+              addressModeU: 'clamp-to-edge',
+              addressModeV: 'clamp-to-edge',
+          },
+      });
+      
+      addToCache(textureKey, { texture });
+      return texture;
+  }
+  
+  _getBoundsFromGrid(lonlatGrid) {
+      const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
+      const cached = positionsCache.get(key);
+      if (cached?.bounds) {
+          return cached.bounds;
+      }
+      
+      let maxLng = -Infinity, minLng = Infinity, maxLat = -Infinity, minLat = Infinity;
+      for (const outerArr of lonlatGrid) {
+          for (const innerArr of outerArr) {
+              const [longitude, latitude] = innerArr;
+              if (longitude > maxLng) maxLng = longitude;
+              if (longitude < minLng) minLng = longitude;
+              if (latitude > maxLat) maxLat = latitude;
+              if (latitude < minLat) minLat = latitude;
+          }
+      }
+      const bounds = { maxLng, minLng, maxLat, minLat };
+      addToCache(key, { bounds });
+      return bounds;
   }
 
-  updateState({
-    props,
-    oldProps,
-    changeFlags,
-    context,
-  }: UpdateParameters<this>) {
-    super.updateState({
-      props,
-      oldProps,
-      changeFlags,
-      context,
-    } as UpdateParameters<this>);
-    const { numParticles, maxAge, width, image } = props;
-    if (!numParticles || !maxAge || !width) {
-      this._deleteTransformFeedback();
-      return;
-    }
+  _setupState() {
+      const { projection } = this.props;
+      const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
+      const calculatedBounds = [minLng, minLat, maxLng, maxLat];
 
-    if (
-      image !== oldProps.image ||
-      numParticles !== oldProps.numParticles ||
-      maxAge !== oldProps.maxAge ||
-      width !== oldProps.width
-    ) {
+      this.setState({
+          bounds: calculatedBounds,
+      });
+
       this._setupTransformFeedback();
+  }
+  
+  updateState({ props, oldProps, changeFlags, context }: UpdateParameters<this>) {
+    super.updateState({ props, oldProps, changeFlags, context } as UpdateParameters<this>);
+    
+    const shouldUpdate = 
+      props.numParticles !== oldProps.numParticles ||
+      props.maxAge !== oldProps.maxAge ||
+      props.width !== oldProps.width ||
+      props.dataDir !== oldProps.dataDir || // Check source data
+      props.dataMag !== oldProps.dataMag;   // Check source data
+
+    if (shouldUpdate) {
+        this._setupState();
     }
   }
 
   finalizeState(context: LayerContext) {
     this._deleteTransformFeedback();
-
     super.finalizeState(context);
   }
 
   _getEffectiveBounds(): number[] {
-    // Use calculated bounds from state if available
+    const cacheKey = this.props.bounds?.join('-') || 'state';
+    
+    if (this.boundsCache?.key === cacheKey) {
+      return this.boundsCache.bounds;
+    }
+
+    let bounds;
     if (this.state?.bounds) {
-        return this.state.bounds;
+        bounds = this.state.bounds;
+    } else if (this.props.bounds && this.props.bounds.length === 4) {
+        bounds = this.props.bounds;
+    } else {
+        bounds = [-180, -90, 180, 90];
     }
     
-    // Fall back to props bounds if provided
-    if (this.props.bounds && this.props.bounds.length === 4) {
-        return this.props.bounds;
-    }
-    
-    // Final fallback to world bounds
-    console.log("returning default -180,-90,180,90")
-    return [-180, -90, 180, 90];
+    this.boundsCache = { key: cacheKey, bounds };
+    return bounds;
   }
 
   getBounds() {
@@ -329,12 +314,10 @@ export default class ParticleLayer<
   }
 
   draw({ uniforms }: { uniforms: any }) {
-    const { initialized } = this.state;
-    if (!initialized) {
+    if (!this.state.initialized) {
       return;
     }
 
-    const { animate } = this.props;
     const {
       sourcePositions,
       targetPositions,
@@ -344,6 +327,7 @@ export default class ParticleLayer<
       widths,
       model,
     } = this.state;
+    
     model.setAttributes({
       instanceSourcePositions: sourcePositions,
       instanceTargetPositions: targetPositions,
@@ -357,70 +341,47 @@ export default class ParticleLayer<
 
     super.draw({ uniforms });
 
-    if (animate) {
+    if (this.props.animate) {
       this.requestStep();
     }
   }
 
   _setupTransformFeedback() {
-    const { initialized } = this.state;
-    if (initialized) {
+    if (this.state.initialized) {
       this._deleteTransformFeedback();
     }
+    
+    const { numParticles, color, maxAge, width } = this.props;
 
-    const { image, numParticles, color, maxAge, width } = this.props;
-    if (typeof image === "string" || image === null) {
+    // Create the texture here
+    const texture = this.props.image || this._createWindTexture();
+    if (!texture || typeof texture === "string") {
       return;
     }
 
-    // Buffer layout groups particles by age.
-    // So all the youngest particles, followed by the next oldest, etc.
-    // After the the transform runs (one age complete) we shift all the buffers down.
-    // The oldest has shifted and the blank area at the start becomes the youngest in the next transform.
     const numInstances = numParticles * maxAge;
     const numAgedInstances = numParticles * (maxAge - 1);
-    const sourcePositions = this.context.device.createBuffer(
-      new Float32Array(numInstances * 3)
-    );
-    const targetPositions = this.context.device.createBuffer(
-      new Float32Array(numInstances * 3)
-    );
+    const sourcePositions = this.context.device.createBuffer(new Float32Array(numInstances * 3));
+    const targetPositions = this.context.device.createBuffer(new Float32Array(numInstances * 3));
 
     const colors = this.context.device.createBuffer(
       new Float32Array(
-        new Array(numInstances)
-          .fill(undefined)
-          .map((_, i) => {
-            const age = Math.floor(i / numParticles);
-            return [
-              color[0],
-              color[1],
-              color[2],
-              (color[3] ?? 255) * (1 - age / maxAge),
-            ].map((d) => d / 255);
-          })
-          .flat()
+        new Array(numInstances).fill(undefined).flatMap((_, i) => {
+          const age = Math.floor(i / numParticles);
+          const alpha = (color[3] ?? 255) * (1 - age / maxAge);
+          return [color[0] / 255, color[1] / 255, color[2] / 255, alpha / 255];
+        })
       )
     );
 
-    // Constant attributes for BufferTransform
     const sourcePositions64Low = new Float32Array([0, 0, 0]);
     const targetPositions64Low = new Float32Array([0, 0, 0]);
     const widths = new Float32Array([width]);
 
     const transform = new BufferTransform(this.context.device, {
-      attributes: {
-        sourcePosition: sourcePositions,
-      },
-      bufferLayout: [
-        {
-          name: "sourcePosition",
-          format: "float32x3",
-        },
-      ],
-      feedbackBuffers: {
-        targetPosition: targetPositions,
-      },
+      attributes: { sourcePosition: sourcePositions },
+      bufferLayout: [{ name: "sourcePosition", format: "float32x3" }],
+      feedbackBuffers: { targetPosition: targetPositions },
       vs: shader,
       varyings: ["targetPosition"],
       modules: [bitmapUniforms],
@@ -438,21 +399,19 @@ export default class ParticleLayer<
       colors,
       widths,
       transform,
-      texture: image,
+      texture, 
       previousViewportZoom: 0,
       previousTime: 0,
     });
   }
 
   _runTransformFeedback() {
-    const { initialized } = this.state;
-    if (!initialized) {
+    if (!this.state.initialized) {
       return;
     }
 
     const { viewport, timeline } = this.context;
-    const { imageUnscale, numParticles, speedFactor, maxAge } =
-      this.props;
+    const { imageUnscale, numParticles, speedFactor, maxAge } = this.props;
     const {
       previousTime,
       previousViewportZoom,
@@ -460,26 +419,19 @@ export default class ParticleLayer<
       sourcePositions,
       targetPositions,
       numAgedInstances,
-      texture,
+      texture, // <-- READ TEXTURE FROM STATE
     } = this.state;
 
     const time = timeline.getTime();
     if (time === previousTime) {
       return;
     }
+    
     const bounds = this._getEffectiveBounds();
-
-    // Viewport
     const viewportBounds = getViewportBounds(viewport);
-    const viewportZoomChangeFactor =
-      2 ** ((previousViewportZoom - viewport.zoom) * 4);
-
-    // Speed factor for zoom level
+    const viewportZoomChangeFactor = 2 ** ((previousViewportZoom - viewport.zoom) * 4);
     const currentSpeedFactor = speedFactor / 2 ** (viewport.zoom + 7);
 
-    // Prep and run the transform.
-    // The uninitialised "youngest" will be created.
-    // Everything else will move as appropriate.
     const moduleUniforms: UniformProps = {
       bitmapTexture: texture,
       viewportBounds: viewportBounds || [0, 0, 0, 0],
@@ -492,6 +444,7 @@ export default class ParticleLayer<
       time,
       seed: Math.random(),
     };
+    
     transform.model.shaderInputs.setProps({ bitmap: moduleUniforms });
     transform.run();
     // transform.run({
@@ -502,9 +455,6 @@ export default class ParticleLayer<
     //   stencilReadOnly: true,
     // });
 
-    // As discussed in _setupTransformFeedback()
-    // We copy the buffer across, but shift everything down 'one age'.
-    // Oldest has dsisappeared, the blank at the start is the youngest.
     const encoder = this.context.device.createCommandEncoder();
     encoder.copyBufferToBuffer({
       sourceBuffer: sourcePositions,
@@ -516,56 +466,41 @@ export default class ParticleLayer<
     encoder.finish();
     encoder.destroy();
 
-    // Swap the buffers.
     this.state.sourcePositions = targetPositions;
     this.state.targetPositions = sourcePositions;
-    transform.model.setAttributes({
-      sourcePosition: targetPositions,
-    });
-    transform.transformFeedback.setBuffers({
-      targetPosition: sourcePositions,
-    });
+    transform.model.setAttributes({ sourcePosition: targetPositions });
+    transform.transformFeedback.setBuffers({ targetPosition: sourcePositions });
 
     this.state.previousViewportZoom = viewport.zoom;
     this.state.previousTime = time;
   }
 
   _resetTransformFeedback() {
-    const { initialized } = this.state;
-    if (!initialized) {
-      return;
+    if (this.state.initialized) {
+      const { sourcePositions, targetPositions, numInstances } = this.state;
+      sourcePositions.write(new Float32Array(numInstances * 3));
+      targetPositions.write(new Float32Array(numInstances * 3));
     }
-
-    const { sourcePositions, targetPositions, numInstances } = this.state;
-    sourcePositions.write(new Float32Array(numInstances * 3));
-    targetPositions.write(new Float32Array(numInstances * 3));
   }
 
   _deleteTransformFeedback() {
-    const { initialized } = this.state;
-    if (!initialized) {
-      return;
+    if (this.state.initialized) {
+        const { sourcePositions, targetPositions, colors, transform, texture } = this.state;
+        sourcePositions?.destroy();
+        targetPositions?.destroy();
+        colors?.destroy();
+        transform?.destroy();
+        // Only destroy the texture if it's not the one from props
+        if (texture && texture !== this.props.image) {
+            // NOTE: Caching means we might not want to destroy it. 
+            // For simplicity, we assume we can. A more robust cache would handle this.
+        }
+        this.setState({ initialized: false });
     }
-
-    const { sourcePositions, targetPositions, colors, transform } = this.state;
-    sourcePositions.destroy();
-    targetPositions.destroy();
-    colors.destroy();
-    transform.destroy();
-
-    this.setState({
-      initialized: false,
-      sourcePositions: undefined,
-      targetPositions: undefined,
-      colors: undefined,
-      transform: undefined,
-    });
   }
 
-  // If it's animated we repeat the BufferTransform process.
   requestStep() {
-    const { stepRequested } = this.state;
-    if (stepRequested) {
+    if (this.state.stepRequested) {
       return;
     }
 
@@ -576,15 +511,25 @@ export default class ParticleLayer<
     });
   }
 
+  // requestStep() {
+  //   if (this.state.stepRequested) {
+  //     return;
+  //   }
+  //   this.setState({ stepRequested: true });
+  //   requestAnimationFrame(() => {
+  //     this.step();
+  //     // It's better to manage state via setState
+  //     this.setState({ stepRequested: false });
+  //   });
+  // }
+
   step() {
     this._runTransformFeedback();
-
     this.setNeedsRedraw();
   }
 
   clear() {
     this._resetTransformFeedback();
-
     this.setNeedsRedraw();
   }
 }
@@ -597,10 +542,6 @@ export function getViewportBounds(viewport) {
   return wrapBounds(viewport.getBounds());
 }
 
-/**
- * Modulo rather than remainder.
- * See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Remainder#description
- */
 function modulo(x: number, y: number): number {
   return ((x % y) + y) % y;
 }
@@ -617,14 +558,9 @@ export function wrapLongitude(
 }
 
 export function wrapBounds(bounds: GeoJSON.BBox): GeoJSON.BBox {
-  // Wrap Longitude
   const minLng = bounds[2] - bounds[0] < 360 ? wrapLongitude(bounds[0]) : -180;
-  const maxLng =
-    bounds[2] - bounds[0] < 360 ? wrapLongitude(bounds[2], minLng) : 180;
-
-  // Clip Latitude
+  const maxLng = bounds[2] - bounds[0] < 360 ? wrapLongitude(bounds[2], minLng) : 180;
   const minLat = Math.max(bounds[1], -90);
   const maxLat = Math.min(bounds[3], 90);
-
   return [minLng, minLat, maxLng, maxLat] as GeoJSON.BBox;
 }

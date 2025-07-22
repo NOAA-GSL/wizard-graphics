@@ -34,7 +34,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
-        particleCheckbox: false,
+        particleCheckbox: true,
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
@@ -152,6 +152,11 @@ function MapContainer() {
             dataDir: wdir,
             dataMag: wmag,
             color:[0,0,0,255],
+            width:1,
+            numParticles: 10000,
+            maxAge: 100,
+            speedFactor: 2,
+            //animate: true,
             projection,
             readout: [
                 {
@@ -172,7 +177,6 @@ function MapContainer() {
         });
         layers.push(particleLayer);
     }
-
     return (
         <>
             <label htmlFor="contourCheckbox">
