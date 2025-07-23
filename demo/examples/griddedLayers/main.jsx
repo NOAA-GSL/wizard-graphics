@@ -33,6 +33,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
+        isGlobeView: false,
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
@@ -64,6 +65,8 @@ function MapContainer() {
             colorLevels,
             colorType,
             projection,
+            elevation: 5000,
+            parameters: { depthTest: false, depthMask: false },
             interpolateData: state.shadedInterpolateCheckbox,
             readout: [
                 {
@@ -214,6 +217,18 @@ function MapContainer() {
                 />
                 Vector Layer
             </label>
+            <br />
+            <label htmlFor="globeView">
+                <input
+                    id="globeView"
+                    type="checkbox"
+                    checked={state.isGlobeView}
+                    onChange={(e) => {
+                        setState({ ...state, isGlobeView: e.target.checked });
+                    }}
+                />
+                Globe View
+            </label>
 
             <div ref={mapContainer} id="mapContainer">
                 <Map
@@ -226,6 +241,7 @@ function MapContainer() {
                     antialias
                     reuseMaps
                     mapStyle={mapStyle}
+                    projection={state.isGlobeView ? 'globe' : 'mercator'}
                 >
                     <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
                     <Readout
