@@ -119,6 +119,9 @@ void main() {
                      mod(particleIndex, bitmap.viewportZoomChangeFactor) >= 1.0) ||
                     (abs(mod(particleIndex, bitmap.maxAge + 2.0) - 
                          mod(bitmap.time, bitmap.maxAge + 2.0)) < 1.0);
+
+  // bool shouldDrop = (abs(mod(particleIndex, bitmap.maxAge + 2.0) - 
+  //                      mod(bitmap.time, bitmap.maxAge + 2.0)) < 1.0);
   
   if(shouldDrop) {
     targetPosition.xy = DROP_POSITION;

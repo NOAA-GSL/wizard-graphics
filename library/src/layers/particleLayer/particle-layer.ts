@@ -61,6 +61,7 @@ function addToCache(key: string, value: any) {
   positionsCache.set(key, value);
 }
 
+const FPS = 30;
 // Particle Layer
 const DEFAULT_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 
@@ -188,7 +189,6 @@ export default class ParticleLayer<
       const dlon = (maxLng - minLng) / width;
       const dlat = (maxLat - minLat) / height;
       
-      // Use a Float32Array instead of Uint8Array for high precision
       const uvData = new Float32Array(width * height * 4);
       let index = 0;
 
@@ -196,7 +196,7 @@ export default class ParticleLayer<
           for (let i = 0; i < width; i += 1) {
               const lat = maxLat - j * dlat;
               const lon = minLng + i * dlon;
-              const interpolate = false; // Using nearest neighbor for texture creation
+              const interpolate = false; 
               const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
               const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
 
@@ -258,8 +258,6 @@ export default class ParticleLayer<
   _setupState() {
       const { projection } = this.props;
       const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
-      // NOTE: No change here. We pass the original, potentially unwrapped bounds to the shader.
-      // The shader logic is now smart enough to handle this.
       const calculatedBounds = [minLng, minLat, maxLng, maxLat];
 
       this.setState({
@@ -273,6 +271,7 @@ export default class ParticleLayer<
     super.updateState({ props, oldProps, changeFlags, context } as UpdateParameters<this>);
     
     const shouldUpdate = 
+      props.image !== oldProps.image ||
       props.numParticles !== oldProps.numParticles ||
       props.maxAge !== oldProps.maxAge ||
       props.width !== oldProps.width ||
@@ -318,6 +317,10 @@ export default class ParticleLayer<
       return;
     }
 
+    if (this.props.animate && this.state.initialized) {
+      this.step();
+    }
+
     const {
       sourcePositions,
       targetPositions,
@@ -341,9 +344,6 @@ export default class ParticleLayer<
 
     super.draw({ uniforms });
 
-    if (this.props.animate) {
-      this.requestStep();
-    }
   }
 
   _setupTransformFeedback() {
@@ -444,7 +444,14 @@ export default class ParticleLayer<
     };
     
     transform.model.shaderInputs.setProps({ bitmap: moduleUniforms });
-    transform.run();
+    //transform.run();
+    transform.run({
+      clearColor:false,
+      clearDepth:false,
+      clearStencil:false,
+      depthReadOnly:true,
+      stencilReadOnly:true,
+    })
 
     const encoder = this.context.device.createCommandEncoder();
     encoder.copyBufferToBuffer({
@@ -486,18 +493,6 @@ export default class ParticleLayer<
         }
         this.setState({ initialized: false });
     }
-  }
-
-  requestStep() {
-    if (this.state.stepRequested) {
-      return;
-    }
-
-    this.state.stepRequested = true;
-    setTimeout(() => {
-      this.step();
-      this.state.stepRequested = false;
-    });
   }
 
   step() {
