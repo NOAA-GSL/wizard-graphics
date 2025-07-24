@@ -11,6 +11,7 @@ import {
     ContourLayer,
     ShadedLayer,
     VectorLayer,
+    ParticleLayer,
     configFields,
 } from 'desi-graphics';
 import projDict from 'demo-data/projection';
@@ -34,6 +35,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
+        particleCheckbox: true,
         isGlobeView: false,
     });
     const overlayRef = useRef();
@@ -129,7 +131,7 @@ function MapContainer() {
             dataDir: wdir,
             dataMag: wmag,
             projection,
-            elevation: 7000,
+            elevation: 6000,
             readout: [
                 {
                     data: wmag,
@@ -149,17 +151,39 @@ function MapContainer() {
         });
         layers.push(vectorLayer);
     }
-
-    /*
-    Not working until deck.gl v9.1
-    const particleLayer = new ParticleLayer({
-        id: 'vectorLayer',
-        dataDir: wdir,
-        dataMag: wmag,
-        proj,
-        // beforeId: getBeforeID(layer.plottype),
-    });
-    */
+    if (state.particleCheckbox) {
+        const particleLayer = new ParticleLayer({
+            id: 'particleLayer',
+            beforeId: mapStyles[style].beforeId,
+            dataDir: wdir,
+            dataMag: wmag,
+            color: [0, 0, 0, 255],
+            width: 1,
+            numParticles: 10000,
+            maxAge: 100,
+            speedFactor: 2,
+            //animate: true,
+            projection,
+            elevation: 8000,
+            readout: [
+                {
+                    data: wmag,
+                    prependText: 'Wind Speed',
+                    decimals: 0,
+                    units: 'mph',
+                    interpolate: true,
+                },
+                {
+                    data: wdir,
+                    prependText: 'Wind Direction',
+                    decimals: 0,
+                    units: '°',
+                    interpolate: true,
+                },
+            ],
+        });
+        layers.push(particleLayer);
+    }
     console.log('layers', layers);
     console.log('isGlobeView', state.isGlobeView);
 
@@ -221,6 +245,17 @@ function MapContainer() {
                     }}
                 />
                 Vector Layer
+            </label>
+            <label htmlFor="particleCheckbox">
+                <input
+                    id="particleCheckbox"
+                    type="checkbox"
+                    checked={state.particleCheckbox}
+                    onChange={(e) => {
+                        setState({ ...state, particleCheckbox: e.target.checked });
+                    }}
+                />
+                Particle Layer
             </label>
             <br />
             <label htmlFor="globeView">

@@ -30,6 +30,9 @@ function App() {
                 <li>
                     <a href="examples/otherLayers/index.html">Other Layers Examples</a>
                 </li>
+                <li>
+                    <a href="examples/globeView/index.html">Globe View Examples</a>
+                </li>
             </ul>
         </div>
     );
