@@ -11,6 +11,7 @@ import {
     ContourLayer,
     ShadedLayer,
     VectorLayer,
+    ParticleLayer,
     configFields,
 } from 'desi-graphics';
 import projDict from 'demo-data/projection';
@@ -33,6 +34,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
+        particleCheckbox: true,
     });
     const overlayRef = useRef();
     const mapContainer = useRef();
@@ -143,18 +145,38 @@ function MapContainer() {
         });
         layers.push(vectorLayer);
     }
-
-    /*
-    Not working until deck.gl v9.1
-    const particleLayer = new ParticleLayer({
-        id: 'vectorLayer',
-        dataDir: wdir,
-        dataMag: wmag,
-        proj,
-        // beforeId: getBeforeID(layer.plottype),
-    });
-    */
-
+    if (state.particleCheckbox){
+        const particleLayer = new ParticleLayer({
+            id: 'particleLayer',
+            beforeId: mapStyles[style].beforeId,
+            dataDir: wdir,
+            dataMag: wmag,
+            color:[0,0,0,255],
+            width:1,
+            numParticles: 10000,
+            maxAge: 100,
+            speedFactor: 2,
+            //animate: true,
+            projection,
+            readout: [
+                {
+                    data: wmag,
+                    prependText: 'Wind Speed',
+                    decimals: 0,
+                    units: 'mph',
+                    interpolate: true,
+                },
+                {
+                    data: wdir,
+                    prependText: 'Wind Direction',
+                    decimals: 0,
+                    units: '°',
+                    interpolate: true,
+                },
+            ],
+        });
+        layers.push(particleLayer);
+    }
     return (
         <>
             <label htmlFor="contourCheckbox">
@@ -215,6 +237,18 @@ function MapContainer() {
                 Vector Layer
             </label>
 
+            <label htmlFor="particleCheckbox">
+                <input
+                    id="particleCheckbox"
+                    type="checkbox"
+                    checked={state.particleCheckbox}
+                    onChange={(e) => {
+                        setState({ ...state, particleCheckbox: e.target.checked });
+                    }}
+                />
+                Particle Layer
+            </label>
+
             <div ref={mapContainer} id="mapContainer">
                 <Map
                     initialViewState={{
@@ -227,7 +261,11 @@ function MapContainer() {
                     reuseMaps
                     mapStyle={mapStyle}
                 >
-                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                    <DeckGLOverlay
+                        overlayRef={overlayRef}
+                        layers={layers}
+                        interleaved
+                    />
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}
