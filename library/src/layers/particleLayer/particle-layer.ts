@@ -61,7 +61,6 @@ function addToCache(key: string, value: any) {
   positionsCache.set(key, value);
 }
 
-const FPS = 30;
 // Particle Layer
 const DEFAULT_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 
