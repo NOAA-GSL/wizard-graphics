@@ -9,12 +9,16 @@ const defaultProps = {
     getBackgroundColor: [255, 255, 255, 150],
     getSize: 12,
     getAngle: 0,
-    billboard: false,
+    billboard: true,
     background: false,
     backgroundPadding: [4, 1],
     getTextAnchor: 'middle',
     fontFamily: 'Helvetica',
     getAlignmentBaseline: 'center',
+    parameters: {
+        depthCompare: 'always',
+        cullMode: 'none',
+    },
     fontSettings: {
         sdf: true,
         radius: 12,
@@ -47,6 +51,48 @@ function fillTree(tree, points, text, padding) {
         }
     }
     return tree;
+}
+
+// The following two functions are hacks to get billboarding to work properly on
+// globe projection, and hide text behind the globe. See this for more details:
+// https://github.com/visgl/deck.gl/issues/9554#issuecomment-2785192798
+
+// Tune this mapping to match your renderer behavior
+function zoomToFOV(zoom) {
+    const clamped = Math.max(Math.min(zoom, 20), 1);
+    // At zoom 1 → full hemisphere (≈130° FOV), at zoom 20 → tight 0° FOV
+    return 130 * (1 - (clamped - 1) / 19); // Range: 130 → 0 degrees
+}
+
+// Helper function to determine if a feature is visible from a camera's pov on globe projection
+function isFeatureVisibleOnGlobe(cameraLat, cameraLon, featureLat, featureLon, zoom) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+
+    // Convert lat/lon to radians
+    const camLatRad = toRad(cameraLat);
+    const camLonRad = toRad(cameraLon);
+    const featLatRad = toRad(featureLat);
+    const featLonRad = toRad(featureLon);
+
+    // Convert to unit vectors
+    const toVec3 = (lat, lon) => [
+        Math.cos(lat) * Math.cos(lon),
+        Math.sin(lat),
+        Math.cos(lat) * Math.sin(lon),
+    ];
+
+    const camVec = toVec3(camLatRad, camLonRad);
+    const featVec = toVec3(featLatRad, featLonRad);
+
+    // Compute dot product
+    const dot = camVec[0] * featVec[0] + camVec[1] * featVec[1] + camVec[2] * featVec[2];
+
+    // Convert zoom level to a tighter FOV threshold
+    const fovDegrees = zoomToFOV(zoom); // field of view in degrees
+    const halfFovCos = Math.cos(toRad(fovDegrees / 2));
+
+    // If the angle between the vectors is within the cone, dot ≥ cos(halfFOV)
+    return dot >= halfFovCos;
 }
 
 export default class ContourLabels extends CompositeLayer {
@@ -149,9 +195,19 @@ export default class ContourLabels extends CompositeLayer {
 
     renderLayers() {
         const { labels } = this.state;
+
+        // access the camera position
+        const { viewport } = this.context;
+        const { zoom } = viewport;
+        const cameraLat = viewport.latitude;
+        const cameraLon = viewport.longitude;
+
         const textlayer = new TextLayer(this.props, {
             id: `${this.props.id}-text`,
-            data: labels,
+            // filter out labels that are not visible on the globe
+            data: labels.filter((label) =>
+                isFeatureVisibleOnGlobe(cameraLat, cameraLon, label.lat, label.lon, zoom),
+            ),
             getPosition: (d) => [Number(d.lon), Number(d.lat), this.props.elevation],
             getText: (d) => d.text,
         });
