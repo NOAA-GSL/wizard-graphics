@@ -1,4 +1,4 @@
-import { Color, DefaultProps, LayerContext, UpdateParameters, COORDINATE_SYSTEM } from "@deck.gl/core";
+import { Color, DefaultProps, LayerContext, UpdateParameters, COORDINATE_SYSTEM, GlobeViewport } from "@deck.gl/core";
 import { LineLayer, LineLayerProps } from "@deck.gl/layers";
 import { Buffer, Texture } from "@luma.gl/core";
 import { Model, BufferTransform } from "@luma.gl/engine";
@@ -430,7 +430,7 @@ export default class ParticleLayer<
       return;
     }
     
-    const isGlobe = viewport.constructor.name === 'GlobeViewport' ? 1 : 0;
+    const isGlobe = viewport.projection?.mode === 'globe' ? 1 : 0;
     const bounds = this._getEffectiveBounds();
     const viewportBounds = getViewportBounds(viewport);
     const viewportZoomChangeFactor = 2 ** ((previousViewportZoom - viewport.zoom) * 4);

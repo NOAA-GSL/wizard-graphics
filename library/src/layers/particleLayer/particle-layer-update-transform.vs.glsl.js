@@ -71,6 +71,7 @@ void main() {
   }
 
   bool isNewParticle = (sourcePosition.xy == DROP_POSITION);
+  float zOffset = (bitmap.isGlobe == 1) ? 1000.0 : 0.0;
   
   if(isNewParticle) {
     vec2 seed = vec2(particleIndex * bitmap.seed / bitmap.numParticles);
@@ -95,7 +96,8 @@ void main() {
       position = mix(vMin, vMax, rand);
     }
     
-    targetPosition = vec3(wrapLng(position.x), position.y, 200.0);
+
+    targetPosition = vec3(wrapLng(position.x), position.y, zOffset);
     return;
   }
 
@@ -136,10 +138,10 @@ void main() {
     newPos = sourcePosition.xy + vec2(speed.x, speed.y * cosLat);
   }
 
-  targetPosition.xy = newPos;
-  targetPosition.x = wrapLng(targetPosition.x);
+  targetPosition = vec3(wrapLng(newPos.x), newPos.y, zOffset);
+  //targetPosition.xy = newPos;
+  //targetPosition.x = wrapLng(targetPosition.x);
 }
-
 `;
 
 export default shader;
