@@ -51,7 +51,7 @@ function MapContainer() {
       vectorCheckbox: false,
       particleCheckbox: false,
       terrainCheckbox: false,
-      isGlobeView: false,
+      isGlobeView: true,
     }
   );
 
@@ -105,7 +105,7 @@ function MapContainer() {
   if (!state.particleCheckbox) return null;
   return new ParticleLayer({
     id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
-    beforeId: mapStyles[style].beforeId,
+    //beforeId: mapStyles[style].beforeId,
     dataDir: wdir,
     dataMag: wmag,
     color: [0, 0, 0, 255],
@@ -115,8 +115,8 @@ function MapContainer() {
     speedFactor: 2,
     animate: true,
     projection,
-    isGlobe: state.isGlobeView ? 1 : 0,
-    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
+    //isGlobe: state.isGlobeView ? 1 : 0,
+    parameters: { depthTest: true, depthCompare: 'always', cullMode: 'front' },
     readout: [
       { data: wmag, prependText: 'Wind Speed', units: 'mph', interpolate: true, decimals: 0 },
       { data: wdir, prependText: 'Wind Direction', units: '°', interpolate: true, decimals: 0 }
@@ -137,7 +137,7 @@ function MapContainer() {
     if (state.shadedCheckbox)
       result.push(
         new ShadedLayer({
-          id: `shadedLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+          id: `shadedLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${state.shadedInterpolateCheckbox ? 'interp' : 'nointerp'}`,
           beforeId: mapStyles[style].beforeId,
           data,
           colors,
@@ -181,8 +181,7 @@ function MapContainer() {
           dataDir: wdir,
           dataMag: wmag,
           projection,
-          //extensions: [new TerrainExtension()],
-          //terrainDrawMode: 'drape',
+          angleOffset: state.isGlobeView ? 180 : 0,
           parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
           readout: [
             { data: wmag, prependText: 'Wind Speed', decimals: 0, units: 'mph', interpolate: true },
