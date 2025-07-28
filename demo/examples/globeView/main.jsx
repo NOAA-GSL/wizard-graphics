@@ -219,7 +219,7 @@ function MapContainer() {
             dataMag: wmag,
             projection,
             elevation: 0,
-            parameters: { depthCompare: 'always', cullMode: 'back' },
+            parameters: { depthCompare: 'always', cullMode: 'front' },
             readout: [
                 {
                     data: wmag,
@@ -370,49 +370,28 @@ function MapContainer() {
             </label>
 
             <div ref={mapContainer} id="mapContainer">
-                {state.isGlobeView ? (
-                    <Map
-                        initialViewState={{
-                            longitude: -100.4,
-                            latitude: 37.8,
-                            zoom: 3,
-                        }}
-                        ref={mapRef}
-                        antialias
-                        reuseMaps={false}
-                        mapStyle={mapStyle}
-                        projection="globe"
-                    >
-                        <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
-                        <Readout
-                            mapContainer={mapContainer}
-                            overlayRef={overlayRef}
-                            title="Wed 06:00 am PST, Oct 21"
-                        />
-                        <Legend overlayRef={overlayRef} />
-                    </Map>
-                ) : (
-                    <Map
-                        initialViewState={{
-                            longitude: -100.4,
-                            latitude: 37.8,
-                            zoom: 3,
-                        }}
-                        ref={mapRef}
-                        antialias
-                        reuseMaps={false}
-                        mapStyle={mapStyle}
-                        projection="mercator"
-                    >
-                        <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
-                        <Readout
-                            mapContainer={mapContainer}
-                            overlayRef={overlayRef}
-                            title="Wed 06:00 am PST, Oct 21"
-                        />
-                        <Legend overlayRef={overlayRef} />
-                    </Map>
-                )}
+                <Map
+                    initialViewState={{
+                        longitude: -100.4,
+                        latitude: 37.8,
+                        zoom: 3,
+                    }}
+                    ref={mapRef}
+                    antialias
+                    reuseMaps={false}
+                    mapStyle={mapStyle}
+                    projection={state.isGlobeView ? 'globe' : 'mercator'}
+                    getAngle={state.isGlobeView ? 180 : 0}
+                    maxPitch={state.isGlobeView ? 0 : 90}
+                >
+                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                    <Readout
+                        mapContainer={mapContainer}
+                        overlayRef={overlayRef}
+                        title="Wed 06:00 am PST, Oct 21"
+                    />
+                    <Legend overlayRef={overlayRef} />
+                </Map>
             </div>
         </>
     );
