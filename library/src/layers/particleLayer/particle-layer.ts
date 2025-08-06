@@ -37,14 +37,12 @@ uniform bitmapUniforms {
 export const bitmapUniforms = {
   name: "bitmap",
   vs: uniformBlock,
-  //fs: uniformBlock,
   uniformTypes: {
     numParticles: "f32",
     maxAge: "f32",
     speedFactor: "f32",
     time: "f32",
     seed: "f32",
-    // @ts-ignore
     viewportBounds: "vec4<f32>",
     viewportZoomChangeFactor: "f32",
     bounds: "vec4<f32>",
@@ -82,6 +80,8 @@ export type ParticleLayerProps<D = unknown> = LineLayerProps<D> & {
   dataDir?: any;
   dataMag?: any;
   projection?: any;
+  trailLength?: number;
+  fadeTrails?: boolean;
 };
 
 const defaultProps: DefaultProps<ParticleLayerProps> = {
@@ -89,18 +89,25 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
 
   image: { type: "image", value: null, async: true },
 
-  numParticles: { type: "number", min: 1, max: 1000000, value: 5000 },
-  maxAge: { type: "number", min: 1, max: 255, value: 100 },
-  speedFactor: { type: "number", min: 0, max: 255, value: 1 },
+  numParticles: { type: "number", min: 1, max: 1000000, value: 10000 },
+  maxAge: { type: "number", min: 1, max: 255, value: 82 },
+  speedFactor: { type: "number", min: 0, max: 255, value: 3 },
 
   color: { type: "color", value: DEFAULT_COLOR },
-  width: { type: "number", value: 1 },
+  width: { type: "number", value: 1.2 },
   animate: { type: "boolean", value: true },
 
   bounds: { type: "array", value: null, compare: true, optional: true },
   coordinateSystem: COORDINATE_SYSTEM.LNGLAT,
   fp64: false,
   wrapLongitude: true,
+
+  trailLength: { type: "number", min: 2, max: 100, value: 30 },
+  fadeTrails: { type: "boolean", value: true },
+
+  particleJitter: { type: "number", min: 0, max: 1, value: 0.7 }, // Amount of random jitter
+  speedVariation: { type: "number", min: 0, max: 1, value: 0.1 }, // Speed variation between particles
+  turbulenceStrength: { type: "number", min: 0, max: 1, value: 0.1 },
 };
 
 export default class ParticleLayer<
@@ -127,6 +134,7 @@ export default class ParticleLayer<
     texture: Texture;
     stepRequested: boolean;
     bounds: number[];
+    trailLines: any[];
   };
 
   getShaders() {
@@ -136,19 +144,53 @@ export default class ParticleLayer<
       inject: {
         "vs:#decl": `
           out float drop;
+          out float trailAge;
+          out float particleVariation;
           const vec2 DROP_POSITION = vec2(0);
+          
+          // Hash function for per-particle variation
+          float hash(float n) {
+            return fract(sin(n) * 43758.5453123);
+          }
         `,
         "vs:#main-start": `
           drop = float(instanceSourcePositions.xy == DROP_POSITION || instanceTargetPositions.xy == DROP_POSITION);
+          float particleIndex = mod(float(gl_VertexID), ${this.props.numParticles}.0);
+          float ageIndex = floor(float(gl_VertexID) / ${this.props.numParticles}.0);
+          trailAge = ageIndex / ${this.props.maxAge}.0;
+          
+          // Add per-particle variation for visual diversity
+          particleVariation = hash(particleIndex);
         `,
         "fs:#decl": `
           in float drop;
+          in float trailAge;
+          in float particleVariation;
         `,
         "fs:#main-start": `
           if (drop > 0.5) discard;
+          ${this.props.fadeTrails ? `
+          // Variable trail fade based on particle
+          float fadeVariation = 0.8 + particleVariation * 0.4;
+          float trailFade = 1.0 - smoothstep(0.0, fadeVariation, trailAge);
+          fragColor.a *= trailFade * trailFade;
+          
+          // Add subtle color variation per particle
+          fragColor.rgb *= 0.9 + particleVariation * 0.2;
+          ` : ''}
         `,
       },
     };
+  }
+
+  shouldResetParticles(viewport, previousViewport) {
+    if (!previousViewport) return false;
+    
+    const zoomDiff = Math.abs(viewport.zoom - previousViewport.zoom);
+    const isGlobe = viewport.projection?.mode === 'globe';
+    
+    // Reset particles on major zoom changes for flat maps only
+    return !isGlobe && zoomDiff > 3;
   }
 
   initializeState() {
@@ -161,6 +203,7 @@ export default class ParticleLayer<
       "instanceColors",
       "instanceWidths",
     ]);
+    
     attributeManager!.addInstanced({
       instanceSourcePositions: { size: 3, type: "float32", noAlloc: true },
       instanceTargetPositions: { size: 3, type: "float32", noAlloc: true },
@@ -175,66 +218,100 @@ export default class ParticleLayer<
     this._setupState();
   }
   
+  _createTrailLines() {
+    const { numParticles, maxAge, trailLength } = this.props;
+    const effectiveTrailLength = Math.min(trailLength, maxAge);
+    const trailLines = [];
+    
+    for (let particleId = 0; particleId < numParticles; particleId++) {
+      for (let age = 0; age < effectiveTrailLength - 1; age++) {
+        const sourceIndex = particleId + age * numParticles;
+        const targetIndex = particleId + (age + 1) * numParticles;
+        
+        trailLines.push({
+          sourcePosition: [0, 0, 0], // Will be updated from transform feedback
+          targetPosition: [0, 0, 0], // Will be updated from transform feedback
+          sourceIndex,
+          targetIndex,
+          age: age,
+          particleId: particleId,
+        });
+      }
+    }
+    
+    return trailLines;
+  }
+  
   _createWindTexture() {
-      const { projection, dataDir, dataMag } = this.props;
-      const { lonlatGrid } = projection;
+    const { projection, dataDir, dataMag } = this.props;
+    const { lonlatGrid } = projection;
 
-      const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
-      const textureKey = `${key}-texture`;
-      const cachedTexture = positionsCache.get(textureKey);
+    const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
+    const textureKey = `${key}-texture`;
+    const cachedTexture = positionsCache.get(textureKey);
 
-      if (cachedTexture?.texture) {
-          return cachedTexture.texture;
-      }
-      
-      const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
-      const width = lonlatGrid[0].length;
-      const height = lonlatGrid.length;
-      const dlon = (maxLng - minLng) / width;
-      const dlat = (maxLat - minLat) / height;
-      
-      const uvData = new Float32Array(width * height * 4);
-      let index = 0;
+    if (cachedTexture?.texture) {
+        return cachedTexture.texture;
+    }
+    
+    const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
+    const width = lonlatGrid[0].length;
+    const height = lonlatGrid.length;
+    const dlon = (maxLng - minLng) / width;
+    const dlat = (maxLat - minLat) / height;
+    
+    const uvData = new Float32Array(width * height * 4);
+    let index = 0;
 
-      for (let j = 0; j < height; j += 1) {
-          for (let i = 0; i < width; i += 1) {
-              const lat = maxLat - j * dlat;
-              const lon = minLng + i * dlon;
-              const interpolate = false; 
-              const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
-              const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
+    const textureNoise = (x: number, y: number) => {
+      return (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+    };
 
-              let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
-              if (isNaN(wmagnitude)) uv = [0, 0];
-              const startIndex = index * 4;
-              
-              // Store the raw U and V vector components as floats
-              uvData[startIndex] = uv[0];     // U component in Red channel
-              uvData[startIndex + 1] = uv[1]; // V component in Green channel
-              uvData[startIndex + 2] = 0;     // Blue channel is unused
-              // Use Alpha to flag if data exists at this point
-              uvData[startIndex + 3] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0; 
-              
-              index += 1;
-          }
-      }
+    for (let j = 0; j < height; j += 1) {
+        for (let i = 0; i < width; i += 1) {
+            const lat = maxLat - j * dlat;
+            const lon = minLng + i * dlon;
+            const interpolate = false; 
+            const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
+            const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
 
-      const texture = this.context.device.createTexture({
-          width,
-          height,
-          data: uvData,
-          format: 'rgba32float', 
-          mipmaps: false, 
-          sampler: {
-              minFilter: 'linear',
-              magFilter: 'linear',
-              addressModeU: 'clamp-to-edge',
-              addressModeV: 'clamp-to-edge',
-          },
-      });
-      
-      addToCache(textureKey, { texture });
-      return texture;
+            let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
+            if (isNaN(wmagnitude)) uv = [0, 0];
+            
+            // Add subtle noise to prevent identical flow paths
+            const noiseScale = 0.02; // Very subtle noise
+            uv[0] += (textureNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
+            uv[1] += (textureNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
+            
+            const startIndex = index * 4;
+            
+            // Store the raw U and V vector components as floats
+            uvData[startIndex] = uv[0];     // U component in Red channel
+            uvData[startIndex + 1] = uv[1]; // V component in Green channel
+            uvData[startIndex + 2] = 0;     // Blue channel is unused
+            // Use Alpha to flag if data exists at this point
+            uvData[startIndex + 3] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0; 
+            
+            index += 1;
+        }
+    }
+
+    const texture = this.context.device.createTexture({
+        width,
+        height,
+        data: uvData,
+        format: 'rgba32float', 
+        mipmaps: false, 
+        sampler: {
+            minFilter: 'linear',
+            magFilter: 'linear',
+            addressModeU: 'clamp-to-edge',
+            addressModeV: 'clamp-to-edge',
+        },
+    });
+    
+    addToCache(textureKey, { texture });
+    return texture;
   }
   
   _getBoundsFromGrid(lonlatGrid) {
@@ -266,6 +343,7 @@ export default class ParticleLayer<
 
       this.setState({
           bounds: calculatedBounds,
+          trailLines: this._createTrailLines(),
       });
 
       this._setupTransformFeedback();
@@ -280,7 +358,8 @@ export default class ParticleLayer<
       props.maxAge !== oldProps.maxAge ||
       props.width !== oldProps.width ||
       props.dataDir !== oldProps.dataDir ||
-      props.dataMag !== oldProps.dataMag;
+      props.dataMag !== oldProps.dataMag ||
+      props.trailLength !== oldProps.trailLength;
 
     if (shouldUpdate) {
         this._setupState();
@@ -311,10 +390,6 @@ export default class ParticleLayer<
     this.boundsCache = { key: cacheKey, bounds };
     return bounds;
   }
-
-  // getBounds() {
-  //   return this._getEffectiveBounds();
-  // }
 
   draw({ uniforms }: { uniforms: any }) {
     if (!this.state.initialized) {
@@ -347,7 +422,6 @@ export default class ParticleLayer<
     });
 
     super.draw({ uniforms });
-
   }
 
   _setupTransformFeedback() {
@@ -355,7 +429,7 @@ export default class ParticleLayer<
       this._deleteTransformFeedback();
     }
     
-    const { numParticles, color, maxAge, width } = this.props;
+    const { numParticles, color, maxAge, width, trailLength, fadeTrails } = this.props;
 
     const texture = this.props.image || this._createWindTexture();
     if (!texture || typeof texture === "string") {
@@ -367,15 +441,31 @@ export default class ParticleLayer<
     const sourcePositions = this.context.device.createBuffer(new Float32Array(numInstances * 3));
     const targetPositions = this.context.device.createBuffer(new Float32Array(numInstances * 3));
 
-    const colors = this.context.device.createBuffer(
-      new Float32Array(
-        new Array(numInstances).fill(undefined).flatMap((_, i) => {
-          const age = Math.floor(i / numParticles);
-          const alpha = (color[3] ?? 255) * (1 - age / maxAge);
-          return [color[0] / 255, color[1] / 255, color[2] / 255, alpha / 255];
-        })
-      )
-    );
+    const colors = new Float32Array(numInstances * 4);
+
+    for (let i = 0; i < numInstances; i++) {
+      const particleIndex = i % numParticles;
+      const age = Math.floor(i / numParticles);
+      const effectiveTrailLength = Math.min(trailLength, maxAge);
+
+      let alpha = color[3] ?? 255;
+
+      if (fadeTrails && age < effectiveTrailLength) {
+        const trailPosition = age / effectiveTrailLength;
+        const trailFade = Math.pow(1 - trailPosition, 2);
+        alpha *= trailFade;
+      } else if (age >= effectiveTrailLength) {
+        alpha = 0;
+      }
+
+      const o = i * 4;
+      colors[o    ] = color[0] / 255; // R
+      colors[o + 1] = color[1] / 255; // G
+      colors[o + 2] = color[2] / 255; // B
+      colors[o + 3] = alpha    / 255;    // A
+    }
+
+    const colorBuffer = this.context.device.createBuffer({data: colors});
 
     const sourcePositions64Low = new Float32Array([0, 0, 0]);
     const targetPositions64Low = new Float32Array([0, 0, 0]);
@@ -385,7 +475,7 @@ export default class ParticleLayer<
       attributes: { sourcePosition: sourcePositions },
       bufferLayout: [{ name: "sourcePosition", format: "float32x3" }],
       feedbackBuffers: { targetPosition: targetPositions },
-      vs: updatedShader, // Use the updated shader code
+      vs: updatedShader,
       varyings: ["targetPosition"],
       modules: [bitmapUniforms],
       vertexCount: numParticles,
@@ -399,7 +489,7 @@ export default class ParticleLayer<
       targetPositions,
       sourcePositions64Low,
       targetPositions64Low,
-      colors,
+      colors: colorBuffer,
       widths,
       transform,
       texture, 
@@ -432,19 +522,33 @@ export default class ParticleLayer<
     
     const isGlobe = viewport.projection?.mode === 'globe' ? 1 : 0;
     const bounds = this._getEffectiveBounds();
-    const viewportBounds = getViewportBounds(viewport);
-    const viewportZoomChangeFactor = 2 ** ((previousViewportZoom - viewport.zoom) * 4);
-    let currentSpeedFactor;
+    
+    let viewportBounds;
+    let viewportZoomChangeFactor;
+    
     if (isGlobe > 0) {
-      // For the globe, use a constant scaling factor.
-      // This value may require tuning for your desired speed.
-      currentSpeedFactor = speedFactor / 50000;
+      viewportBounds = bounds;
+      viewportZoomChangeFactor = 1.0;
     } else {
-      // For flat maps, use the existing zoom-based scaling.
-      currentSpeedFactor = speedFactor / (2 ** (viewport.zoom + 7));
+      viewportBounds = getViewportBounds(viewport);
+      // Reduce zoom change sensitivity to prevent excessive particle drops
+      viewportZoomChangeFactor = Math.max(1.0, 2 ** ((previousViewportZoom - viewport.zoom) * 1.5)); 
+    }
+    
+    // Add variation to speed factor based on time
+    let currentSpeedFactor;
+    const speedVariation = 0.95 + 0.1 * Math.sin(time * 0.001); // Subtle global speed variation
+    
+    if (isGlobe > 0) {
+      currentSpeedFactor = (speedFactor * speedVariation) / 100000; 
+    } else {
+      currentSpeedFactor = (speedFactor * speedVariation) / (2 ** (viewport.zoom + 7));
     }
 
-    const moduleUniforms: UniformProps = {
+    // Use a more varied seed that changes more dramatically over time
+    const seed = Math.sin(time * 0.0001) * 999 + Math.cos(time * 0.00013) * 777;
+
+    const moduleUniforms = {
       bitmapTexture: texture,
       viewportBounds: viewportBounds || [0, 0, 0, 0],
       viewportZoomChangeFactor: viewportZoomChangeFactor || 0,
@@ -453,19 +557,19 @@ export default class ParticleLayer<
       maxAge,
       speedFactor: currentSpeedFactor,
       time,
-      seed: Math.random(),
+      seed: Math.abs(seed),
       isGlobe
     };
     
     transform.model.shaderInputs.setProps({ bitmap: moduleUniforms });
-    //transform.run();
+    
     transform.run({
-      clearColor:false,
-      clearDepth:false,
-      clearStencil:false,
-      depthReadOnly:true,
-      stencilReadOnly:true,
-    })
+      clearColor: false,
+      clearDepth: false,
+      clearStencil: false,
+      depthReadOnly: true,
+      stencilReadOnly: true,
+    });
 
     const encoder = this.context.device.createCommandEncoder();
     encoder.copyBufferToBuffer({
@@ -536,7 +640,30 @@ ParticleLayer.defaultProps = defaultProps;
 
 // Viewport Functions
 export function getViewportBounds(viewport) {
-  return wrapBounds(viewport.getBounds());
+  // For both globe and flat maps, return expanded bounds to prevent edge clipping
+  // This allows particles to flow naturally across viewport boundaries
+  
+  if (viewport.projection?.mode === 'globe') {
+    // For globe, return world bounds
+    return [-180, -90, 180, 90];
+  }
+  
+  // For flat maps, expand the viewport bounds to allow particle flow
+  const bounds = viewport.getBounds();
+  const [west, south, east, north] = bounds;
+  
+  // Expand bounds by a margin to prevent edge clipping
+  const lonMargin = (east - west) * 0.2; // 20% margin
+  const latMargin = (north - south) * 0.2; // 20% margin
+  
+  const expandedBounds = [
+    Math.max(west - lonMargin, -180),
+    Math.max(south - latMargin, -90),
+    Math.min(east + lonMargin, 180),
+    Math.min(north + latMargin, 90)
+  ];
+  
+  return wrapBounds(expandedBounds);
 }
 
 function modulo(x: number, y: number): number {

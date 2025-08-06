@@ -1,6 +1,7 @@
-import React, { StrictMode, useMemo, useRef, useCallback, useReducer } from 'react';
+import React, { StrictMode, useMemo, useRef, useCallback, useReducer, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
+import Stats from 'stats.js';
 import {
   mapStyles,
   Maps,
@@ -34,6 +35,7 @@ const checkboxConfig = [
   { key: 'particleCheckbox', label: 'Particle Layer' },
   { key: 'terrainCheckbox', label: 'Terrain Layer' },
   { key: 'isGlobeView', label: 'Globe View' },
+  { key: 'showStats', label: 'Show Performance Stats' },
 ];
 
 function MapContainer() {
@@ -49,9 +51,10 @@ function MapContainer() {
       shadedCheckbox: true,
       shadedInterpolateCheckbox: true,
       vectorCheckbox: false,
-      particleCheckbox: false,
+      particleCheckbox: true,
       terrainCheckbox: false,
       isGlobeView: true,
+      showStats:false, // Enable stats by default
     }
   );
 
@@ -63,6 +66,73 @@ function MapContainer() {
   const overlayRef = useRef();
   const mapContainer = useRef();
   const mapRef = useRef();
+  const statsRef = useRef();
+
+  // Initialize Stats.js
+  useEffect(() => {
+    if (state.showStats && !statsRef.current) {
+      const stats = new Stats();
+      stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+      
+      // Style the stats panel
+      stats.dom.style.position = 'absolute';
+      stats.dom.style.top = '10px';
+      stats.dom.style.left = '10px';
+      stats.dom.style.zIndex = '10000';
+      
+      // Add to the map container instead of body for better positioning
+      if (mapContainer.current) {
+        mapContainer.current.appendChild(stats.dom);
+        statsRef.current = stats;
+      }
+    } else if (!state.showStats && statsRef.current) {
+      // Remove stats when disabled
+      if (statsRef.current.dom.parentNode) {
+        statsRef.current.dom.parentNode.removeChild(statsRef.current.dom);
+      }
+      statsRef.current = null;
+    }
+  }, [state.showStats]);
+
+  // Cleanup stats on unmount
+  useEffect(() => {
+    return () => {
+      if (statsRef.current && statsRef.current.dom.parentNode) {
+        statsRef.current.dom.parentNode.removeChild(statsRef.current.dom);
+      }
+    };
+  }, []);
+
+  // Animation loop for stats
+  useEffect(() => {
+    let animationId;
+    
+    function animate() {
+      if (statsRef.current) {
+        statsRef.current.begin();
+        
+        // The actual rendering is handled by deck.gl/mapbox
+        // We just need to call end() after each frame
+        requestAnimationFrame(() => {
+          if (statsRef.current) {
+            statsRef.current.end();
+          }
+        });
+      }
+      
+      animationId = requestAnimationFrame(animate);
+    }
+    
+    if (state.showStats && statsRef.current) {
+      animate();
+    }
+    
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [state.showStats]);
 
   const projection = useMemo(() => {
     const p = new Projection(projDict, resLevel);
@@ -85,7 +155,7 @@ function MapContainer() {
   const terrainLayer = useMemo(
     () =>
       new TerrainLayer({
-        id: 'terrain-layer',
+        id: `terrain-layer-${state.isGlobeView ? 'globe' : 'mercator'}`,
         //texture: 'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png',
         elevationData: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
         elevationDecoder: { rScaler: 256, gScaler: 1, bScaler: 0.00390625, offset: -32768 },
@@ -102,34 +172,29 @@ function MapContainer() {
   );
 
   const particleLayer = useMemo(() => {
-  if (!state.particleCheckbox) return null;
-  return new ParticleLayer({
-    id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
-    //beforeId: mapStyles[style].beforeId,
-    dataDir: wdir,
-    dataMag: wmag,
-    color: [0, 0, 0, 255],
-    width: 1,
-    numParticles: 10000,
-    maxAge: 100,
-    speedFactor: 2,
-    animate: true,
+    if (!state.particleCheckbox) return null;
+    return new ParticleLayer({
+      id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+      dataDir: wdir,
+      dataMag: wmag,
+      color: [0, 0, 0, 255],
+      width: 1.5,
+      numParticles: 10000,
+      projection,
+      parameters: { depthTest: true, depthCompare: 'always', cullMode: 'front' },
+      readout: [
+        { data: wmag, prependText: 'Wind Speed', units: 'mph', interpolate: true, decimals: 0 },
+        { data: wdir, prependText: 'Wind Direction', units: '°', interpolate: true, decimals: 0 }
+      ],
+    });
+  }, [
+    state.particleCheckbox,
+    state.isGlobeView,
     projection,
-    //isGlobe: state.isGlobeView ? 1 : 0,
-    parameters: { depthTest: true, depthCompare: 'always', cullMode: 'front' },
-    readout: [
-      { data: wmag, prependText: 'Wind Speed', units: 'mph', interpolate: true, decimals: 0 },
-      { data: wdir, prependText: 'Wind Direction', units: '°', interpolate: true, decimals: 0 }
-    ],
-  });
-}, [
-  state.particleCheckbox,
-  state.isGlobeView,
-  projection,
-  wdir,
-  wmag,
-  style
-]);
+    wdir,
+    wmag,
+    style
+  ]);
 
   const layers = useMemo(() => {
     const result = [];
@@ -221,16 +286,19 @@ function MapContainer() {
           </label>
         ) : null
       )}
-      <div ref={mapContainer} id='mapContainer'>
+      <div ref={mapContainer} id='mapContainer' style={{ position: 'relative' }}>
         <Map
-          //key={state.isGlobeView ? 'globe' : 'mercator'}
           initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
           ref={mapRef}
           antialias
           mapStyle={mapStyle}
           projection={state.isGlobeView ? 'globe' : 'mercator'}
         >
-          <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+          <DeckGLOverlay 
+            overlayRef={overlayRef} 
+            layers={layers} 
+            interleaved 
+          />
           <Readout mapContainer={mapContainer} overlayRef={overlayRef} title='Wed 06:00 am PST, Oct 21' />
           <Legend overlayRef={overlayRef} />
         </Map>
