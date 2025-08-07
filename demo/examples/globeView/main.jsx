@@ -26,9 +26,10 @@ import rrfsWdir from 'demo-data/RRFS/wdir';
 import rrfsWmag from 'demo-data/RRFS/wmag';
 import rrfsProjDict from 'demo-data/RRFS/projection';
 
-// import eagleTemperatures from 'demo-data/EAGLE/temp';
-// import eagleWdir from 'demo-data/EAGLE/wdir';
-// import eagleWmag from 'demo-data/EAGLE/wmag';
+import eagleTemperatures from 'demo-data/EAGLE/temp';
+import eagleWdir from 'demo-data/EAGLE/wdir';
+import eagleWmag from 'demo-data/EAGLE/wmag';
+import eagleProjDict from 'demo-data/EAGLE/projection';
 
 import { TerrainLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
@@ -65,7 +66,7 @@ function MapContainer() {
         showStats: false, // Enable stats by default
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
-    const [currentDataset, setCurrentDataset] = React.useState(radioOptions[1]);
+    const [currentDataset, setCurrentDataset] = React.useState(radioOptions[0]);
 
     const toggle = useCallback((key) => (e) => dispatch({ key, value: e.target.checked }), []);
 
@@ -99,6 +100,7 @@ function MapContainer() {
             wdir = eagleWdir;
             wmag = eagleWmag;
             projDict = eagleProjDict;
+            resLevel = 8; // sample data is every 8th point
             break;
         default:
             console.error('ERROR', `Unknown dataset: ${currentDataset}`);
