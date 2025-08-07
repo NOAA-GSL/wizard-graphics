@@ -18,29 +18,63 @@ function getColor(f) {
     return f.properties.color ? gUtilities.hexToRgb(f.properties.color) : [255, 0, 0];
 }
 
+// function getFillColor(f) {
+//     const coordinatesStr = JSON.stringify(f.geometry.coordinates);
+//     const featureInfo = getFeatureKey(f);
+
+//     if (seenFeaturesMap.has(coordinatesStr)) {
+//         const existingFeature = seenFeaturesMap.get(coordinatesStr);
+
+//         // Check if the existing feature has the same phenomenon and significance
+//         if (
+//             existingFeature.phenomenon !== featureInfo.phenomenon ||
+//             existingFeature.significance !== featureInfo.significance
+//         ) {
+//             // Properties differ, return semi-transparent fill
+//             return [...getColor(f), 128]; // Semi-transparent fill
+//         }
+//         // Same properties, use original color
+//         return getColor(f);
+//     }
+
+//     // Store the new feature
+//     seenFeaturesMap.set(coordinatesStr, {
+//         phenomenon: featureInfo.phenomenon,
+//         significance: featureInfo.significance,
+//     });
+//     return getColor(f); // First time seeing this feature
+// }
+
+// testing the new getFillColor function from the feat/archive branch merge
 function getFillColor(f) {
     const coordinatesStr = JSON.stringify(f.geometry.coordinates);
     const featureInfo = getFeatureKey(f);
+    const { phenomenon, significance, priority } = featureInfo;
 
     if (seenFeaturesMap.has(coordinatesStr)) {
         const existingFeature = seenFeaturesMap.get(coordinatesStr);
+        const existingPriority = existingFeature.priority;
 
         // Check if the existing feature has the same phenomenon and significance
         if (
-            existingFeature.phenomenon !== featureInfo.phenomenon ||
-            existingFeature.significance !== featureInfo.significance
+            existingFeature.phenomenon !== phenomenon &&
+            existingFeature.significance !== significance
         ) {
-            // Properties differ, return semi-transparent fill
-            return [...getColor(f), 128]; // Semi-transparent fill
+            // Check priority:
+            if (priority < existingPriority) {
+                return getColor(f);
+            }
+            // Properties differ, return transparent
+            return [...getColor(f), 0];
         }
         // Same properties, use original color
         return getColor(f);
     }
-
     // Store the new feature
     seenFeaturesMap.set(coordinatesStr, {
-        phenomenon: featureInfo.phenomenon,
-        significance: featureInfo.significance,
+        phenomenon,
+        significance,
+        priority,
     });
     return getColor(f); // First time seeing this feature
 }
@@ -49,11 +83,13 @@ const defaultProps = {
     filled: true,
     lineWidthMinPixels: 1,
     getFillColor,
-    getLineColor: (f) =>
-        f.properties.color ? gUtilities.hexToRgb(f.properties.color) : [255, 255, 255],
+    // changed this with feat/archive branch merge
+    getLineColor: [0, 0, 0, 0],
+    // getLineColor: (f) =>
+    //     f.properties.color ? gUtilities.hexToRgb(f.properties.color) : [255, 255, 255],
     getLineWidth: 2,
     stroked: true,
-    opacity: 0.5,
+    opacity: 1, // changed from 0.5 to 1
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
 
