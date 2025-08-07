@@ -30,6 +30,7 @@ const defaultProps = {
     getLabel: (x) => x.label,
     getWeight: (x) => x.weight || 1,
     getPosition: (x) => x.position,
+    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
 };
 
 const findPopulationScale = (d) => {

@@ -254,7 +254,6 @@ function MapContainer() {
             iconMapping,
             sizeScale: 40,
             parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
-            elevation:0,
         });
         layers.push(iconLayer);
     }
@@ -262,8 +261,6 @@ function MapContainer() {
         const citiesLayer = new CitiesLayer({
             id: 'citiesLayer',
             cityList: demoCities,
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
-            elevation:0,
             ...(state.citiesDataLabelsCheckbox && {
                 dataLabels: {
                     data,
@@ -285,8 +282,6 @@ function MapContainer() {
             id: 'spotLayer',
             pickable: true,
             onClick: handleSpotClick, // Add click handler
-            parameters: { depthTest:true, depthCompare: 'always', cullMode: 'none' },
-            elevation:0,
         });
         layers.push(spotLayer);
     }
@@ -296,8 +291,6 @@ function MapContainer() {
             data: URLdata['NIFC-active'],
             incidents: 'active', // 'active' or 'last24Hours'
             pickable: true,
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
-            elevation:0,
         });
         layers.push(nifcLayer);
     }
@@ -367,8 +360,6 @@ function MapContainer() {
                 layerType: 'temp', // 'temp', 'prcp'
                 range: '6-10', // '6-10', '8-14'
             },
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
-            elevation:0,
         });
         layers.push(cpcLayer);
     }
@@ -398,8 +389,6 @@ function MapContainer() {
                 ],
                 dataType: 'day1outlook', // day1outlook, day2outlook, day3outlook, day4outlook, day5outlook
             },
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
-            elevation:0,
         });
         layers.push(spcLayer);
     }
@@ -426,8 +415,6 @@ function MapContainer() {
                 dataType: 'day1outlook', // day1outlook, day2outlook, day3outlook, day4outlook, day5outlook
             },
             pickable: true,
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
-            elevation:0,
         });
         layers.push(wpcLayer);
     }
@@ -440,8 +427,6 @@ function MapContainer() {
                 type: 'dynamicItems', // 'staticBar', 'staticItems', 'dynamicItems'
                 title: 'NWS Hazards & Warnings',
             },
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
-            elevation:0,
         });
         layers.push(wwaLayer);
     }

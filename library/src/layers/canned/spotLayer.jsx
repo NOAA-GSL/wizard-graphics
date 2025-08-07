@@ -55,6 +55,7 @@ const defaultProps = {
     getTextBorderWidth: 4,
     getElevation: 0,
     elevationScale: 1,
+    parameters: { depthTest:true, depthCompare: 'always', cullMode: 'none' },
     // Add click handler prop
     onSpotClick: null,
     pickingFunction: (d) => {

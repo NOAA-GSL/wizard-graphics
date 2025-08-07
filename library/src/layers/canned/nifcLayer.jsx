@@ -27,6 +27,7 @@ const defaultProps = {
     },
     getIconSize,
     getIcon: () => 'marker',
+    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
     pickingFunction: (d) => {
         if (d.object) {
             const {
