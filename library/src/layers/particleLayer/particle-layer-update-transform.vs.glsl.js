@@ -37,70 +37,86 @@ vec2 noise2D(vec2 p) {
   ) * 2.0 - 1.0;
 }
 
-float wrapLng(float lng) {
+// Standard longitude wrapping for display purposes only
+float wrapLngForDisplay(float lng) {
   return lng - 360.0 * floor((lng + 180.0) / 360.0);
 }
 
-float unwrapLng(float lng, float ref) {
-  return lng - 360.0 * floor((lng - ref + 180.0) / 360.0);
-}
-
-bool isInBounds(vec2 pos, vec4 bounds) {
-  float lng = pos.x;
-  bool inLat = bounds.y <= pos.y && pos.y <= bounds.w;
-  if (!inLat) {
-    return false;
-  }
-
-  float minLng = wrapLng(bounds.x);
-  float maxLng = wrapLng(bounds.z);
-  
-  if (minLng <= maxLng) {
-    return minLng <= lng && lng <= maxLng;
-  } else {
-    return minLng <= lng || lng <= maxLng;
-  }
-}
-
-// Globe-aware bounds checking - only check data bounds, not viewport bounds
+// FIXED: Work with unwrapped data coordinates - don't wrap unless necessary
 bool isInDataBounds(vec2 pos, vec4 bounds) {
-  // Always check latitude bounds
-  if (pos.y < bounds.y || pos.y > bounds.w) {
-    return false;
-  }
+  // Work directly with unwrapped coordinates for data bounds
+  return pos.x >= bounds.x && pos.x <= bounds.z && 
+         pos.y >= bounds.y && pos.y <= bounds.w;
+}
+
+// FIXED: Handle viewport bounds (which may be wrapped) vs data bounds (unwrapped)
+bool isInViewportBounds(vec2 pos, vec4 viewportBounds) {
+  // For viewport bounds, we need to handle potential wrapping
+  float lng = pos.x;
+  bool inLat = viewportBounds.y <= pos.y && pos.y <= viewportBounds.w;
+  if (!inLat) return false;
+
+  float minLng = viewportBounds.x;
+  float maxLng = viewportBounds.z;
   
-  // For longitude, wrap and check
-  float lng = wrapLng(pos.x);
-  float minLng = wrapLng(bounds.x);
-  float maxLng = wrapLng(bounds.z);
-  
-  if (minLng <= maxLng) {
-    return minLng <= lng && lng <= maxLng;
+  // Check if viewport bounds cross the dateline
+  if (minLng > maxLng) {
+    // Viewport crosses dateline, need to check both wrapped and unwrapped space
+    float wrappedLng = wrapLngForDisplay(lng);
+    return (wrappedLng >= minLng || wrappedLng <= maxLng) || 
+           (lng >= minLng || lng <= maxLng);
   } else {
-    return minLng <= lng || lng <= maxLng;
+    // Normal case - check both wrapped and unwrapped
+    float wrappedLng = wrapLngForDisplay(lng);
+    return (lng >= minLng && lng <= maxLng) || 
+           (wrappedLng >= minLng && wrappedLng <= maxLng);
   }
 }
 
 vec2 getUV(vec2 pos, vec4 bounds) {
-  float unwrappedLng = unwrapLng(pos.x, bounds.x);
+  // Work directly with unwrapped coordinates
+  float u = (pos.x - bounds.x) / (bounds.z - bounds.x);
+  float v = (pos.y - bounds.w) / (bounds.y - bounds.w);
   
-  float boundsMinX = bounds.x;
-  float boundsMaxX = bounds.z;
+  // Clamp UV coordinates to prevent sampling outside texture
+  return vec2(clamp(u, 0.0, 1.0), clamp(v, 0.0, 1.0));
+}
 
-  if (boundsMinX > boundsMaxX) {
-    boundsMaxX += 360.0;
+float convertToDataSpace(float wrappedLng, vec4 dataBounds) {
+  float dataMin = dataBounds.x;
+  float dataMax = dataBounds.z;
+  
+  // If wrapped longitude is in standard range but data is unwrapped
+  if (wrappedLng >= -180.0 && wrappedLng <= 180.0) {
+    // Try direct mapping first
+    if (wrappedLng >= dataMin && wrappedLng <= dataMax) {
+      return wrappedLng;
+    }
+    
+    // If data spans across dateline in unwrapped space (e.g., -220 to -50)
+    // Convert wrapped longitude to equivalent unwrapped space
+    if (dataMin < -180.0) {
+      // Data extends westward past -180
+      if (wrappedLng > 0.0) {
+        // Positive longitude corresponds to the western extension
+        return wrappedLng - 360.0;
+      }
+    } else if (dataMax > 180.0) {
+      // Data extends eastward past 180
+      if (wrappedLng < 0.0) {
+        // Negative longitude corresponds to the eastern extension
+        return wrappedLng + 360.0;
+      }
+    }
   }
   
-  return vec2(
-    (unwrappedLng - boundsMinX) / (boundsMaxX - boundsMinX),
-    (pos.y - bounds.w) / (bounds.y - bounds.w)
-  );
+  return wrappedLng;
 }
 
 // Enhanced trail-aware particle lifecycle with better randomization
 bool shouldDropParticle(float particleIndex, float particleAge) {
   // Add per-particle lifetime variation
-  float particleLifeVariation = hash(vec2(particleIndex * 0.01, 0.5)) * 0.4 + 0.8; // 0.8 to 1.2 multiplier
+  float particleLifeVariation = hash(vec2(particleIndex * 0.01, 0.5)) * 0.4 + 0.8;
   float adjustedMaxAge = bitmap.maxAge * particleLifeVariation;
   
   // More varied particle recycling with staggered timing
@@ -115,8 +131,8 @@ bool shouldDropParticle(float particleIndex, float particleAge) {
     // For flat maps, include zoom-based culling but with reduced sensitivity
     bool zoomCull = bitmap.viewportZoomChangeFactor > 1.5 && 
                     mod(particleIndex + hash(vec2(particleIndex * 0.013, 3.2)) * 10.0, bitmap.viewportZoomChangeFactor * 0.5) >= 0.5;
-    bool boundsCull = !isInBounds(sourcePosition.xy, bitmap.viewportBounds) || 
-                      !isInBounds(sourcePosition.xy, bitmap.bounds);
+    bool boundsCull = !isInViewportBounds(sourcePosition.xy, bitmap.viewportBounds) || 
+                      !isInDataBounds(sourcePosition.xy, bitmap.bounds);
     
     return ageCycle || zoomCull || boundsCull;
   }
@@ -165,28 +181,35 @@ void main() {
 
     vec2 vMin, vMax;
     
-    // For globe view, use data bounds for particle spawning instead of viewport bounds
+    // FIXED: Use data bounds for spawning, which may be unwrapped
     if (bitmap.isGlobe == 1) {
       vMin = bitmap.bounds.xy;
       vMax = bitmap.bounds.zw;
     } else {
+      // For flat maps, try to use viewport bounds, but fall back to data bounds
       vMin = bitmap.viewportBounds.xy;
       vMax = bitmap.viewportBounds.zw;
+      
+      // If viewport bounds are wrapped but data is unwrapped, adjust
+      if (vMin.x > vMax.x) {
+        // Viewport crosses dateline, use data bounds instead for consistency
+        vMin = bitmap.bounds.xy;
+        vMax = bitmap.bounds.zw;
+      }
     }
     
-    if (vMin.x > vMax.x) vMax.x += 360.0;
-
     vec2 position;
-    // --- GLOBE LOGIC FOR NEW PARTICLES ---
+
     if (bitmap.isGlobe == 1) {
-      float lonSpan = vMax.x - vMin.x;
-      position.x = vMin.x + rand.x * lonSpan;
+      // Globe logic - spawn directly in data space
+      position.x = mix(vMin.x, vMax.x, rand.x);
+      
       // Distribute particles evenly across the curved surface
       float phiMin = vMin.y * PI_180;
       float phiMax = vMax.y * PI_180;
       position.y = asin(mix(sin(phiMin), sin(phiMax), rand.y)) / PI_180;
     } else {
-    // --- FLAT MAP LOGIC FOR NEW PARTICLES ---
+      // Flat map logic - spawn directly in data space
       position = mix(vMin, vMax, rand);
     }
     
@@ -194,7 +217,7 @@ void main() {
     vec2 jitter = noise2D(vec2(particleIndex * 0.031, bitmap.time * 0.001)) * 0.5;
     position += jitter;
     
-    targetPosition = vec3(wrapLng(position.x), clamp(position.y, -90.0, 90.0), zOffset);
+    targetPosition = vec3(position.x, clamp(position.y, -90.0, 90.0), zOffset);
     return;
   }
 
@@ -204,11 +227,12 @@ void main() {
     return;
   }
 
-  vec2 uv = getUV(sourcePosition.xy, bitmap.bounds);
+  vec2 currentPos = sourcePosition.xy;
+  vec2 uv = getUV(currentPos, bitmap.bounds);
   vec4 bitmapColour = texture(bitmapTexture, uv);
 
   // Enhanced data validation for smoother trails
-  if (bitmapColour.a < 0.1) { // Reduced threshold for smoother transitions
+  if (bitmapColour.a < 0.1) {
     targetPosition.xy = DROP_POSITION;
     return;
   }
@@ -226,8 +250,8 @@ void main() {
   
   // Add small turbulence to prevent particles from following identical paths
   vec2 turbulence = noise2D(vec2(
-    sourcePosition.x * 0.1 + bitmap.time * 0.01,
-    sourcePosition.y * 0.1 + particleIndex * 0.001
+    currentPos.x * 0.1 + bitmap.time * 0.01,
+    currentPos.y * 0.1 + particleIndex * 0.001
   )) * 0.02;
   
   // Scale turbulence based on speed magnitude to maintain natural flow
@@ -240,9 +264,8 @@ void main() {
   
   vec2 newPos;
 
-  // --- GLOBE LOGIC FOR PARTICLE MOVEMENT ---
   if (bitmap.isGlobe == 1) {
-    float lat = sourcePosition.y * PI_180;
+    float lat = currentPos.y * PI_180;
     float cosLat = cos(lat);
     // Convert speed (m/s) to degrees for both lat and lon
     float dLat = (speed.y) / (R_EARTH * PI_180);
@@ -253,20 +276,29 @@ void main() {
     dLat += randomWalk.y;
     dLon += randomWalk.x;
     
-    newPos = sourcePosition.xy + vec2(dLon, dLat);
-    newPos.y = clamp(newPos.y, -89.0, 89.0); // Slightly inset from poles
+    newPos = currentPos + vec2(dLon, dLat);
+    newPos.y = clamp(newPos.y, -89.0, 89.0);
   } else {
-  // --- FLAT MAP LOGIC FOR PARTICLE MOVEMENT ---
     // Apply Mercator distortion correction
-    float cosLat = cos(sourcePosition.y * PI_180);
+    float lat = clamp(currentPos.y, -85.0, 85.0); // Prevent extreme latitudes
+    float cosLat = cos(lat * PI_180);
     
     // Add slight random walk to prevent convergence
     vec2 randomWalk = noise2D(vec2(particleIndex * 0.027, bitmap.time * 0.003)) * 0.0001;
     
-    newPos = sourcePosition.xy + vec2(speed.x + randomWalk.x, (speed.y + randomWalk.y) * cosLat);
+    newPos = currentPos + vec2(speed.x + randomWalk.x, (speed.y + randomWalk.y) * cosLat);
   }
 
-  targetPosition = vec3(wrapLng(newPos.x), newPos.y, zOffset);
+  // Only apply wrapping if the particle moves outside the data bounds
+  if (newPos.x < bitmap.bounds.x) {
+    // Particle moved past western edge - wrap to eastern edge
+    newPos.x = bitmap.bounds.z - (bitmap.bounds.x - newPos.x);
+  } else if (newPos.x > bitmap.bounds.z) {
+    // Particle moved past eastern edge - wrap to western edge  
+    newPos.x = bitmap.bounds.x + (newPos.x - bitmap.bounds.z);
+  }
+
+  targetPosition = vec3(newPos.x, clamp(newPos.y, -90.0, 90.0), zOffset);
 }
 `;
 

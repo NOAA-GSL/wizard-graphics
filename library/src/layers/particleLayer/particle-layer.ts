@@ -251,63 +251,64 @@ export default class ParticleLayer<
     const cachedTexture = positionsCache.get(textureKey);
 
     if (cachedTexture?.texture) {
-        return cachedTexture.texture;
+      return cachedTexture.texture;
     }
     
     const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
     const width = lonlatGrid[0].length;
     const height = lonlatGrid.length;
+    
+    // Work with unwrapped coordinates directly
     const dlon = (maxLng - minLng) / width;
     const dlat = (maxLat - minLat) / height;
     
     const uvData = new Float32Array(width * height * 4);
     let index = 0;
 
-    const textureNoise = (x: number, y: number) => {
+    const textureNoise = (x, y) => {
       return (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
     };
 
     for (let j = 0; j < height; j += 1) {
-        for (let i = 0; i < width; i += 1) {
-            const lat = maxLat - j * dlat;
-            const lon = minLng + i * dlon;
-            const interpolate = false; 
-            const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
-            const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
+      for (let i = 0; i < width; i += 1) {
+        // Calculate coordinates in unwrapped space
+        const lat = maxLat - j * dlat;
+        const lon = minLng + i * dlon; // Don't wrap this longitude
+        
+        const interpolate = false; 
+        const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
+        const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
 
-            let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
-            if (isNaN(wmagnitude)) uv = [0, 0];
-            
-            // Add subtle noise to prevent identical flow paths
-            const noiseScale = 0.02; // Very subtle noise
-            uv[0] += (textureNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
-            uv[1] += (textureNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
-            
-            const startIndex = index * 4;
-            
-            // Store the raw U and V vector components as floats
-            uvData[startIndex] = uv[0];     // U component in Red channel
-            uvData[startIndex + 1] = uv[1]; // V component in Green channel
-            uvData[startIndex + 2] = 0;     // Blue channel is unused
-            // Use Alpha to flag if data exists at this point
-            uvData[startIndex + 3] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0; 
-            
-            index += 1;
-        }
+        let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
+        if (isNaN(wmagnitude)) uv = [0, 0];
+        
+        // Add subtle noise to prevent identical flow paths
+        const noiseScale = 0.02;
+        uv[0] += (textureNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
+        uv[1] += (textureNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
+        
+        const startIndex = index * 4;
+        uvData[startIndex] = uv[0];     // U component
+        uvData[startIndex + 1] = uv[1]; // V component  
+        uvData[startIndex + 2] = 0;     // Blue channel unused
+        uvData[startIndex + 3] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0;
+        
+        index += 1;
+      }
     }
 
     const texture = this.context.device.createTexture({
-        width,
-        height,
-        data: uvData,
-        format: 'rgba32float', 
-        mipmaps: false, 
-        sampler: {
-            minFilter: 'linear',
-            magFilter: 'linear',
-            addressModeU: 'clamp-to-edge',
-            addressModeV: 'clamp-to-edge',
-        },
+      width,
+      height,
+      data: uvData,
+      format: 'rgba32float', 
+      mipmaps: false, 
+      sampler: {
+        minFilter: 'linear',
+        magFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge',
+      },
     });
     
     addToCache(textureKey, { texture });
@@ -315,38 +316,41 @@ export default class ParticleLayer<
   }
   
   _getBoundsFromGrid(lonlatGrid) {
-      const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
-      const cached = positionsCache.get(key);
-      if (cached?.bounds) {
-          return cached.bounds;
+    const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
+    const cached = positionsCache.get(key);
+    if (cached?.bounds) {
+      return cached.bounds;
+    }
+    
+    let maxLng = -Infinity, minLng = Infinity, maxLat = -Infinity, minLat = Infinity;
+    for (const outerArr of lonlatGrid) {
+      for (const innerArr of outerArr) {
+        const [longitude, latitude] = innerArr;
+        // DON'T wrap longitude here - preserve original data coordinates
+        if (longitude > maxLng) maxLng = longitude;
+        if (longitude < minLng) minLng = longitude;
+        if (latitude > maxLat) maxLat = latitude;
+        if (latitude < minLat) minLat = latitude;
       }
-      
-      let maxLng = -Infinity, minLng = Infinity, maxLat = -Infinity, minLat = Infinity;
-      for (const outerArr of lonlatGrid) {
-          for (const innerArr of outerArr) {
-              const [longitude, latitude] = innerArr;
-              if (longitude > maxLng) maxLng = longitude;
-              if (longitude < minLng) minLng = longitude;
-              if (latitude > maxLat) maxLat = latitude;
-              if (latitude < minLat) minLat = latitude;
-          }
-      }
-      const bounds = { maxLng, minLng, maxLat, minLat };
-      addToCache(key, { bounds });
-      return bounds;
+    }
+    const bounds = { maxLng, minLng, maxLat, minLat };
+    addToCache(key, { bounds });
+    return bounds;
   }
 
   _setupState() {
-      const { projection } = this.props;
-      const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
-      const calculatedBounds = [minLng, minLat, maxLng, maxLat];
+    const { projection } = this.props;
+    const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
+    
+    // Keep unwrapped coordinates for data bounds
+    const calculatedBounds = [minLng, minLat, maxLng, maxLat];
 
-      this.setState({
-          bounds: calculatedBounds,
-          trailLines: this._createTrailLines(),
-      });
+    this.setState({
+      bounds: calculatedBounds,
+      trailLines: this._createTrailLines(),
+    });
 
-      this._setupTransformFeedback();
+    this._setupTransformFeedback();
   }
   
   updateState({ props, oldProps, changeFlags, context }: UpdateParameters<this>) {
@@ -521,23 +525,25 @@ export default class ParticleLayer<
     }
     
     const isGlobe = viewport.projection?.mode === 'globe' ? 1 : 0;
+    
+    // Use unwrapped data bounds directly
     const bounds = this._getEffectiveBounds();
     
     let viewportBounds;
     let viewportZoomChangeFactor;
     
     if (isGlobe > 0) {
+      // For globe, use data bounds directly
       viewportBounds = bounds;
       viewportZoomChangeFactor = 1.0;
     } else {
+      // Get viewport bounds without forcing wrapping
       viewportBounds = getViewportBounds(viewport);
-      // Reduce zoom change sensitivity to prevent excessive particle drops
       viewportZoomChangeFactor = Math.max(1.0, 2 ** ((previousViewportZoom - viewport.zoom) * 1.5)); 
     }
     
-    // Add variation to speed factor based on time
     let currentSpeedFactor;
-    const speedVariation = 0.95 + 0.1 * Math.sin(time * 0.001); // Subtle global speed variation
+    const speedVariation = 0.95 + 0.1 * Math.sin(time * 0.001);
     
     if (isGlobe > 0) {
       currentSpeedFactor = (speedFactor * speedVariation) / 100000; 
@@ -545,14 +551,13 @@ export default class ParticleLayer<
       currentSpeedFactor = (speedFactor * speedVariation) / (2 ** (viewport.zoom + 7));
     }
 
-    // Use a more varied seed that changes more dramatically over time
     const seed = Math.sin(time * 0.0001) * 999 + Math.cos(time * 0.00013) * 777;
 
     const moduleUniforms = {
       bitmapTexture: texture,
       viewportBounds: viewportBounds || [0, 0, 0, 0],
       viewportZoomChangeFactor: viewportZoomChangeFactor || 0,
-      bounds,
+      bounds, // Use unwrapped data bounds
       numParticles,
       maxAge,
       speedFactor: currentSpeedFactor,
@@ -640,30 +645,25 @@ ParticleLayer.defaultProps = defaultProps;
 
 // Viewport Functions
 export function getViewportBounds(viewport) {
-  // For both globe and flat maps, return expanded bounds to prevent edge clipping
-  // This allows particles to flow naturally across viewport boundaries
-  
   if (viewport.projection?.mode === 'globe') {
     // For globe, return world bounds
     return [-180, -90, 180, 90];
   }
   
-  // For flat maps, expand the viewport bounds to allow particle flow
+  // For flat maps, get the actual viewport bounds without forcing wrapping
   const bounds = viewport.getBounds();
   const [west, south, east, north] = bounds;
   
-  // Expand bounds by a margin to prevent edge clipping
-  const lonMargin = (east - west) * 0.2; // 20% margin
-  const latMargin = (north - south) * 0.2; // 20% margin
-  
+  // Don't wrap bounds here - let them extend beyond standard limits
+  // This allows working with unwrapped data coordinates
   const expandedBounds = [
-    Math.max(west - lonMargin, -180),
-    Math.max(south - latMargin, -90),
-    Math.min(east + lonMargin, 180),
-    Math.min(north + latMargin, 90)
+    west - (east - west) * 0.2,  // 20% margin west
+    Math.max(south - (north - south) * 0.2, -90), // 20% margin south, clamped
+    east + (east - west) * 0.2,  // 20% margin east  
+    Math.min(north + (north - south) * 0.2, 90)   // 20% margin north, clamped
   ];
   
-  return wrapBounds(expandedBounds);
+  return expandedBounds;
 }
 
 function modulo(x: number, y: number): number {
@@ -674,12 +674,24 @@ export function wrapLongitude(lng: number): number {
   return modulo(lng + 180, 360) - 180;
 }
 
-export function wrapBounds(bounds: [number, number, number, number]): [number, number, number, number] {
+export function preserveDataCoordinates(bounds) {
   const [west, south, east, north] = bounds;
-  // If the viewport is wider than the world, return the full world
+  return [west, Math.max(south, -90), east, Math.min(north, 90)];
+}
+
+export function wrapBounds(bounds, isDataBounds = false) {
+  const [west, south, east, north] = bounds;
+  
+  if (isDataBounds) {
+    // Don't wrap data bounds - they may legitimately extend beyond ±180
+    return preserveDataCoordinates(bounds);
+  }
+  
+  // Only wrap viewport/display bounds
   if (east - west >= 360) {
     return [-180, Math.max(south, -90), 180, Math.min(north, 90)];
   }
+  
   const minLng = wrapLongitude(west);
   const maxLng = wrapLongitude(east);
   const minLat = Math.max(south, -90);
