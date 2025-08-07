@@ -15,17 +15,27 @@ import {
     ParticleLayer,
     configFields,
 } from 'desi-graphics';
-import projDict from 'demo-data/HREF/projection';
-import temperatures from 'demo-data/HREF/temp';
-import wdir from 'demo-data/HREF/wdir';
-import wmag from 'demo-data/HREF/wmag';
+
+import hrefTemperatures from 'demo-data/HREF/temp';
+import hrefWdir from 'demo-data/HREF/wdir';
+import hrefWmag from 'demo-data/HREF/wmag';
+import hrefProjDict from 'demo-data/HREF/projection';
+
+import rrfsTemperatures from 'demo-data/RRFS/temp';
+import rrfsWdir from 'demo-data/RRFS/wdir';
+import rrfsWmag from 'demo-data/RRFS/wmag';
+import rrfsProjDict from 'demo-data/RRFS/projection';
+
+// import eagleTemperatures from 'demo-data/EAGLE/temp';
+// import eagleWdir from 'demo-data/EAGLE/wdir';
+// import eagleWmag from 'demo-data/EAGLE/wmag';
+
 import { TerrainLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import 'desi-graphics/desi-graphics.css';
 
-const resLevel = 4;
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
     { key: 'contourLabels', label: 'Contour Labels', parent: 'contourCheckbox' },
@@ -44,18 +54,18 @@ function MapContainer() {
     const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
 
     const [state, dispatch] = useReducer((s, { key, value }) => ({ ...s, [key]: value }), {
-        contourCheckbox: true,
+        contourCheckbox: false,
         contourLabels: true,
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
-        particleCheckbox: true,
+        particleCheckbox: false,
         terrainCheckbox: false,
         isGlobeView: true,
         showStats: false, // Enable stats by default
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
-    const [radioValue, setRadioValue] = React.useState(radioOptions[0]);
+    const [currentDataset, setCurrentDataset] = React.useState(radioOptions[1]);
 
     const toggle = useCallback((key) => (e) => dispatch({ key, value: e.target.checked }), []);
 
@@ -63,6 +73,41 @@ function MapContainer() {
     const mapContainer = useRef();
     const mapRef = useRef();
     const statsRef = useRef();
+
+    let temperatures;
+    let wdir;
+    let wmag;
+    let projDict;
+    let resLevel;
+    switch (currentDataset) {
+        case 'HREF':
+            temperatures = hrefTemperatures;
+            wdir = hrefWdir;
+            wmag = hrefWmag;
+            projDict = hrefProjDict;
+            resLevel = 4; // sample data is every 4th point
+            break;
+        case 'RRFS':
+            temperatures = rrfsTemperatures;
+            wdir = rrfsWdir;
+            wmag = rrfsWmag;
+            projDict = rrfsProjDict;
+            resLevel = 8; // sample data is every 8th point
+            break;
+        case 'EAGLE':
+            temperatures = eagleTemperatures;
+            wdir = eagleWdir;
+            wmag = eagleWmag;
+            projDict = eagleProjDict;
+            break;
+        default:
+            console.error('ERROR', `Unknown dataset: ${currentDataset}`);
+    }
+
+    const data = useMemo(
+        () => new Float32Array(Object.values(temperatures).map((v) => (v == null ? NaN : v))),
+        [temperatures],
+    );
 
     // Initialize Stats.js
     useEffect(() => {
@@ -135,15 +180,10 @@ function MapContainer() {
         p.makeLonLatGrid();
         p.isGlobe = state.isGlobeView;
         return p;
-    }, [state.isGlobeView]);
+    }, [state.isGlobeView, currentDataset]);
 
     const field = 't2';
     const { colors, colorLevels, contourLevels, colorType } = configFields[field].colorBars.default;
-
-    const data = useMemo(
-        () => new Float32Array(Object.values(temperatures).map((v) => (v == null ? NaN : v))),
-        [],
-    );
 
     const terrainLayer = useMemo(
         () =>
@@ -330,8 +370,8 @@ function MapContainer() {
                             type="radio"
                             name="threeway"
                             value={option}
-                            checked={radioValue === option}
-                            onChange={() => setRadioValue(option)}
+                            checked={currentDataset === option}
+                            onChange={() => setCurrentDataset(option)}
                         />
                         {option}
                     </label>
