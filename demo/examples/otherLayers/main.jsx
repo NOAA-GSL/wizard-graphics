@@ -6,8 +6,8 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
 import { IconClusterLayer, CitiesLayer } from 'desi-graphics';
-import temperatures from 'demo-data/temp';
-import projDict from 'demo-data/projection';
+import temperatures from 'demo-data/HREF/temp';
+import projDict from 'demo-data/HREF/projection';
 import { Projection } from 'desi-graphics';
 import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from 'desi-graphics';
 import URLdata from './URLdata';
@@ -31,9 +31,7 @@ function PersistentTooltip({ tooltip, onClose }) {
             onClick={(e) => e.stopPropagation()} // Prevent map clicks from closing
         >
             <div className="x4d-persistent-tooltip-header">
-                <div className="x4d-persistent-tooltip-content">
-                    {tooltip.readout}
-                </div>
+                <div className="x4d-persistent-tooltip-content">{tooltip.readout}</div>
                 <button
                     className="x4d-persistent-tooltip-close"
                     onClick={onClose}
@@ -63,13 +61,13 @@ function MapContainer() {
         wwaLayerCheckbox: true,
         isGlobeView: true,
     });
-    
+
     // Add state for persistent tooltip
     const [persistentTooltip, setPersistentTooltip] = useState(null);
-    
+
     // Add ref to track when spot was clicked to prevent immediate closure
     const spotClickedRef = useRef(false);
-    
+
     const overlayRef = useRef();
     const mapContainer = useRef();
     const mapRef = useRef();
@@ -94,35 +92,36 @@ function MapContainer() {
     // Handle spot layer clicks
     const handleSpotClick = useCallback((info, event) => {
         console.log('Spot clicked:', info); // Debug log
-        
+
         // Set flag to prevent map click from closing tooltip immediately
         spotClickedRef.current = true;
-        
+
         // Clear flag after a short delay
         setTimeout(() => {
             spotClickedRef.current = false;
         }, 100);
-        
+
         if (info.object) {
             // Get the screen coordinates from the click event
             const rect = mapContainer.current?.getBoundingClientRect();
             if (!rect) return false;
-            
-            const x = info.pixel ? info.pixel[0] : (event?.center?.x || 0);
-            const y = info.pixel ? info.pixel[1] : (event?.center?.y || 0);
+
+            const x = info.pixel ? info.pixel[0] : event?.center?.x || 0;
+            const y = info.pixel ? info.pixel[1] : event?.center?.y || 0;
 
             // Use the picking function from SpotLayer default props directly
-            const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } = info.object.properties;
-            
+            const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } =
+                info.object.properties;
+
             // Build tooltip content directly (same logic as in SpotLayer)
             const readout = [];
-            
+
             if (name) {
                 readout.push(
                     <div key="name">
                         <strong>Name:</strong> {name}
                         <br />
-                    </div>
+                    </div>,
                 );
             }
 
@@ -132,7 +131,11 @@ function MapContainer() {
                     '0,P': { color: [255, 193, 7, 150], cirtext: 'W', label: 'Wildfire Pending' },
                     '0,C': { color: [25, 135, 84, 150], cirtext: 'W', label: 'Wildfire Completed' },
                     '1,P': { color: [255, 193, 7, 150], cirtext: 'P', label: 'Prescribed Pending' },
-                    '1,C': { color: [25, 135, 84, 150], cirtext: 'P', label: 'Prescribed Completed' },
+                    '1,C': {
+                        color: [25, 135, 84, 150],
+                        cirtext: 'P',
+                        label: 'Prescribed Completed',
+                    },
                     '2,P': { color: [255, 193, 7, 150], cirtext: 'M', label: 'Marine Pending' },
                     '2,C': { color: [25, 135, 84, 150], cirtext: 'M', label: 'Marine Completed' },
                     '3,P': { color: [255, 193, 7, 150], cirtext: 'H', label: 'Hazmat Pending' },
@@ -150,10 +153,13 @@ function MapContainer() {
                     '7,P': { color: [255, 193, 7, 150], cirtext: 'O', label: 'Other Pending' },
                     '7,C': { color: [25, 135, 84, 150], cirtext: 'O', label: 'Other Completed' },
                 };
-                
-                const symbolInfo = uniqueValueMap[`${tid},${stat}`] || { color: [0, 0, 0, 150], label: 'N/A' };
+
+                const symbolInfo = uniqueValueMap[`${tid},${stat}`] || {
+                    color: [0, 0, 0, 150],
+                    label: 'N/A',
+                };
                 const { label, color } = symbolInfo;
-                
+
                 readout.push(
                     <div key="type">
                         <strong>Type:</strong>
@@ -162,7 +168,7 @@ function MapContainer() {
                             {label}
                         </span>
                         <br />
-                    </div>
+                    </div>,
                 );
             }
 
@@ -171,25 +177,25 @@ function MapContainer() {
                     <div key="request">
                         <strong>Request Made:</strong> {rmade}
                         <br />
-                    </div>
+                    </div>,
                 );
             }
-            
+
             if (deliverdtg) {
                 readout.push(
                     <div key="deliver">
                         <strong>Deliver Time:</strong> {deliverdtg}
                         <br />
-                    </div>
+                    </div>,
                 );
             }
-            
+
             if (wfo) {
                 readout.push(
                     <div key="office">
                         <strong>Forecast Office:</strong> {wfo}
                         <br />
-                    </div>
+                    </div>,
                 );
             }
 
@@ -198,16 +204,16 @@ function MapContainer() {
                 readout.push(
                     <div key="spot-link" className="spot-forecast-link">
                         <strong>Link:</strong>{' '}
-                        <a 
-                            href={spoturl} 
-                            target="_blank" 
+                        <a
+                            href={spoturl}
+                            target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                         >
                             🔗 Spot Forecast
                         </a>
                         <br />
-                    </div>
+                    </div>,
                 );
             }
 
@@ -216,7 +222,7 @@ function MapContainer() {
                 setPersistentTooltip({
                     readout,
                     x: Math.min(x, window.innerWidth - 320),
-                    y: Math.max(y - 10, 10)
+                    y: Math.max(y - 10, 10),
                 });
             }
         }
@@ -230,18 +236,21 @@ function MapContainer() {
     }, []);
 
     // Close tooltip when clicking on map (but not immediately after spot click)
-    const handleMapClick = useCallback((event) => {
-        // Don't close if a spot was just clicked
-        if (spotClickedRef.current) {
-            console.log('Map click ignored - spot was just clicked'); // Debug log
-            return;
-        }
-        
-        if (persistentTooltip) {
-            console.log('Map clicked, closing tooltip'); // Debug log
-            setPersistentTooltip(null);
-        }
-    }, [persistentTooltip]);
+    const handleMapClick = useCallback(
+        (event) => {
+            // Don't close if a spot was just clicked
+            if (spotClickedRef.current) {
+                console.log('Map click ignored - spot was just clicked'); // Debug log
+                return;
+            }
+
+            if (persistentTooltip) {
+                console.log('Map clicked, closing tooltip'); // Debug log
+                setPersistentTooltip(null);
+            }
+        },
+        [persistentTooltip],
+    );
 
     if (state.iconLayerCheckbox) {
         console.log('demoCities', demoCities.length);
@@ -253,7 +262,7 @@ function MapContainer() {
             iconAtlas,
             iconMapping,
             sizeScale: 40,
-            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
+            parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
         });
         layers.push(iconLayer);
     }
@@ -488,17 +497,14 @@ function MapContainer() {
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}
-                        layers={layers.filter(layer => layer.id !== 'spotLayer')} // Exclude spot layer from normal readout
+                        layers={layers.filter((layer) => layer.id !== 'spotLayer')} // Exclude spot layer from normal readout
                         title="Wed 06:00 am PST, Oct 21"
                     />
                     <Legend mapRef={mapRef} overlayRef={overlayRef} viewState={viewState} />
                 </Map>
-                
+
                 {/* Render persistent tooltip */}
-                <PersistentTooltip 
-                    tooltip={persistentTooltip} 
-                    onClose={closePersistentTooltip} 
-                />
+                <PersistentTooltip tooltip={persistentTooltip} onClose={closePersistentTooltip} />
             </div>
         </>
     );
