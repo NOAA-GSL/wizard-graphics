@@ -55,9 +55,11 @@ const defaultProps = {
     getTextBorderWidth: 4,
     getElevation: 0,
     elevationScale: 1,
+    parameters: { depthTest:true, depthCompare: 'always', cullMode: 'none' },
+    // Add click handler prop
+    onSpotClick: null,
     pickingFunction: (d) => {
         if (d.object) {
-            // eslint-disable-next-line no-unused-vars
             const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } =
                 d.object.properties;
 
@@ -109,32 +111,49 @@ const defaultProps = {
                     </div>,
                 );
 
-            // if (snumunum) {
-            //     // NWS spot page URL
-            //     const spoturl = `https://spot.weather.gov/forecasts/${snumunum}`;
-            //     tooltipContent.push(
-            //         `<strong>Link:</strong> <a href="${spoturl}">Spot Forecast</a>`,
-            //     );
-            // }
-            // Combine all rows and set the tooltip content
-            return { readout };
-            // tooltip.innerHTML = tooltipContent.join('<br/>');
-            // tooltip.style.display = 'block';
+            // Add the spot forecast link
+            if (snumunum) {
+                const spoturl = `https://spot.weather.gov/forecasts/${snumunum}`;
+                readout.push(
+                    <div key="spot-link" className="spot-forecast-link">
+                        <strong>Link:</strong>{' '}
+                        <a 
+                            href={spoturl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                // Link will open normally
+                            }}
+                        >
+                            Spot Forecast
+                        </a>
+                        <br />
+                    </div>,
+                );
+            }
 
-            // // Position the tooltip based on the onclick event
-            // tooltip.style.left = `${d.x}px`;
-            // tooltip.style.top = `${d.y}px`;
+            // Return readout with additional metadata for persistent tooltips
+            return { 
+                readout, 
+                coordinates: [d.coordinate[0], d.coordinate[1]],
+                object: d.object,
+                isPersistent: d.type === 'click' // Will be true for clicks
+            };
         }
         return { readout: null };
     },
 };
+
 class SpotLayer extends CompositeLayer {
     renderLayers() {
         return new GeoJsonLayer(this.props, {
             id: `${this.props.id}-geojson`,
+            onClick: this.props.onClick, // Pass through click handler
         });
     }
 }
+
 SpotLayer.defaultProps = defaultProps;
 SpotLayer.layerName = 'SpotLayer';
 export default SpotLayer;

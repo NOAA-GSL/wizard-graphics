@@ -1,4 +1,4 @@
-import { StrictMode, useMemo, useRef, useState } from 'react';
+import { StrictMode, useMemo, useRef, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
 import { Maps, DeckGLOverlay, Readout, mapStyles, Legend } from 'desi-graphics';
@@ -15,6 +15,37 @@ import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
 import 'desi-graphics/desi-graphics.css';
 
+// Custom persistent tooltip component
+function PersistentTooltip({ tooltip, onClose }) {
+    if (!tooltip) return null;
+
+    return (
+        <div
+            className="x4d-readout x4d-persistent-tooltip"
+            style={{
+                left: tooltip.x,
+                top: tooltip.y,
+                pointerEvents: 'auto', // Override the pointer-events: none from x4d-readout
+                position: 'absolute',
+            }}
+            onClick={(e) => e.stopPropagation()} // Prevent map clicks from closing
+        >
+            <div className="x4d-persistent-tooltip-header">
+                <div className="x4d-persistent-tooltip-content">
+                    {tooltip.readout}
+                </div>
+                <button
+                    className="x4d-persistent-tooltip-close"
+                    onClick={onClose}
+                    title="Close tooltip"
+                >
+                    ×
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
     const { mapToken } = process.env;
@@ -30,7 +61,15 @@ function MapContainer() {
         spcLayerCheckbox: false,
         wpcLayerCheckbox: false,
         wwaLayerCheckbox: true,
+        isGlobeView: true,
     });
+    
+    // Add state for persistent tooltip
+    const [persistentTooltip, setPersistentTooltip] = useState(null);
+    
+    // Add ref to track when spot was clicked to prevent immediate closure
+    const spotClickedRef = useRef(false);
+    
     const overlayRef = useRef();
     const mapContainer = useRef();
     const mapRef = useRef();
@@ -40,13 +79,169 @@ function MapContainer() {
     // Make the LonLatGrid of Data
     // This is HREF data sampled every 4 points (resLevel = 4)
     const resLevel = 4;
-    const projection = new Projection(projDict, resLevel);
-    projection.makeLonLatGrid();
+    const projection = useMemo(() => {
+        const p = new Projection(projDict, resLevel);
+        p.makeLonLatGrid();
+        p.isGlobe = state.isGlobeView;
+        return p;
+    }, [state.isGlobeView]);
 
     // Format data (nulls to NaN)
     const data = new Float32Array(
         Object.values(temperatures).map((value) => (value === null ? NaN : value)),
     );
+
+    // Handle spot layer clicks
+    const handleSpotClick = useCallback((info, event) => {
+        console.log('Spot clicked:', info); // Debug log
+        
+        // Set flag to prevent map click from closing tooltip immediately
+        spotClickedRef.current = true;
+        
+        // Clear flag after a short delay
+        setTimeout(() => {
+            spotClickedRef.current = false;
+        }, 100);
+        
+        if (info.object) {
+            // Get the screen coordinates from the click event
+            const rect = mapContainer.current?.getBoundingClientRect();
+            if (!rect) return false;
+            
+            const x = info.pixel ? info.pixel[0] : (event?.center?.x || 0);
+            const y = info.pixel ? info.pixel[1] : (event?.center?.y || 0);
+
+            // Use the picking function from SpotLayer default props directly
+            const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } = info.object.properties;
+            
+            // Build tooltip content directly (same logic as in SpotLayer)
+            const readout = [];
+            
+            if (name) {
+                readout.push(
+                    <div key="name">
+                        <strong>Name:</strong> {name}
+                        <br />
+                    </div>
+                );
+            }
+
+            if (tid && stat) {
+                // Import getSymbolInfo function or recreate it here
+                const uniqueValueMap = {
+                    '0,P': { color: [255, 193, 7, 150], cirtext: 'W', label: 'Wildfire Pending' },
+                    '0,C': { color: [25, 135, 84, 150], cirtext: 'W', label: 'Wildfire Completed' },
+                    '1,P': { color: [255, 193, 7, 150], cirtext: 'P', label: 'Prescribed Pending' },
+                    '1,C': { color: [25, 135, 84, 150], cirtext: 'P', label: 'Prescribed Completed' },
+                    '2,P': { color: [255, 193, 7, 150], cirtext: 'M', label: 'Marine Pending' },
+                    '2,C': { color: [25, 135, 84, 150], cirtext: 'M', label: 'Marine Completed' },
+                    '3,P': { color: [255, 193, 7, 150], cirtext: 'H', label: 'Hazmat Pending' },
+                    '4,P': { color: [255, 193, 7, 150], cirtext: 'H', label: 'Hazmat Pending' },
+                    '8,P': { color: [255, 193, 7, 150], cirtext: 'H', label: 'Hazmat Pending' },
+                    '3,C': { color: [25, 135, 84, 150], cirtext: 'H', label: 'Hazmat Completed' },
+                    '4,C': { color: [25, 135, 84, 150], cirtext: 'H', label: 'Hazmat Completed' },
+                    '8,C': { color: [25, 135, 84, 150], cirtext: 'H', label: 'Hazmat Completed' },
+                    '5,P': { color: [255, 193, 7, 150], cirtext: 'S', label: 'SAR Pending' },
+                    '6,P': { color: [255, 193, 7, 150], cirtext: 'S', label: 'SAR Pending' },
+                    '9,P': { color: [255, 193, 7, 150], cirtext: 'S', label: 'SAR Pending' },
+                    '5,C': { color: [25, 135, 84, 150], cirtext: 'S', label: 'SAR Completed' },
+                    '6,C': { color: [25, 135, 84, 150], cirtext: 'S', label: 'SAR Completed' },
+                    '9,C': { color: [25, 135, 84, 150], cirtext: 'S', label: 'SAR Completed' },
+                    '7,P': { color: [255, 193, 7, 150], cirtext: 'O', label: 'Other Pending' },
+                    '7,C': { color: [25, 135, 84, 150], cirtext: 'O', label: 'Other Completed' },
+                };
+                
+                const symbolInfo = uniqueValueMap[`${tid},${stat}`] || { color: [0, 0, 0, 150], label: 'N/A' };
+                const { label, color } = symbolInfo;
+                
+                readout.push(
+                    <div key="type">
+                        <strong>Type:</strong>
+                        <span style={{ color: `rgb(${color[0]},${color[1]},${color[2]})` }}>
+                            {' '}
+                            {label}
+                        </span>
+                        <br />
+                    </div>
+                );
+            }
+
+            if (rmade) {
+                readout.push(
+                    <div key="request">
+                        <strong>Request Made:</strong> {rmade}
+                        <br />
+                    </div>
+                );
+            }
+            
+            if (deliverdtg) {
+                readout.push(
+                    <div key="deliver">
+                        <strong>Deliver Time:</strong> {deliverdtg}
+                        <br />
+                    </div>
+                );
+            }
+            
+            if (wfo) {
+                readout.push(
+                    <div key="office">
+                        <strong>Forecast Office:</strong> {wfo}
+                        <br />
+                    </div>
+                );
+            }
+
+            if (snumunum) {
+                const spoturl = `https://spot.weather.gov/forecasts/${snumunum}`;
+                readout.push(
+                    <div key="spot-link" className="spot-forecast-link">
+                        <strong>Link:</strong>{' '}
+                        <a 
+                            href={spoturl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            🔗 Spot Forecast
+                        </a>
+                        <br />
+                    </div>
+                );
+            }
+
+            if (readout.length > 0) {
+                console.log('Setting persistent tooltip'); // Debug log
+                setPersistentTooltip({
+                    readout,
+                    x: Math.min(x, window.innerWidth - 320),
+                    y: Math.max(y - 10, 10)
+                });
+            }
+        }
+        return true; // Prevent default deck.gl click handling
+    }, []);
+
+    // Close persistent tooltip
+    const closePersistentTooltip = useCallback(() => {
+        console.log('Closing persistent tooltip'); // Debug log
+        setPersistentTooltip(null);
+    }, []);
+
+    // Close tooltip when clicking on map (but not immediately after spot click)
+    const handleMapClick = useCallback((event) => {
+        // Don't close if a spot was just clicked
+        if (spotClickedRef.current) {
+            console.log('Map click ignored - spot was just clicked'); // Debug log
+            return;
+        }
+        
+        if (persistentTooltip) {
+            console.log('Map clicked, closing tooltip'); // Debug log
+            setPersistentTooltip(null);
+        }
+    }, [persistentTooltip]);
 
     if (state.iconLayerCheckbox) {
         console.log('demoCities', demoCities.length);
@@ -58,6 +253,7 @@ function MapContainer() {
             iconAtlas,
             iconMapping,
             sizeScale: 40,
+            parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
         });
         layers.push(iconLayer);
     }
@@ -85,6 +281,7 @@ function MapContainer() {
         const spotLayer = new SpotLayer({
             id: 'spotLayer',
             pickable: true,
+            onClick: handleSpotClick, // Add click handler
         });
         layers.push(spotLayer);
     }
@@ -281,19 +478,27 @@ function MapContainer() {
                     }}
                     ref={mapRef}
                     onMoveEnd={onViewStateChange}
+                    onClick={handleMapClick}
                     antialias
                     reuseMaps
                     mapStyle={mapStyle}
+                    projection={'globe'}
                 >
                     <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}
-                        layers={layers}
+                        layers={layers.filter(layer => layer.id !== 'spotLayer')} // Exclude spot layer from normal readout
                         title="Wed 06:00 am PST, Oct 21"
                     />
                     <Legend mapRef={mapRef} overlayRef={overlayRef} viewState={viewState} />
                 </Map>
+                
+                {/* Render persistent tooltip */}
+                <PersistentTooltip 
+                    tooltip={persistentTooltip} 
+                    onClose={closePersistentTooltip} 
+                />
             </div>
         </>
     );
