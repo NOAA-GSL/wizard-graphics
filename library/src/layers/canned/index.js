@@ -1,5 +1,5 @@
 import SpotLayer from './spotLayer';
-import NIFCLayer from './nicfLayer';
+import NIFCLayer from './nifcLayer';
 import CPCLayer from './cpcLayer';
 import SPCLayer from './spcLayer';
 import WPCLayer from './wpcLayer';
