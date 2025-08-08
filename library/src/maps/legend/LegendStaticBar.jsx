@@ -33,31 +33,6 @@ export function getcolors(colorLevels, colors, colorType) {
 }
 
 export default function LegendStaticBar({ options }) {
-    // destructuring `options` with default values
-    const {
-        colors,
-        colorLevels,
-        colorType,
-        // optional variables
-        animationSpeed = 1000,
-        className = '',
-        ticks: tickStyle = 'linear', // 'linear', 'byColorLevels'
-        orient = 'vertical', // vertical or horizontal
-        barLength = 600, // how long is the bar
-        thickness = 10, // how thick is the bar
-        tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
-        tickValues = null, // specific tick values for the colorbar
-        title = '', // title on legend
-        units = '', // units on legend
-        x = 0, // position relative to the div container
-        y = 0, // position relative to the div container
-    } = options;
-
-    // scaleLinear should always have isLeftCap and isRightCap set to false
-    // otherwise, use the options provided
-    const isLeftCap = colorType === 'scaleLinear' ? false : options.isLeftCap;
-    const isRightCap = colorType === 'scaleLinear' ? false : options.isRightCap;
-
     const svgRef = useRef();
 
     // End caps can introduce ticks that are outside the original values
@@ -100,6 +75,33 @@ export default function LegendStaticBar({ options }) {
 		SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		*/
 
+        // destructuring `options` with default values
+        const {
+            colors,
+            colorLevels,
+            colorType,
+            // optional variables
+            animationSpeed = 1000,
+            ticks: tickStyle = 'linear', // 'linear', 'byColorLevels'
+            orient = 'vertical', // vertical or horizontal
+            barLength = 600, // how long is the bar
+            thickness = 10, // how thick is the bar
+            tickValues = null, // specific tick values for the colorbar
+            title = '', // title on legend
+            units = '', // units on legend
+            x = 0, // position relative to the div container
+            y = 0, // position relative to the div container
+        } = options;
+
+        let {
+            tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
+        } = options;
+
+        // scaleLinear should always have isLeftCap and isRightCap set to false
+        // otherwise, use the options provided
+        const isLeftCap = colorType === 'scaleLinear' ? false : options.isLeftCap;
+        const isRightCap = colorType === 'scaleLinear' ? false : options.isRightCap;
+
         const origin = { x, y };
 
         let thicknessAttr;
@@ -112,13 +114,23 @@ export default function LegendStaticBar({ options }) {
         let textDx;
         let textDy;
         let textRotate;
-        let additionalTextRotate = 0;
-        let additionalTextTranslate = 'translate(0,0)';
+        let textTranslateX = 0;
+        let textTranslateY = 0;
+        let textAnchor = 'start';
 
         // Grab the color scale
         const colorScale = getcolors(colorLevels, colors, colorType);
 
-        const titlePadding = title ? 17 : 0;
+        // Make the fillLegendScale
+        const domain = colorScale.domain();
+        // If left or right cap, just add another value to the array
+        if (isRightCap) domain.push(domain[domain.length - 1] + 1);
+        if (isLeftCap) domain.unshift(domain[0] - 1);
+        const fillLegendScale = d3.scaleLinear().domain(domain);
+
+        const numColors = domain.length - 1;
+        const maxTextWidth = barLength / numColors;
+        const titlePadding = title === '' ? 0 : 17;
 
         // Margin
         const margin = {
@@ -131,15 +143,21 @@ export default function LegendStaticBar({ options }) {
 
         if (orient === 'horizontal') {
             margin.bottom = 15; // Don't need the bottom padding as much since numbers are horizonal
-            margin.right = 0; // something is adding unnecessary padding on the right side
             thicknessAttr = 'height';
             lengthAttr = 'width';
             axisOrient = 'bottom';
             positionVariable = 'x';
             nonPositionVariable = 'y';
             textDx = barLength / 2;
-            textDy = -5;
+            textDy = -5; // was -5, instead of using dy, let's use `dominant-baseline: middle`
             textRotate = 0;
+            textAnchor = 'middle';
+            if (tickAngle < -45) {
+                // Disable tickAngle for horizontal legends
+                tickAngle = 0;
+                textTranslateX = maxTextWidth / 2;
+                textTranslateY = 0;
+            }
             axisTransform = `translate (${(margin.left + margin.right) / 2},${
                 thickness + margin.top
             })`;
@@ -153,6 +171,13 @@ export default function LegendStaticBar({ options }) {
             textDx = -barLength / 2;
             textDy = -5;
             textRotate = -90;
+            textTranslateX = 0;
+            textTranslateY = 0; // was -1
+            if (tickAngle < -45) {
+                textTranslateX = maxTextWidth / 2 - 10;
+                textTranslateY = 10;
+                textAnchor = 'middle';
+            }
             axisTransform = `translate (${thickness + margin.top},${
                 (margin.left + margin.right) / 2
             })`;
@@ -160,11 +185,6 @@ export default function LegendStaticBar({ options }) {
         }
 
         const divContainer = d3.select(svgRef.current);
-
-        // // Only make if it doesn't exists
-        // if (!divContainer.select('#legend').node()) {
-        //     divContainer.append('g').attr('id', 'legend').attr('class', `legendbar ${className}`);
-        // }
 
         // otherwise create the skeletal chart
         const newColorbars = divContainer
@@ -204,10 +224,7 @@ export default function LegendStaticBar({ options }) {
             text = svg
                 .append('text')
                 .attr('class', 'legendtext_colorbar')
-                .style('text-anchor', 'middle')
-                .attr('dx', textDx)
-                .attr('dy', textDy);
-            // .attr("transform","rotate(" + textRotate + ")")
+                .style('text-anchor', 'middle');
         }
 
         // don't include the () when no units are provided
@@ -224,19 +241,6 @@ export default function LegendStaticBar({ options }) {
         // updated in response to mouseovers, because that's way cool.
 
         const fillLegend = svg.selectAll('g.colorbar');
-
-        // Make the fillLegendScale
-        const domain = colorScale.domain();
-        // If left or right cap, just add another value to the array
-        if (isRightCap) domain.push(domain[domain.length - 1] + 1);
-        if (isLeftCap) domain.unshift(domain[0] - 1);
-        const fillLegendScale = d3.scaleLinear().domain(domain);
-
-        // Is this needed?
-        // fillLegendScale = scale.copy();
-        // if (typeof(fillLegendScale.invert)=="undefined") {
-        //	fillLegendScale = d3.scaleLinear().domain(fillLegendScale.domain())
-        // }
 
         const legendRange = d3.range(
             0,
@@ -292,12 +296,8 @@ export default function LegendStaticBar({ options }) {
         if (tickStyle === 'byColorLevels' && tickValues) {
             let finalTicks = fillLegendScale.domain();
             finalTicks = filterTicks(colorScale.domain(), finalTicks);
-            additionalTextRotate = tickAngle ?? 0;
             colorAxisFunction.tickValues(finalTicks);
             colorAxisFunction.tickFormat((d, i) => tickValues[i]);
-            if (additionalTextRotate < -80) {
-                additionalTextTranslate = 'translate(0,10)';
-            }
         }
         // If we want to plot tics by the values supplied
         else if (tickStyle === 'byColorLevels') {
@@ -329,14 +329,18 @@ export default function LegendStaticBar({ options }) {
             .duration(animationSpeed)
             .call(colorAxisFunction)
             .selectAll('text')
-            .attr('transform', `rotate(${additionalTextRotate}) ${additionalTextTranslate}`)
+            .attr(
+                'transform',
+                `rotate(${tickAngle}) translate(${textTranslateX}, ${textTranslateY})`,
+            )
+            .style('text-anchor', textAnchor)
             .end()
             .then(() => {
                 // update the margin based on the size of the text labels
                 const axisBBox = axis.node().getBBox();
-                if (additionalTextRotate !== 0) {
+                if (tickAngle !== 0) {
                     // Calculate the rotated bounding box dimensions
-                    const radians = (additionalTextRotate * Math.PI) / 180;
+                    const radians = (tickAngle * Math.PI) / 180;
                     const cos = Math.abs(Math.cos(radians));
                     const sin = Math.abs(Math.sin(radians));
                     // using width for both measurements because height is the entire legend axis
@@ -345,8 +349,8 @@ export default function LegendStaticBar({ options }) {
 
                     // Using 10 as a buffer for the rotated text. This is because the axis of the text is
                     // centered, so when it rotates, the top of the last letter can get cut off.
-                    axisBBox.width = rotatedWidth + 10;
-                    axisBBox.height = rotatedHeight + 10;
+                    axisBBox.width = rotatedWidth + 15;
+                    axisBBox.height = rotatedHeight + 15;
                 }
 
                 // hack to make the resizing work for horizontal and vertical legends
@@ -363,8 +367,7 @@ export default function LegendStaticBar({ options }) {
                 // eslint-disable-next-line spaced-comment
                 //console.error('Error:', error);
             });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [colors, colorLevels, colorType, barLength, thickness, title, units, x, y]);
+    }, [options]);
 
-    return <div ref={svgRef} className={`legendbar ${className}`} />;
+    return <div ref={svgRef} className={`legendbar ${options.className}`} />;
 }

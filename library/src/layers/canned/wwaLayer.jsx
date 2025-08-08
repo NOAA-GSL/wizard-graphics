@@ -89,7 +89,8 @@ const defaultProps = {
     //     f.properties.color ? gUtilities.hexToRgb(f.properties.color) : [255, 255, 255],
     getLineWidth: 2,
     stroked: true,
-    opacity: 0.5, // DESI has this as 1... ?
+    //* Some transparency would be nice to see overlapping warnings, but then the colors don't match the legend
+    opacity: 1,
     parameters: { depthTest: false, depthCompare: 'always', cullMode: 'back' },
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
