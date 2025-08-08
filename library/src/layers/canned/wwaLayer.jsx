@@ -89,7 +89,8 @@ const defaultProps = {
     //     f.properties.color ? gUtilities.hexToRgb(f.properties.color) : [255, 255, 255],
     getLineWidth: 2,
     stroked: true,
-    opacity: 1, // changed from 0.5 to 1
+    opacity: 0.5, // DESI has this as 1... ?
+    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'back' },
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
 

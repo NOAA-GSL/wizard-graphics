@@ -25,7 +25,7 @@ function App() {
                     <a href="examples/basemap/index.html">Basemap Example</a>
                 </li>
                 <li>
-                    <a href="examples/griddedLayers/index.html">Gridded Layers Examples</a>
+                    <a href="examples/globeView/index.html">Globe/Gridded Layers Examples</a>
                 </li>
                 <li>
                     <a href="examples/otherLayers/index.html">Other Layers Examples</a>

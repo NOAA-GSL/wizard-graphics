@@ -4,15 +4,26 @@ import gUtilities from './graphicsUtilities';
 import deckUtilities from './deckUtilities';
 
 export default class Projection {
-    constructor({ nx, ny, dx, dy, firstLat, firstLon, proj }, resLevel = 1) {
-        this.nx = Math.floor(nx / resLevel);
-        this.ny = Math.floor(ny / resLevel);
+    constructor(
+        { nx, ny, dx, dy, firstLat, firstLon, proj, rotate, rotation, wrapLongitude, datelineFix },
+        resLevel = 1,
+    ) {
+        this.nx = Math.ceil(nx / resLevel);
+        this.ny = Math.ceil(ny / resLevel);
         this.dx = dx * resLevel;
         this.dy = dy * resLevel;
         this.firstLat = firstLat;
         this.firstLon = firstLon;
         this.proj = proj;
         this.resLevel = resLevel;
+        this.wrapLongitude = wrapLongitude || false;
+        this.datelineFix = datelineFix || false;
+        this.rotate = rotate || false;
+        this.rotation = rotation || {
+            longitudeOfSouthernPoleInDegrees: 0,
+            latitudeOfSouthernPoleInDegrees: 0,
+            angleOfRotationInDegrees: 0,
+        };
         this.i0 = NaN;
         this.i1 = NaN;
         this.j0 = NaN;
@@ -55,24 +66,31 @@ export default class Projection {
         this.projection = proj4(`${this.proj} +x_0=${-x} +y_0=${-y}`);
     }
 
-    getCorners(localDomain = false) {
+    getCorners(localDomain = true, reverse = true) {
         const { nx, ny } = this.getNxNY(localDomain);
         const path = [];
+
         // Get the first column
         for (let y = 0; y < ny; y += 1) {
-            path.push(this.ijToLonLat(0, y, localDomain).reverse());
+            path.push(this.ijToLonLat(0, y, localDomain));
         }
         // Get the first row
         for (let x = 0; x < nx; x += 1) {
-            path.push(this.ijToLonLat(x, ny - 1, localDomain).reverse());
+            path.push(this.ijToLonLat(x, ny - 1, localDomain));
         }
         // Get the last column in reverse
         for (let y = ny - 1; y >= 0; y -= 1) {
-            path.push(this.ijToLonLat(nx - 1, y, localDomain).reverse());
+            path.push(this.ijToLonLat(nx - 1, y, localDomain));
         }
         // Get last row in reverse
         for (let x = nx - 1; x >= 0; x -= 1) {
-            path.push(this.ijToLonLat(x, 0, localDomain).reverse());
+            path.push(this.ijToLonLat(x, 0, localDomain));
+        }
+
+        for (let i = 0; i < path.length; i += 1) {
+            if (reverse) {
+                path[i].reverse();
+            }
         }
 
         return path;
@@ -91,7 +109,7 @@ export default class Projection {
         return { nx, ny };
     }
 
-    makeLonLatGrid(localDomain = false) {
+    makeLonLatGrid(localDomain = true) {
         // Make the LonLatGrid
         const { nx, ny } = this.getNxNY(localDomain);
         const lonlatGrid = new Array(ny);
@@ -101,35 +119,53 @@ export default class Projection {
                 lonlatGrid[y][x] = this.ijToLonLat(x, y, localDomain);
             }
         }
-
         this.lonlatGrid = lonlatGrid;
+    }
+
+    qcPoints() {
+        // Make sure i0...j0 points don't go outside of domain
+        this.j0 = Math.max(this.j0, 0);
+        this.j1 = Math.min(this.j1, this.ny);
+        this.i1 = Math.min(this.i1, this.nx);
+        if (this.wrapLongitude) {
+            // wrapLongitude can allow points -nx to +nx
+            this.i0 = Math.max(this.i0, -this.nx);
+            // -1 is important for creating no seams in the globe
+            const correction = this.i1 - this.i0 - this.nx - 1;
+            if (correction > 0) {
+                this.i0 += Math.ceil(correction / 2);
+                this.i1 -= Math.floor(correction / 2);
+            }
+        } else {
+            this.i0 = Math.max(this.i0, 0);
+        }
+    }
+
+    makeresponse() {
+        return {
+            i0: this.i0,
+            j0: this.j0,
+            i1: this.i1,
+            j1: this.j1,
+            nx: this.nx,
+            ny: this.ny,
+            resLevel: this.resLevel,
+        };
     }
 
     //
     // Adds i0, i1, j0, j1 of the local domain to this.projDict
     // nx and ny will remain the nx and ny of the origional domain
     calcLocalDomain(lat, lon, ny, nx) {
-        const [i, j] = this.LonLatToij(lon, lat, true, false);
+        const [i, j] = this.LonLatToij(lon, lat, true, true);
         this.i0 = i - Math.floor(nx / 2);
         this.i1 = i + Math.floor(nx / 2);
         this.j0 = j - Math.floor(ny / 2);
         this.j1 = j + Math.floor(ny / 2);
 
-        // Make sure i0...j0 points don't go outside of domain
-        if (this.j0 < 0) this.j0 = 0;
-        if (this.j1 >= this.ny) this.j1 = this.ny;
-        if (this.i0 < 0) this.i0 = 0;
-        if (this.i1 >= this.nx) this.i1 = this.nx;
+        this.qcPoints();
 
-        const projDictBounds = {
-            i0: this.i0,
-            j0: this.j0,
-            i1: this.i1,
-            j1: this.j1,
-            resLevel: this.resLevel,
-        };
-
-        return projDictBounds;
+        return this.makeresponse();
     }
 
     calcLocalDomainFromViewport(x4dDisplay, viewState, tiling, mapType = 'Mapbox') {
@@ -140,21 +176,9 @@ export default class Projection {
         this.j0 = j0;
         this.j1 = j1;
 
-        // Make sure i0...j0 points don't go outside of domain
-        if (this.j0 < 0) this.j0 = 0;
-        if (this.j1 >= this.ny) this.j1 = this.ny;
-        if (this.i0 < 0) this.i0 = 0;
-        if (this.i1 >= this.nx) this.i1 = this.nx;
+        this.qcPoints();
 
-        const projDictBounds = {
-            i0: this.i0,
-            j0: this.j0,
-            i1: this.i1,
-            j1: this.j1,
-            resLevel: this.resLevel,
-        };
-
-        return projDictBounds;
+        return this.makeresponse();
     }
 
     getViewportBoundsIJ(x4dDisplay, viewState, mapType, tiling = undefined) {
@@ -223,10 +247,74 @@ export default class Projection {
         return resLevel;
     }
 
+    rotateCoordinate(lon, lat, option) {
+        lon = (lon * Math.PI) / 180; // Convert degrees to radians
+        lat = (lat * Math.PI) / 180;
+
+        const { longitudeOfSouthernPoleInDegrees, latitudeOfSouthernPoleInDegrees } = this.rotation;
+        let theta = 90 + latitudeOfSouthernPoleInDegrees; // Rotation around y-axis
+        let phi = longitudeOfSouthernPoleInDegrees; // Rotation around z-axis
+
+        phi = (phi * Math.PI) / 180; // Convert degrees to radians
+        theta = (theta * Math.PI) / 180;
+
+        const x = Math.cos(lon) * Math.cos(lat); // Convert from spherical to cartesian coordinates
+        const y = Math.sin(lon) * Math.cos(lat);
+        const z = Math.sin(lat);
+
+        let x_new;
+        let y_new;
+        let z_new;
+        if (option === 1) {
+            // Regular -> Rotated
+
+            x_new =
+                Math.cos(theta) * Math.cos(phi) * x +
+                Math.cos(theta) * Math.sin(phi) * y +
+                Math.sin(theta) * z;
+            y_new = -Math.sin(phi) * x + Math.cos(phi) * y;
+            z_new =
+                -Math.sin(theta) * Math.cos(phi) * x -
+                Math.sin(theta) * Math.sin(phi) * y +
+                Math.cos(theta) * z;
+        }
+        if (option === 2) {
+            // Rotated -> Regular
+
+            phi = -phi;
+            theta = -theta;
+
+            x_new =
+                Math.cos(theta) * Math.cos(phi) * x +
+                Math.sin(phi) * y +
+                Math.sin(theta) * Math.cos(phi) * z;
+            y_new =
+                -Math.cos(theta) * Math.sin(phi) * x +
+                Math.cos(phi) * y -
+                Math.sin(theta) * Math.sin(phi) * z;
+            z_new = -Math.sin(theta) * x + Math.cos(theta) * z;
+        }
+
+        let lon_new = Math.atan2(y_new, x_new); // Convert cartesian back to spherical coordinates
+        let lat_new = Math.asin(z_new);
+
+        lon_new = (lon_new * 180) / Math.PI; // Convert radians back to degrees
+        lat_new = (lat_new * 180) / Math.PI;
+
+        return [lon_new, lat_new]; // Return the new coordinates
+    }
+
     LonLatToij(longitude, latitude, round, localDomain = true, commonCoordinates = false) {
-        const lat = latitude;
+        let lat = latitude;
         let lon = longitude;
-        if (!commonCoordinates) {
+        // Do we need to rotate coordinates?
+        if (this.rotate) {
+            [lon, lat] = this.rotateCoordinate(lon, lat, 1);
+        }
+
+        // Needed for zoom in near Guam on the LREF, breaks RRFS which is why
+        // i added datelineFix flag
+        if (!commonCoordinates && this.datelineFix) {
             // Don't allow negative lon values if first lon is positive
             // Don't allow positive lon values if first lon is negative
             if (this.firstLon > 0 && lon < 0) lon += 360;
@@ -235,6 +323,7 @@ export default class Projection {
 
         let i;
         let j;
+        // x_0 and y_0 don't impact longlat grids, need to add them back in
         if (this.proj.includes('longlat')) {
             i = (lon - this.firstLon) / this.dx;
             j = (lat - this.firstLat) / this.dy;
@@ -268,17 +357,20 @@ export default class Projection {
             j += this.j0;
         }
 
-        let lat;
-        let lon;
+        let [lon, lat] = this.projection.inverse([i * this.dx, j * this.dy]);
+
+        // x_0 and y_0 don't impact longlat grids, need to add them back in
         if (this.proj.includes('longlat')) {
-            lon = this.firstLon + i * this.dx;
-            lat = this.firstLat + j * this.dy;
-        } else {
-            [lon, lat] = this.projection.inverse([i * this.dx, j * this.dy]);
+            lon += this.firstLon;
+            lat += this.firstLat;
         }
 
-        // Don't allow negative lon values if first lon is positive
-        // Don't allow positive lon values if first lon is negative
+        // Do we need to rotate grid?
+        if (this.rotate) {
+            [lon, lat] = this.rotateCoordinate(lon, lat, 2);
+        }
+
+        // Needed for HREF Alaska
         if (this.firstLon > 0 && lon < 0) lon += 360;
         if (this.firstLon < 0 && lon > 0) lon -= 360;
 
