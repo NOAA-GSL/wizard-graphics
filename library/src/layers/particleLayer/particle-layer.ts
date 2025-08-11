@@ -1,12 +1,18 @@
-import { Color, DefaultProps, LayerContext, UpdateParameters, COORDINATE_SYSTEM, GlobeViewport } from "@deck.gl/core";
+
+import {
+  Color,
+  DefaultProps,
+  LayerContext,
+  UpdateParameters,
+  COORDINATE_SYSTEM
+} from "@deck.gl/core";
 import { LineLayer, LineLayerProps } from "@deck.gl/layers";
 import { Buffer, Texture } from "@luma.gl/core";
 import { Model, BufferTransform } from "@luma.gl/engine";
 import { ShaderModule } from "@luma.gl/shadertools";
 import gUtilities from "../../utilities/graphicsUtilities";
-import updatedShader from "./particle-layer-update-transform.vs.glsl.js"; 
+import shader from "./particle-layer-update-transform.vs.glsl.js";
 
-// Shader Module
 export type UniformProps = {
   numParticles: number;
   maxAge: number;
@@ -18,6 +24,8 @@ export type UniformProps = {
   bounds: number[];
   bitmapTexture: Texture;
   isGlobe: number;
+  viewportCenter: number[];
+  cullBackside: number;
 };
 
 const uniformBlock = `\
@@ -30,6 +38,8 @@ uniform bitmapUniforms {
   vec4 viewportBounds;
   float viewportZoomChangeFactor;
   vec4 bounds;
+  vec2 viewportCenter;
+  float cullBackside;
   int isGlobe;
 } bitmap;
 `;
@@ -46,12 +56,13 @@ export const bitmapUniforms = {
     viewportBounds: "vec4<f32>",
     viewportZoomChangeFactor: "f32",
     bounds: "vec4<f32>",
-    isGlobe: "i32",
-  },
+    viewportCenter: "vec2<f32>",
+    cullBackside: "f32",
+    isGlobe: "i32"
+  }
 } as const satisfies ShaderModule<UniformProps>;
 
-// Simple cache for bounds calculations
-const positionsCache = new Map();
+const positionsCache = new Map<string, any>();
 const MAX_CACHE_SIZE = 50;
 
 function addToCache(key: string, value: any) {
@@ -62,7 +73,51 @@ function addToCache(key: string, value: any) {
   positionsCache.set(key, value);
 }
 
-// Particle Layer
+function isGlobalData(bounds: number[]): boolean {
+  if (!bounds || bounds.length !== 4) return false;
+  const [west, south, east, north] = bounds;
+  const lonSpan = east - west;
+  const latSpan = north - south;
+  return lonSpan >= 350 && latSpan >= 170;
+}
+
+function isPacificCentered(bounds: number[]): boolean {
+  if (!bounds || bounds.length !== 4) return false;
+  const [west, , east] = bounds;
+  return west >= 180 && east > 360;
+}
+
+function normalizeDataBounds(bounds: number[]): number[] {
+  const [west, south, east, north] = bounds;
+
+  if (isPacificCentered(bounds)) {
+    return [west, Math.max(south, -90), east, Math.min(north, 90)];
+  }
+
+  return [
+    ((west % 360) + 360) % 360 - 180,
+    Math.max(south, -90),
+    ((east % 360) + 360) % 360 - 180,
+    Math.min(north, 90)
+  ];
+}
+
+function getViewportBounds(viewport: any): number[] {
+  if (viewport?.projection?.mode === "globe") {
+    return [-180, -90, 180, 90];
+  }
+  const [west, south, east, north] = viewport.getBounds();
+  const lonMargin = (east - west) * 0.2;
+  const latMargin = (north - south) * 0.2;
+  return [
+    west - lonMargin,
+    Math.max(south - latMargin, -90),
+    east + lonMargin,
+    Math.min(north + latMargin, 90)
+  ];
+}
+
+// ===== Types / props =====
 const DEFAULT_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 
 export type Bbox = [number, number, number, number];
@@ -105,38 +160,52 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
   trailLength: { type: "number", min: 2, max: 100, value: 30 },
   fadeTrails: { type: "boolean", value: true },
 
-  particleJitter: { type: "number", min: 0, max: 1, value: 0.7 }, // Amount of random jitter
-  speedVariation: { type: "number", min: 0, max: 1, value: 0.1 }, // Speed variation between particles
-  turbulenceStrength: { type: "number", min: 0, max: 1, value: 0.1 },
+  particleJitter: { type: "number", min: 0, max: 1, value: 0.7 },
+  speedVariation: { type: "number", min: 0, max: 1, value: 0.1 },
+  turbulenceStrength: { type: "number", min: 0, max: 1, value: 0.1 }
 };
 
 export default class ParticleLayer<
   D = any,
   ExtraPropsT = ParticleLayerProps<D>
 > extends LineLayer<D, ExtraPropsT & ParticleLayerProps<D>> {
-  
   private boundsCache: { key: string; bounds: number[] } | null = null;
 
   state!: {
     model?: Model;
+
     initialized: boolean;
     numInstances: number;
     numAgedInstances: number;
+
     sourcePositions: Buffer;
     targetPositions: Buffer;
+
     sourcePositions64Low: Float32Array;
     targetPositions64Low: Float32Array;
-    colors: Buffer;
     widths: Float32Array;
+
+    colors: Buffer;
+
     transform: BufferTransform;
+    texture: Texture;
+
     previousViewportZoom: number;
     previousTime: number;
-    texture: Texture;
+
     stepRequested: boolean;
     bounds: number[];
     trailLines: any[];
+    isPacificCentered: boolean;
+    isGlobalData: boolean;
+
+    // Perf additions
+    needsAttributeBind: boolean;
+    uniformHolder: { bitmap?: any } | null;
+    zeroPositions?: Float32Array;
   };
 
+  // ====== Shader injection (unchanged visuals) ======
   getShaders() {
     const oldShaders = super.getShaders();
     return {
@@ -147,8 +216,7 @@ export default class ParticleLayer<
           out float trailAge;
           out float particleVariation;
           const vec2 DROP_POSITION = vec2(0);
-          
-          // Hash function for per-particle variation
+
           float hash(float n) {
             return fract(sin(n) * 43758.5453123);
           }
@@ -158,8 +226,7 @@ export default class ParticleLayer<
           float particleIndex = mod(float(gl_VertexID), ${this.props.numParticles}.0);
           float ageIndex = floor(float(gl_VertexID) / ${this.props.numParticles}.0);
           trailAge = ageIndex / ${this.props.maxAge}.0;
-          
-          // Add per-particle variation for visual diversity
+
           particleVariation = hash(particleIndex);
         `,
         "fs:#decl": `
@@ -169,30 +236,28 @@ export default class ParticleLayer<
         `,
         "fs:#main-start": `
           if (drop > 0.5) discard;
-          ${this.props.fadeTrails ? `
-          // Variable trail fade based on particle
+          ${this.props.fadeTrails
+            ? `
           float fadeVariation = 0.8 + particleVariation * 0.4;
           float trailFade = 1.0 - smoothstep(0.0, fadeVariation, trailAge);
           fragColor.a *= trailFade * trailFade;
-          
-          // Add subtle color variation per particle
+
           fragColor.rgb *= 0.9 + particleVariation * 0.2;
-          ` : ''}
-        `,
-      },
+          `
+            : ""}
+        `
+      }
     };
   }
 
   shouldResetParticles(viewport, previousViewport) {
     if (!previousViewport) return false;
-    
     const zoomDiff = Math.abs(viewport.zoom - previousViewport.zoom);
-    const isGlobe = viewport.projection?.mode === 'globe';
-    
-    // Reset particles on major zoom changes for flat maps only
+    const isGlobe = viewport.projection?.mode === "globe";
     return !isGlobe && zoomDiff > 3;
   }
 
+  // ====== Lifecycle ======
   initializeState() {
     super.initializeState();
 
@@ -201,9 +266,9 @@ export default class ParticleLayer<
       "instanceSourcePositions",
       "instanceTargetPositions",
       "instanceColors",
-      "instanceWidths",
+      "instanceWidths"
     ]);
-    
+
     attributeManager!.addInstanced({
       instanceSourcePositions: { size: 3, type: "float32", noAlloc: true },
       instanceTargetPositions: { size: 3, type: "float32", noAlloc: true },
@@ -211,37 +276,37 @@ export default class ParticleLayer<
         size: 4,
         type: "float32",
         noAlloc: true,
-        defaultValue: [...this.props.color.map(c => c / 255)],
-      },
+        defaultValue: [...this.props.color.map((c) => c / 255)]
+      }
     });
 
     this._setupState();
   }
-  
+
   _createTrailLines() {
     const { numParticles, maxAge, trailLength } = this.props;
     const effectiveTrailLength = Math.min(trailLength, maxAge);
     const trailLines = [];
-    
+
     for (let particleId = 0; particleId < numParticles; particleId++) {
       for (let age = 0; age < effectiveTrailLength - 1; age++) {
         const sourceIndex = particleId + age * numParticles;
         const targetIndex = particleId + (age + 1) * numParticles;
-        
+
         trailLines.push({
-          sourcePosition: [0, 0, 0], // Will be updated from transform feedback
-          targetPosition: [0, 0, 0], // Will be updated from transform feedback
+          sourcePosition: [0, 0, 0],
+          targetPosition: [0, 0, 0],
           sourceIndex,
           targetIndex,
-          age: age,
-          particleId: particleId,
+          age,
+          particleId
         });
       }
     }
-    
+
     return trailLines;
   }
-  
+
   _createWindTexture() {
     const { projection, dataDir, dataMag } = this.props;
     const { lonlatGrid } = projection;
@@ -251,88 +316,119 @@ export default class ParticleLayer<
     const cachedTexture = positionsCache.get(textureKey);
 
     if (cachedTexture?.texture) {
-      return cachedTexture.texture;
+      return cachedTexture.texture as Texture;
     }
-    
-    const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
+
+    const bounds = this._getBoundsFromGrid(lonlatGrid);
+    const { minLng, minLat, maxLng, maxLat } = bounds;
     const width = lonlatGrid[0].length;
     const height = lonlatGrid.length;
-    
-    // Work with unwrapped coordinates directly
+
     const dlon = (maxLng - minLng) / width;
     const dlat = (maxLat - minLat) / height;
-    
-    const uvData = new Float32Array(width * height * 4);
-    let index = 0;
 
-    const textureNoise = (x, y) => {
-      return (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
-    };
+    // Reuse a scratch buffer for this grid size if available
+    const scratchKey = `scratch-${width}x${height}`;
+    let uvData: Float32Array =
+      positionsCache.get(scratchKey)?.uvData ||
+      new Float32Array(width * height * 4);
+    if (!positionsCache.has(scratchKey)) {
+      addToCache(scratchKey, { uvData });
+    }
 
-    for (let j = 0; j < height; j += 1) {
-      for (let i = 0; i < width; i += 1) {
-        // Calculate coordinates in unwrapped space
-        const lat = maxLat - j * dlat;
-        const lon = minLng + i * dlon; // Don't wrap this longitude
-        
-        const interpolate = false; 
-        const wdirection = gUtilities.getreadoutvalue(lat, lon, projection, dataDir, '°', interpolate, dataMag);
-        const wmagnitude = gUtilities.getreadoutvalue(lat, lon, projection, dataMag, 'mph', interpolate, dataDir); 
+    let ptr = 0;
+    const interpolate = false;
+    const noiseScale = 0.02;
+
+    const pacificCentered = isPacificCentered([minLng, minLat, maxLng, maxLat]);
+    const globalData = isGlobalData([minLng, minLat, maxLng, maxLat]);
+
+    const texNoise = (x: number, y: number) =>
+      (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+
+    for (let j = 0; j < height; j++) {
+      const lat = maxLat - j * dlat;
+      for (let i = 0; i < width; i++) {
+        const lon = minLng + i * dlon;
+
+        // For Pacific-centered data, preserve the coordinate system
+        let lookupLon = lon;
+        if (pacificCentered && lon > 360) {
+          lookupLon = lon - 360;
+        }
+
+        const wdirection = gUtilities.getreadoutvalue(
+          lat,
+          lookupLon,
+          projection,
+          dataDir,
+          "°",
+          interpolate,
+          dataMag
+        );
+        const wmagnitude = gUtilities.getreadoutvalue(
+          lat,
+          lookupLon,
+          projection,
+          dataMag,
+          "mph",
+          interpolate,
+          dataDir
+        );
 
         let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
         if (isNaN(wmagnitude)) uv = [0, 0];
-        
-        // Add subtle noise to prevent identical flow paths
-        const noiseScale = 0.02;
-        uv[0] += (textureNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
-        uv[1] += (textureNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
-        
-        const startIndex = index * 4;
-        uvData[startIndex] = uv[0];     // U component
-        uvData[startIndex + 1] = uv[1]; // V component  
-        uvData[startIndex + 2] = 0;     // Blue channel unused
-        uvData[startIndex + 3] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0;
-        
-        index += 1;
+
+        // Subtle noise to decorrelate identical paths
+        uv[0] += (texNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
+        uv[1] += (texNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
+
+        uvData[ptr++] = uv[0];
+        uvData[ptr++] = uv[1];
+        uvData[ptr++] = 0;
+        uvData[ptr++] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0;
       }
     }
 
+    const addressModeU = globalData ? "repeat" : "clamp-to-edge";
     const texture = this.context.device.createTexture({
       width,
       height,
       data: uvData,
-      format: 'rgba32float', 
-      mipmaps: false, 
+      format: "rgba32float",
+      mipmaps: false,
       sampler: {
-        minFilter: 'linear',
-        magFilter: 'linear',
-        addressModeU: 'clamp-to-edge',
-        addressModeV: 'clamp-to-edge',
-      },
+        minFilter: "linear",
+        magFilter: "linear",
+        addressModeU,
+        addressModeV: "clamp-to-edge"
+      }
     });
-    
+
     addToCache(textureKey, { texture });
     return texture;
   }
-  
-  _getBoundsFromGrid(lonlatGrid) {
+
+  _getBoundsFromGrid(lonlatGrid: any) {
     const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
     const cached = positionsCache.get(key);
-    if (cached?.bounds) {
-      return cached.bounds;
-    }
-    
-    let maxLng = -Infinity, minLng = Infinity, maxLat = -Infinity, minLat = Infinity;
-    for (const outerArr of lonlatGrid) {
-      for (const innerArr of outerArr) {
-        const [longitude, latitude] = innerArr;
-        // DON'T wrap longitude here - preserve original data coordinates
+    if (cached?.bounds) return cached.bounds;
+
+    let maxLng = -Infinity,
+      minLng = Infinity,
+      maxLat = -Infinity,
+      minLat = Infinity;
+
+    for (const row of lonlatGrid) {
+      for (const pair of row) {
+        const [longitude, latitude] = pair;
         if (longitude > maxLng) maxLng = longitude;
         if (longitude < minLng) minLng = longitude;
         if (latitude > maxLat) maxLat = latitude;
         if (latitude < minLat) minLat = latitude;
       }
     }
+
     const bounds = { maxLng, minLng, maxLat, minLat };
     addToCache(key, { bounds });
     return bounds;
@@ -340,23 +436,40 @@ export default class ParticleLayer<
 
   _setupState() {
     const { projection } = this.props;
-    const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
-    
-    // Keep unwrapped coordinates for data bounds
-    const calculatedBounds = [minLng, minLat, maxLng, maxLat];
+    const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(
+      projection.lonlatGrid
+    );
+
+    let calculatedBounds = [minLng, minLat, maxLng, maxLat];
+
+    if (
+      isNaN(minLng) ||
+      isNaN(maxLng) ||
+      isNaN(minLat) ||
+      isNaN(maxLat)
+    ) {
+      calculatedBounds = [-180, -90, 180, 90];
+    }
+
+    const _ = normalizeDataBounds(calculatedBounds);
+    const pacificCentered = isPacificCentered(calculatedBounds);
+    const globalData = isGlobalData(calculatedBounds);
 
     this.setState({
       bounds: calculatedBounds,
       trailLines: this._createTrailLines(),
+      isPacificCentered: pacificCentered,
+      isGlobalData: globalData
     });
 
     this._setupTransformFeedback();
   }
-  
-  updateState({ props, oldProps, changeFlags, context }: UpdateParameters<this>) {
-    super.updateState({ props, oldProps, changeFlags, context } as UpdateParameters<this>);
-    
-    const shouldUpdate = 
+
+  updateState(params: UpdateParameters<this>) {
+    super.updateState(params);
+    const { props, oldProps } = params;
+
+    const shouldUpdate =
       props.image !== oldProps.image ||
       props.numParticles !== oldProps.numParticles ||
       props.maxAge !== oldProps.maxAge ||
@@ -366,7 +479,7 @@ export default class ParticleLayer<
       props.trailLength !== oldProps.trailLength;
 
     if (shouldUpdate) {
-        this._setupState();
+      this._setupState();
     }
   }
 
@@ -375,55 +488,54 @@ export default class ParticleLayer<
     super.finalizeState(context);
   }
 
-  _getEffectiveBounds(): number[] {
-    const cacheKey = this.props.bounds?.join('-') || 'state';
-    
+  _getEffectiveBounds() {
+    const cacheKey = this.props.bounds?.join("-") || "state";
     if (this.boundsCache?.key === cacheKey) {
       return this.boundsCache.bounds;
     }
 
-    let bounds;
+    let bounds: number[];
     if (this.state?.bounds) {
-        bounds = this.state.bounds;
+      bounds = this.state.bounds;
     } else if (this.props.bounds && this.props.bounds.length === 4) {
-        bounds = this.props.bounds;
+      bounds = this.props.bounds;
     } else {
-        bounds = [-180, -90, 180, 90];
+      bounds = [-180, -90, 180, 90];
     }
-    
+
     this.boundsCache = { key: cacheKey, bounds };
     return bounds;
   }
 
   draw({ uniforms }: { uniforms: any }) {
-    if (!this.state.initialized) {
-      return;
-    }
+    if (!this.state.initialized) return;
 
-    if (this.props.animate && this.state.initialized) {
+    if (this.props.animate) {
       this.step();
     }
 
     const {
+      model,
       sourcePositions,
       targetPositions,
       sourcePositions64Low,
       targetPositions64Low,
       colors,
       widths,
-      model,
+      needsAttributeBind
     } = this.state;
-    
-    model.setAttributes({
-      instanceSourcePositions: sourcePositions,
-      instanceTargetPositions: targetPositions,
-      instanceColors: colors,
-    });
-    model.setConstantAttributes({
-      instanceSourcePositions64Low: sourcePositions64Low,
-      instanceTargetPositions64Low: targetPositions64Low,
-      instanceWidths: widths,
-    });
+
+    if (model && needsAttributeBind) {
+      model.setAttributes?.({
+        instanceSourcePositions: sourcePositions,
+        instanceTargetPositions: targetPositions,
+        instanceColors: colors
+      });
+      model.setConstantAttributes?.({
+        instanceWidths: widths
+      });
+      this.state.needsAttributeBind = false;
+    }
 
     super.draw({ uniforms });
   }
@@ -432,8 +544,9 @@ export default class ParticleLayer<
     if (this.state.initialized) {
       this._deleteTransformFeedback();
     }
-    
-    const { numParticles, color, maxAge, width, trailLength, fadeTrails } = this.props;
+
+    const { numParticles, color, maxAge, width, trailLength, fadeTrails } =
+      this.props;
 
     const texture = this.props.image || this._createWindTexture();
     if (!texture || typeof texture === "string") {
@@ -442,34 +555,42 @@ export default class ParticleLayer<
 
     const numInstances = numParticles * maxAge;
     const numAgedInstances = numParticles * (maxAge - 1);
-    const sourcePositions = this.context.device.createBuffer(new Float32Array(numInstances * 3));
-    const targetPositions = this.context.device.createBuffer(new Float32Array(numInstances * 3));
 
-    const colors = new Float32Array(numInstances * 4);
+    const sourcePositions = this.context.device.createBuffer(
+      new Float32Array(numInstances * 3)
+    );
+    const targetPositions = this.context.device.createBuffer(
+      new Float32Array(numInstances * 3)
+    );
 
-    for (let i = 0; i < numInstances; i++) {
-      const particleIndex = i % numParticles;
-      const age = Math.floor(i / numParticles);
-      const effectiveTrailLength = Math.min(trailLength, maxAge);
-
-      let alpha = color[3] ?? 255;
-
+    // Precompute alphas by age (no pow in the big loop)
+    const effectiveTrailLength = Math.min(trailLength, maxAge);
+    const alphasByAge = new Float32Array(maxAge);
+    const baseAlpha = ((color[3] ?? 255) as number) / 255;
+    for (let age = 0; age < maxAge; age++) {
+      let a = 0;
       if (fadeTrails && age < effectiveTrailLength) {
-        const trailPosition = age / effectiveTrailLength;
-        const trailFade = Math.pow(1 - trailPosition, 2);
-        alpha *= trailFade;
-      } else if (age >= effectiveTrailLength) {
-        alpha = 0;
+        const t = age / effectiveTrailLength;
+        const fade = (1 - t) * (1 - t);
+        a = baseAlpha * fade;
       }
-
-      const o = i * 4;
-      colors[o    ] = color[0] / 255; // R
-      colors[o + 1] = color[1] / 255; // G
-      colors[o + 2] = color[2] / 255; // B
-      colors[o + 3] = alpha    / 255;    // A
+      alphasByAge[age] = a;
     }
 
-    const colorBuffer = this.context.device.createBuffer({data: colors});
+    // Build color buffer
+    const colorsArr = new Float32Array(numInstances * 4);
+    const r = (color[0] as number) / 255;
+    const g = (color[1] as number) / 255;
+    const b = (color[2] as number) / 255;
+    for (let i = 0; i < numInstances; i++) {
+      const age = (i / numParticles) | 0;
+      const o = i * 4;
+      colorsArr[o] = r;
+      colorsArr[o + 1] = g;
+      colorsArr[o + 2] = b;
+      colorsArr[o + 3] = alphasByAge[age];
+    }
+    const colorBuffer = this.context.device.createBuffer({ data: colorsArr });
 
     const sourcePositions64Low = new Float32Array([0, 0, 0]);
     const targetPositions64Low = new Float32Array([0, 0, 0]);
@@ -479,11 +600,14 @@ export default class ParticleLayer<
       attributes: { sourcePosition: sourcePositions },
       bufferLayout: [{ name: "sourcePosition", format: "float32x3" }],
       feedbackBuffers: { targetPosition: targetPositions },
-      vs: updatedShader,
+      vs: shader,
       varyings: ["targetPosition"],
       modules: [bitmapUniforms],
-      vertexCount: numParticles,
+      vertexCount: numParticles
     });
+
+    // Reuse a zeroed array for resets
+    const zeroPositions = new Float32Array(numInstances * 3);
 
     this.setState({
       initialized: true,
@@ -496,18 +620,19 @@ export default class ParticleLayer<
       colors: colorBuffer,
       widths,
       transform,
-      texture, 
+      texture,
       previousViewportZoom: 0,
       previousTime: 0,
+      needsAttributeBind: true,
+      uniformHolder: { bitmap: {} },
+      zeroPositions
     });
   }
 
   _runTransformFeedback() {
-    if (!this.state.initialized) {
-      return;
-    }
+    if (!this.state.initialized) return;
 
-    const { viewport, timeline } = this.context;
+    const { viewport, timeline } = this.context as any;
     const { numParticles, speedFactor, maxAge } = this.props;
     const {
       previousTime,
@@ -516,119 +641,140 @@ export default class ParticleLayer<
       sourcePositions,
       targetPositions,
       numAgedInstances,
-      texture,
+      texture
     } = this.state;
 
     const time = timeline.getTime();
-    if (time === previousTime) {
-      return;
-    }
-    
-    const isGlobe = viewport.projection?.mode === 'globe' ? 1 : 0;
-    
-    // Use unwrapped data bounds directly
+    if (time === previousTime) return;
+
+    const isGlobe = viewport?.projection?.mode === "globe" ? 1 : 0;
     const bounds = this._getEffectiveBounds();
-    
-    let viewportBounds;
-    let viewportZoomChangeFactor;
-    
+
+    let viewportBounds: number[];
+    let viewportCenter: [number, number];
+    let viewportZoomChangeFactor: number;
+    let cullBackside = 0;
+
     if (isGlobe > 0) {
-      // For globe, use data bounds directly
-      viewportBounds = bounds;
+      viewportBounds = this.state.isGlobalData
+        ? [-180, -90, 180, 90]
+        : bounds;
       viewportZoomChangeFactor = 1.0;
+      cullBackside = this.state.isGlobalData ? 1 : 0;
+      // Use deck.gl globe props for center
+      const lng = viewport?.longitude ?? 0;
+      const lat = viewport?.latitude ?? 0;
+      viewportCenter = [lng, lat];
     } else {
-      // Get viewport bounds without forcing wrapping
       viewportBounds = getViewportBounds(viewport);
-      viewportZoomChangeFactor = Math.max(1.0, 2 ** ((previousViewportZoom - viewport.zoom) * 1.5)); 
+      const [w, s, e, n] = viewportBounds;
+      viewportCenter = [(w + e) / 2, (s + n) / 2];
+      viewportZoomChangeFactor = Math.max(
+        1.0,
+        Math.pow(2, (previousViewportZoom - viewport.zoom) * 1.5)
+      );
     }
-    
-    let currentSpeedFactor;
+
+    // Mild temporal variation; keep same behavior
     const speedVariation = 0.95 + 0.1 * Math.sin(time * 0.001);
-    
+
+    let currentSpeedFactor: number;
     if (isGlobe > 0) {
-      currentSpeedFactor = (speedFactor * speedVariation) / 100000; 
+      currentSpeedFactor = (speedFactor * speedVariation) / 100000;
     } else {
-      currentSpeedFactor = (speedFactor * speedVariation) / (2 ** (viewport.zoom + 7));
+      currentSpeedFactor =
+        (speedFactor * speedVariation) / Math.pow(2, viewport.zoom + 7);
     }
 
-    const seed = Math.sin(time * 0.0001) * 999 + Math.cos(time * 0.00013) * 777;
+    const seed =
+      Math.sin(time * 0.0001) * 999 + Math.cos(time * 0.00013) * 777;
 
-    const moduleUniforms = {
-      bitmapTexture: texture,
-      viewportBounds: viewportBounds || [0, 0, 0, 0],
-      viewportZoomChangeFactor: viewportZoomChangeFactor || 0,
-      bounds, // Use unwrapped data bounds
-      numParticles,
-      maxAge,
-      speedFactor: currentSpeedFactor,
-      time,
-      seed: Math.abs(seed),
-      isGlobe
-    };
-    
-    transform.model.shaderInputs.setProps({ bitmap: moduleUniforms });
-    
+    // Reuse uniforms object (avoid per-frame allocations)
+    const u = (this.state.uniformHolder!.bitmap ||= {});
+    u.bitmapTexture = texture;
+    u.viewportBounds = viewportBounds;
+    u.viewportZoomChangeFactor = viewportZoomChangeFactor;
+    u.bounds = bounds;
+    u.viewportCenter = viewportCenter;
+    u.cullBackside = cullBackside;
+    u.numParticles = numParticles;
+    u.maxAge = maxAge;
+    u.speedFactor = currentSpeedFactor;
+    u.time = time;
+    u.seed = Math.abs(seed);
+    u.isGlobe = isGlobe;
+
+    if (!transform?.model) return; // simple early-out
+
+    transform.model.shaderInputs?.setProps?.({ bitmap: u }); 
+
     transform.run({
       clearColor: false,
       clearDepth: false,
       clearStencil: false,
       depthReadOnly: true,
-      stencilReadOnly: true,
+      stencilReadOnly: true
     });
 
+    // Shift aged positions down by one "age row"
     const encoder = this.context.device.createCommandEncoder();
     encoder.copyBufferToBuffer({
       sourceBuffer: sourcePositions,
       sourceOffset: 0,
       destinationBuffer: targetPositions,
       destinationOffset: numParticles * 4 * 3,
-      size: numAgedInstances * 4 * 3,
+      size: numAgedInstances * 4 * 3
     });
     encoder.finish();
     encoder.destroy();
 
+    // Swap
     this.state.sourcePositions = targetPositions;
     this.state.targetPositions = sourcePositions;
     transform.model.setAttributes({ sourcePosition: targetPositions });
     transform.transformFeedback.setBuffers({ targetPosition: sourcePositions });
+
+    // Mark bindings dirty for draw()
+    this.state.needsAttributeBind = true;
 
     this.state.previousViewportZoom = viewport.zoom;
     this.state.previousTime = time;
   }
 
   _resetTransformFeedback() {
-    if (this.state.initialized) {
-      const { sourcePositions, targetPositions, numInstances } = this.state;
-      sourcePositions.write(new Float32Array(numInstances * 3));
-      targetPositions.write(new Float32Array(numInstances * 3));
+    if (!this.state.initialized) return;
+    const { sourcePositions, targetPositions, zeroPositions } = this.state;
+    if (zeroPositions) {
+      sourcePositions.write(zeroPositions);
+      targetPositions.write(zeroPositions);
+      this.state.needsAttributeBind = true;
     }
   }
 
   _deleteTransformFeedback() {
-    if (this.state.initialized) {
-        const { sourcePositions, targetPositions, colors, transform, texture } = this.state;
-        sourcePositions?.destroy();
-        targetPositions?.destroy();
-        colors?.destroy();
-        transform?.destroy();
+    if (!this.state.initialized) return;
 
-        // If the texture exists and was generated by this layer (not passed in via props)
-        if (texture && texture !== this.props.image) {
-            // Find the texture in the cache and remove it
-            for (const [key, value] of positionsCache.entries()) {
-                if (value.texture === texture) {
-                    positionsCache.delete(key);
-                    break; // Exit after finding and deleting
-                }
-            }
-            // Destroy the texture to free up GPU memory
-            texture.destroy();
+    const { sourcePositions, targetPositions, colors, transform, texture } =
+      this.state;
+    sourcePositions?.destroy();
+    targetPositions?.destroy();
+    colors?.destroy();
+    transform?.destroy();
+
+    if (texture && texture !== this.props.image) {
+      for (const [key, value] of positionsCache.entries()) {
+        if (value.texture === texture) {
+          positionsCache.delete(key);
+          break;
         }
-        
-        this.setState({ initialized: false });
+      }
+      texture.destroy();
     }
+
+    this.setState({ initialized: false });
   }
 
+  // ===== Public API =====
   step() {
     this._runTransformFeedback();
     this.setNeedsRedraw();
@@ -642,60 +788,3 @@ export default class ParticleLayer<
 
 ParticleLayer.layerName = "ParticleLayer";
 ParticleLayer.defaultProps = defaultProps;
-
-// Viewport Functions
-export function getViewportBounds(viewport) {
-  if (viewport.projection?.mode === 'globe') {
-    // For globe, return world bounds
-    return [-180, -90, 180, 90];
-  }
-  
-  // For flat maps, get the actual viewport bounds without forcing wrapping
-  const bounds = viewport.getBounds();
-  const [west, south, east, north] = bounds;
-  
-  // Don't wrap bounds here - let them extend beyond standard limits
-  // This allows working with unwrapped data coordinates
-  const expandedBounds = [
-    west - (east - west) * 0.2,  // 20% margin west
-    Math.max(south - (north - south) * 0.2, -90), // 20% margin south, clamped
-    east + (east - west) * 0.2,  // 20% margin east  
-    Math.min(north + (north - south) * 0.2, 90)   // 20% margin north, clamped
-  ];
-  
-  return expandedBounds;
-}
-
-function modulo(x: number, y: number): number {
-  return ((x % y) + y) % y;
-}
-
-export function wrapLongitude(lng: number): number {
-  return modulo(lng + 180, 360) - 180;
-}
-
-export function preserveDataCoordinates(bounds) {
-  const [west, south, east, north] = bounds;
-  return [west, Math.max(south, -90), east, Math.min(north, 90)];
-}
-
-export function wrapBounds(bounds, isDataBounds = false) {
-  const [west, south, east, north] = bounds;
-  
-  if (isDataBounds) {
-    // Don't wrap data bounds - they may legitimately extend beyond ±180
-    return preserveDataCoordinates(bounds);
-  }
-  
-  // Only wrap viewport/display bounds
-  if (east - west >= 360) {
-    return [-180, Math.max(south, -90), 180, Math.min(north, 90)];
-  }
-  
-  const minLng = wrapLongitude(west);
-  const maxLng = wrapLongitude(east);
-  const minLat = Math.max(south, -90);
-  const maxLat = Math.min(north, 90);
-  
-  return [minLng, minLat, maxLng, maxLat];
-}
