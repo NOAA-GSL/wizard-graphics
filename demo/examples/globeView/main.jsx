@@ -105,7 +105,8 @@ function MapContainer() {
         default:
             console.error('ERROR', `Unknown dataset: ${currentDataset}`);
     }
-
+    wdir = useMemo(() => wdir.flat(), [wdir]);
+    wmag = useMemo(() => wmag.flat().map(v => v * 2.23694), [wmag]);
     const data = useMemo(
         () =>
             new Float32Array(
