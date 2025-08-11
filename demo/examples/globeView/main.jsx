@@ -107,7 +107,12 @@ function MapContainer() {
     }
 
     const data = useMemo(
-        () => new Float32Array(Object.values(temperatures).map((v) => (v == null ? NaN : v))),
+        () =>
+            new Float32Array(
+                temperatures.flat().map((v) =>
+                    v == null ? NaN : ((v - 273.15) * 9) / 5 + 32
+                )
+            ),
         [temperatures],
     );
 
@@ -382,6 +387,7 @@ function MapContainer() {
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
                 <Map
                     initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
+                    maxPitch={0}
                     ref={mapRef}
                     antialias
                     mapStyle={mapStyle}
