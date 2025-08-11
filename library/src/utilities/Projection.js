@@ -312,13 +312,9 @@ export default class Projection {
             [lon, lat] = this.rotateCoordinate(lon, lat, 1);
         }
 
-        // Needed for zoom in near Guam on the LREF, breaks RRFS which is why
-        // i added datelineFix flag
-        if (!commonCoordinates && this.datelineFix) {
-            // Don't allow negative lon values if first lon is positive
-            // Don't allow positive lon values if first lon is negative
-            if (this.firstLon > 0 && lon < 0) lon += 360;
-            if (this.firstLon < 0 && lon > 0) lon -= 360;
+        // Make sure the lon is within the bounds of the data
+        if (!commonCoordinates) {
+            if (lon < this.firstLon) lon += 360;
         }
 
         let i;
