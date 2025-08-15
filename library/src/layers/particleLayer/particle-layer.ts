@@ -85,17 +85,6 @@ function isGlobalData(bounds: number[]): boolean {
   return lonSpan >= 350 && latSpan >= 170;
 }
 
-function normalizeDataBounds(bounds: number[]): number[] {
-  const [west, south, east, north] = bounds;
-
-  return [
-    ((west % 360) + 360) % 360 - 180,
-    Math.max(south, -90),
-    ((east % 360) + 360) % 360 - 180,
-    Math.min(north, 90)
-  ];
-}
-
 function toRadians(value: number): number {
     return (value / 180) * Math.PI;
 }
@@ -496,7 +485,6 @@ export default class ParticleLayer<
       calculatedBounds = [-180, -90, 180, 90];
     }
 
-    const _ = normalizeDataBounds(calculatedBounds);
     const globalData = isGlobalData(calculatedBounds);
 
     this.setState({
