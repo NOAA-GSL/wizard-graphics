@@ -5,6 +5,8 @@ import { VectorLayer } from './vectorLayer/vectorLayer';
 import ParticleLayer from './particleLayer/particle-layer';
 import IconClusterLayer from './iconClusterLayer/iconClusterLayer.ts';
 import CitiesLayer from './citiesLayer/citiesLayer';
+import PathLayer from './pathLayer/DESIPathLayer.js';
+import GeoJsonLayer from './geojsonLayer/geojson-layer.ts';
 import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from './canned';
 
 export {
@@ -21,4 +23,6 @@ export {
     SPCLayer,
     WPCLayer,
     WWALayer,
+    GeoJsonLayer,
+    PathLayer,
 };
