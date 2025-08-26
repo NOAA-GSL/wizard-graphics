@@ -14,6 +14,7 @@ import {
     VectorLayer,
     ParticleLayer,
     configFields,
+    GeoJsonLayer,
 } from 'desi-graphics';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
@@ -36,6 +37,7 @@ import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import 'desi-graphics/desi-graphics.css';
+import coastLines from './ne_10m_coastline.json';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
@@ -46,6 +48,7 @@ const checkboxConfig = [
     { key: 'particleCheckbox', label: 'Particle Layer' },
     { key: 'terrainCheckbox', label: 'Terrain Layer' },
     { key: 'isGlobeView', label: 'Globe View' },
+    { key: 'geojsonLayer', label: 'GeoJSON Layer' },
     { key: 'showStats', label: 'Show Performance Stats' },
 ];
 
@@ -63,6 +66,7 @@ function MapContainer() {
         particleCheckbox: false,
         terrainCheckbox: false,
         isGlobeView: true,
+        geojsonLayer: true,
         showStats: false, // Enable stats by default
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
@@ -106,13 +110,11 @@ function MapContainer() {
             console.error('ERROR', `Unknown dataset: ${currentDataset}`);
     }
     wdir = useMemo(() => wdir.flat(), [wdir]);
-    wmag = useMemo(() => wmag.flat().map(v => v * 2.23694), [wmag]);
+    wmag = useMemo(() => wmag.flat().map((v) => v * 2.23694), [wmag]);
     const data = useMemo(
         () =>
             new Float32Array(
-                temperatures.flat().map((v) =>
-                    v == null ? NaN : ((v - 273.15) * 9) / 5 + 32
-                )
+                temperatures.flat().map((v) => (v == null ? NaN : ((v - 273.15) * 9) / 5 + 32)),
             ),
         [temperatures],
     );
@@ -223,7 +225,7 @@ function MapContainer() {
             width: 1.5,
             numParticles: 10000,
             projection,
-            parameters: { depthTest: true, depthCompare: 'always', cullMode: 'front' },
+            parameters: { depthCompare: 'always', cullMode: 'front' },
             readout: [
                 {
                     data: wmag,
@@ -260,7 +262,7 @@ function MapContainer() {
                     //extensions: [new TerrainExtension()],
                     //terrainDrawMode:'drape',
                     interpolateData: state.shadedInterpolateCheckbox,
-                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'back' },
+                    parameters: { depthCompare: 'always', cullMode: 'back' },
                     readout: [
                         {
                             data,
@@ -287,7 +289,10 @@ function MapContainer() {
                     elevation: 0,
                     //extensions: [new TerrainExtension()],
                     //terrainDrawMode: 'drape',
-                    parameters: { depthTest: true, depthCompare: 'always', cullMode: 'back' },
+                    parameters: {
+                        depthCompare: 'always',
+                        cullMode: 'back',
+                    },
                     labels: { enabled: state.contourLabels, getSize: 14 },
                     readout: [
                         {
@@ -301,6 +306,29 @@ function MapContainer() {
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
                 }),
             );
+        if (state.geojsonLayer) {
+            result.push(
+                new GeoJsonLayer({
+                    id: 'GeoJsonLayer',
+                    data: coastLines,
+
+                    stroked: true,
+                    filled: true,
+                    lineWidthUnits: 'pixels',
+                    lineWidthMinPixels: 2,
+                    getLineWidth: 2,
+                    getFillColor: [255, 160, 180, 200],
+                    getLineColor: [255, 0, 0],
+                    parameters: {
+                        depthCompare: 'always',
+                        frontFace: 'ccw',
+                        cullMode: 'back',
+                    },
+                    getPointRadius: 4,
+                    getTextSize: 12,
+                }),
+            );
+        }
         if (state.vectorCheckbox)
             result.push(
                 new VectorLayer({
@@ -340,6 +368,7 @@ function MapContainer() {
         state.contourLabels,
         state.vectorCheckbox,
         state.particleCheckbox,
+        state.geojsonLayer,
         terrainLayer,
         particleLayer,
         data,
