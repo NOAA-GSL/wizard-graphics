@@ -1,6 +1,6 @@
 import { mergeWith, cloneDeep } from 'lodash';
 import defaults from './configFieldsDefault';
-import configFields from './configFields';
+import configFields from './configFields.json';
 
 // Don't merge arrays, just use source value
 function customizer(objValue, srcValue) {
