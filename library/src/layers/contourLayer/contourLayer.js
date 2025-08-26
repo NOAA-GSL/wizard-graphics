@@ -1,10 +1,10 @@
 /* eslint-disable max-len */
-import { PathLayer } from '@deck.gl/layers';
 import { CompositeLayer } from '@deck.gl/core';
 import gUtilities from '../../utilities/graphicsUtilities';
 import { ContourLabels } from './contourLabels';
 import { isolines } from './raster-marching-squares';
 import { getcolors } from '../../maps/legend/LegendStaticBar';
+import PathLayer from '../pathLayer/DESIPathLayer';
 
 const defaultProps = {
     elevation: 0,
