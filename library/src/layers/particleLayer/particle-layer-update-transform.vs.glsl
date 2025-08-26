@@ -1,4 +1,3 @@
-const shader = `\
 #version 300 es
 #define SHADER_NAME particle_layer_update_transform_vertex_shader
 
@@ -280,6 +279,3 @@ void main() {
 
   targetPosition = vec3(newPos, 0.0);
 }
-`;
-
-export default shader;

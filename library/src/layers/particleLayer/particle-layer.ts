@@ -26,6 +26,7 @@ export type UniformProps = {
   isGlobe: number;
   viewportCenter: number[];
   cullBackside: number;
+  viewportGlobeRadius: number;
 };
 
 const uniformBlock = `\
@@ -39,8 +40,9 @@ uniform bitmapUniforms {
   float viewportZoomChangeFactor;
   vec4 bounds;
   vec2 viewportCenter;
-  float cullBackside;
+  int cullBackside;
   int isGlobe;
+  float viewportGlobeRadius;
 } bitmap;
 `;
 
@@ -57,13 +59,15 @@ export const bitmapUniforms = {
     viewportZoomChangeFactor: "f32",
     bounds: "vec4<f32>",
     viewportCenter: "vec2<f32>",
-    cullBackside: "f32",
-    isGlobe: "i32"
+    cullBackside: "i32",
+    isGlobe: "i32",
+    viewportGlobeRadius: "f32"
   }
 } as const satisfies ShaderModule<UniformProps>;
 
 const positionsCache = new Map<string, any>();
 const MAX_CACHE_SIZE = 50;
+const DEFAULT_RADIUS = 6370972;
 
 function addToCache(key: string, value: any) {
   if (positionsCache.size >= MAX_CACHE_SIZE) {
@@ -81,43 +85,87 @@ function isGlobalData(bounds: number[]): boolean {
   return lonSpan >= 350 && latSpan >= 170;
 }
 
-function isPacificCentered(bounds: number[]): boolean {
-  if (!bounds || bounds.length !== 4) return false;
-  const [west, , east] = bounds;
-  return west >= 180 && east > 360;
+function toRadians(value: number): number {
+    return (value / 180) * Math.PI;
 }
 
-function normalizeDataBounds(bounds: number[]): number[] {
-  const [west, south, east, north] = bounds;
+export function distance(
+    start: GeoJSON.Position,
+    destination: GeoJSON.Position,
+    radius: number = DEFAULT_RADIUS,
+): number {
+    const R = radius;
+    const φ1 = toRadians(start[1]);
+    const λ1 = toRadians(start[0]);
+    const φ2 = toRadians(destination[1]);
+    const λ2 = toRadians(destination[0]);
+    
+    const Δφ = φ2 - φ1;
+    let Δλ = λ2 - λ1;
+    
+    // Handle longitude difference across date line
+    if (Math.abs(Δλ) > Math.PI) {
+        Δλ = Δλ > 0 ? Δλ - 2 * Math.PI : Δλ + 2 * Math.PI;
+    }
 
-  if (isPacificCentered(bounds)) {
-    return [west, Math.max(south, -90), east, Math.min(north, 90)];
-  }
+    const a =
+        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c;
 
-  return [
-    ((west % 360) + 360) % 360 - 180,
-    Math.max(south, -90),
-    ((east % 360) + 360) % 360 - 180,
-    Math.min(north, 90)
-  ];
+    return d;
 }
 
 function getViewportBounds(viewport: any): number[] {
-  if (viewport?.projection?.mode === "globe") {
-    return [-180, -90, 180, 90];
-  }
   const [west, south, east, north] = viewport.getBounds();
   const lonMargin = (east - west) * 0.2;
   const latMargin = (north - south) * 0.2;
-  return [
-    west - lonMargin,
-    Math.max(south - latMargin, -90),
-    east + lonMargin,
-    Math.min(north + latMargin, 90)
-  ];
+  
+  let adjustedWest = west - lonMargin;
+  let adjustedEast = east + lonMargin;
+  const adjustedSouth = Math.max(south - latMargin, -90);
+  const adjustedNorth = Math.min(north + latMargin, 90);
+  
+  // Handle date line crossing
+  if (adjustedEast - adjustedWest > 360) {
+    // If the span is greater than 360°, just use global bounds
+    return [-180, adjustedSouth, 180, adjustedNorth];
+  }
+  
+  // Normalize longitudes to [-180, 180] range
+  adjustedWest = ((adjustedWest + 180) % 360) - 180;
+  adjustedEast = ((adjustedEast + 180) % 360) - 180;
+  
+  return [adjustedWest, adjustedSouth, adjustedEast, adjustedNorth];
 }
 
-// ===== Types / props =====
+
+export function getViewportGlobeRadius(viewport: GlobeViewport): number {
+  const viewportGlobeCenter = [viewport.longitude, viewport.latitude];
+  
+  const distances = [
+    distance(viewportGlobeCenter, viewport.unproject([viewport.width / 2, 0])),
+    distance(viewportGlobeCenter, viewport.unproject([0, viewport.height / 2])),
+  ];
+  
+  if (viewport.width > viewport.height) {
+    distances.push(
+      distance(viewportGlobeCenter, viewport.unproject([viewport.width / 4, viewport.height / 2])),
+      distance(viewportGlobeCenter, viewport.unproject([viewport.width * 3/4, viewport.height / 2])),
+      distance(viewportGlobeCenter, viewport.unproject([viewport.width, viewport.height / 2]))
+    );
+  } else {
+    distances.push(
+      distance(viewportGlobeCenter, viewport.unproject([viewport.width / 2, viewport.height / 4])),
+      distance(viewportGlobeCenter, viewport.unproject([viewport.width / 2, viewport.height * 3/4])),
+      distance(viewportGlobeCenter, viewport.unproject([viewport.width / 2, viewport.height]))
+    );
+  }
+  const viewportGlobeRadius = Math.max(...distances);
+  return viewportGlobeRadius;
+}
+
 const DEFAULT_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 
 export type Bbox = [number, number, number, number];
@@ -157,7 +205,7 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
   fp64: false,
   wrapLongitude: true,
 
-  trailLength: { type: "number", min: 2, max: 100, value: 30 },
+  trailLength: { type: "number", min: 2, max: 100, value: 22 },
   fadeTrails: { type: "boolean", value: true },
 
   particleJitter: { type: "number", min: 0, max: 1, value: 0.7 },
@@ -196,16 +244,13 @@ export default class ParticleLayer<
     stepRequested: boolean;
     bounds: number[];
     trailLines: any[];
-    isPacificCentered: boolean;
     isGlobalData: boolean;
 
-    // Perf additions
     needsAttributeBind: boolean;
     uniformHolder: { bitmap?: any } | null;
     zeroPositions?: Float32Array;
   };
 
-  // ====== Shader injection (unchanged visuals) ======
   getShaders() {
     const oldShaders = super.getShaders();
     return {
@@ -257,7 +302,6 @@ export default class ParticleLayer<
     return !isGlobe && zoomDiff > 3;
   }
 
-  // ====== Lifecycle ======
   initializeState() {
     super.initializeState();
 
@@ -327,7 +371,6 @@ export default class ParticleLayer<
     const dlon = (maxLng - minLng) / width;
     const dlat = (maxLat - minLat) / height;
 
-    // Reuse a scratch buffer for this grid size if available
     const scratchKey = `scratch-${width}x${height}`;
     let uvData: Float32Array =
       positionsCache.get(scratchKey)?.uvData ||
@@ -340,7 +383,6 @@ export default class ParticleLayer<
     const interpolate = false;
     const noiseScale = 0.02;
 
-    const pacificCentered = isPacificCentered([minLng, minLat, maxLng, maxLat]);
     const globalData = isGlobalData([minLng, minLat, maxLng, maxLat]);
 
     const texNoise = (x: number, y: number) =>
@@ -351,15 +393,9 @@ export default class ParticleLayer<
       for (let i = 0; i < width; i++) {
         const lon = minLng + i * dlon;
 
-        // For Pacific-centered data, preserve the coordinate system
-        let lookupLon = lon;
-        if (pacificCentered && lon > 360) {
-          lookupLon = lon - 360;
-        }
-
         const wdirection = gUtilities.getreadoutvalue(
           lat,
-          lookupLon,
+          lon,
           projection,
           dataDir,
           "°",
@@ -368,7 +404,7 @@ export default class ParticleLayer<
         );
         const wmagnitude = gUtilities.getreadoutvalue(
           lat,
-          lookupLon,
+          lon,
           projection,
           dataMag,
           "mph",
@@ -379,7 +415,6 @@ export default class ParticleLayer<
         let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
         if (isNaN(wmagnitude)) uv = [0, 0];
 
-        // Subtle noise to decorrelate identical paths
         uv[0] += (texNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
         uv[1] += (texNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
 
@@ -390,7 +425,6 @@ export default class ParticleLayer<
       }
     }
 
-    const addressModeU = globalData ? "repeat" : "clamp-to-edge";
     const texture = this.context.device.createTexture({
       width,
       height,
@@ -400,7 +434,7 @@ export default class ParticleLayer<
       sampler: {
         minFilter: "linear",
         magFilter: "linear",
-        addressModeU,
+        addressModeU: globalData ? "repeat" : "clamp-to-edge",
         addressModeV: "clamp-to-edge"
       }
     });
@@ -451,14 +485,11 @@ export default class ParticleLayer<
       calculatedBounds = [-180, -90, 180, 90];
     }
 
-    const _ = normalizeDataBounds(calculatedBounds);
-    const pacificCentered = isPacificCentered(calculatedBounds);
     const globalData = isGlobalData(calculatedBounds);
 
     this.setState({
       bounds: calculatedBounds,
       trailLines: this._createTrailLines(),
-      isPacificCentered: pacificCentered,
       isGlobalData: globalData
     });
 
@@ -518,8 +549,6 @@ export default class ParticleLayer<
       model,
       sourcePositions,
       targetPositions,
-      sourcePositions64Low,
-      targetPositions64Low,
       colors,
       widths,
       needsAttributeBind
@@ -563,7 +592,6 @@ export default class ParticleLayer<
       new Float32Array(numInstances * 3)
     );
 
-    // Precompute alphas by age (no pow in the big loop)
     const effectiveTrailLength = Math.min(trailLength, maxAge);
     const alphasByAge = new Float32Array(maxAge);
     const baseAlpha = ((color[3] ?? 255) as number) / 255;
@@ -577,7 +605,6 @@ export default class ParticleLayer<
       alphasByAge[age] = a;
     }
 
-    // Build color buffer
     const colorsArr = new Float32Array(numInstances * 4);
     const r = (color[0] as number) / 255;
     const g = (color[1] as number) / 255;
@@ -606,7 +633,6 @@ export default class ParticleLayer<
       vertexCount: numParticles
     });
 
-    // Reuse a zeroed array for resets
     const zeroPositions = new Float32Array(numInstances * 3);
 
     this.setState({
@@ -650,37 +676,31 @@ export default class ParticleLayer<
     const isGlobe = viewport?.projection?.mode === "globe" ? 1 : 0;
     const bounds = this._getEffectiveBounds();
 
-    let viewportBounds: number[];
     let viewportCenter: [number, number];
     let viewportZoomChangeFactor: number;
     let cullBackside = 0;
 
-    if (isGlobe > 0) {
-      viewportBounds = this.state.isGlobalData
-        ? [-180, -90, 180, 90]
-        : bounds;
-      viewportZoomChangeFactor = 1.0;
-      cullBackside = this.state.isGlobalData ? 1 : 0;
-      // Use deck.gl globe props for center
-      const lng = viewport?.longitude ?? 0;
-      const lat = viewport?.latitude ?? 0;
-      viewportCenter = [lng, lat];
-    } else {
-      viewportBounds = getViewportBounds(viewport);
-      const [w, s, e, n] = viewportBounds;
-      viewportCenter = [(w + e) / 2, (s + n) / 2];
-      viewportZoomChangeFactor = Math.max(
+    const lng = viewport?.longitude ?? 0;
+    const lat = viewport?.latitude ?? 0;
+    
+    const normalizedLng = ((lng + 180) % 360) - 180;
+    viewportCenter = [normalizedLng, lat];
+    
+    const viewportGlobeRadius = getViewportGlobeRadius(viewport);
+    const viewportBounds = getViewportBounds(viewport);
+    
+    viewportZoomChangeFactor = Math.max(
         1.0,
         Math.pow(2, (previousViewportZoom - viewport.zoom) * 1.5)
-      );
-    }
+    );
+    
+    cullBackside = isGlobe > 0 ? 1 : 0;
 
-    // Mild temporal variation; keep same behavior
     const speedVariation = 0.95 + 0.1 * Math.sin(time * 0.001);
 
     let currentSpeedFactor: number;
     if (isGlobe > 0) {
-      currentSpeedFactor = (speedFactor * speedVariation) / 100000;
+      currentSpeedFactor = (speedFactor * speedVariation ** viewport.scale) / 90000;
     } else {
       currentSpeedFactor =
         (speedFactor * speedVariation) / Math.pow(2, viewport.zoom + 7);
@@ -689,7 +709,6 @@ export default class ParticleLayer<
     const seed =
       Math.sin(time * 0.0001) * 999 + Math.cos(time * 0.00013) * 777;
 
-    // Reuse uniforms object (avoid per-frame allocations)
     const u = (this.state.uniformHolder!.bitmap ||= {});
     u.bitmapTexture = texture;
     u.viewportBounds = viewportBounds;
@@ -703,8 +722,9 @@ export default class ParticleLayer<
     u.time = time;
     u.seed = Math.abs(seed);
     u.isGlobe = isGlobe;
+    u.viewportGlobeRadius = viewportGlobeRadius;
 
-    if (!transform?.model) return; // simple early-out
+    if (!transform?.model) return; 
 
     transform.model.shaderInputs?.setProps?.({ bitmap: u }); 
 
@@ -739,7 +759,7 @@ export default class ParticleLayer<
 
     this.state.previousViewportZoom = viewport.zoom;
     this.state.previousTime = time;
-  }
+}
 
   _resetTransformFeedback() {
     if (!this.state.initialized) return;
@@ -774,7 +794,6 @@ export default class ParticleLayer<
     this.setState({ initialized: false });
   }
 
-  // ===== Public API =====
   step() {
     this._runTransformFeedback();
     this.setNeedsRedraw();
