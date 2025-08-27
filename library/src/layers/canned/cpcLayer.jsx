@@ -75,6 +75,7 @@ const defaultProps = {
     getFillColor: (f) =>
         getFillColor(this.legend.layerType, f.properties.cat, f.properties.prob, f),
     getLineColor: [0, 0, 0],
+    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
         if (d.object) {

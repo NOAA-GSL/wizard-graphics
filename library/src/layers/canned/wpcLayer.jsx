@@ -11,6 +11,7 @@ const defaultProps = {
         return colorMap[f.properties.dn] || [255, 255, 255];
     },
     getLineColor: [0, 0, 0],
+    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
     pickingFunction: (d) => {
         if (d.object) {
             const dnMapping = {
