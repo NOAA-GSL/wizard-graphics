@@ -144,11 +144,25 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
             e.preventDefault();
             e.stopPropagation();
             const viewport = deckUtilities.getViewport(overlayRef, displayNum);
+            console.log('viewport:', viewport);
             if (!viewport || rightClickMenu.isOpen) return null;
 
+            const dims = mapContainer?.current?.getBoundingClientRect(); // needed to make offsetX/Y work
+            const pixelWidth = dims.width;
+            const pixelHeight = dims.height;
+            // x += (xoffset / 100) * pixelWidth;
+            // y += (yoffset / 100) * pixelHeight;
+
             const { offsetX, offsetY } = e;
+            console.log('offsetY:', offsetY);
+            console.log('offsetX:', offsetX);
             const [newLon, newLat] = viewport.unproject([offsetX, offsetY]);
-            setPosition({ x: offsetX, y: offsetY, lon: newLon, lat: newLat });
+            setPosition({
+                x: offsetX + viewport.x,
+                y: offsetY + viewport.y,
+                lon: newLon,
+                lat: newLat,
+            });
             setReadoutDivDisplay('block');
             return null;
         },
