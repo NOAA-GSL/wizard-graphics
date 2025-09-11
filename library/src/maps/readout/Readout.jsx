@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { some } from 'lodash';
-import deckUtilities from '../../utilities/deckUtilities';
 import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.css';
 
-export default function Readout({ mapContainer, overlayRef, title, displayNum = 0 }) {
+const MOUSE_OFFSET = {
+    x: 7,
+    y: 7,
+};
+
+export default function Readout({ mapContainer, overlayRef, title, displayNum = 0, views }) {
+    console.log('views:', views);
     const [readoutDivDisplay, setReadoutDivDisplay] = useState('none');
     const [rightClickMenu, setRightClickMenu] = useState({
         isOpen: false,
@@ -29,8 +34,8 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
         const readoutArray = [];
         const uniqueArray = [];
         for (const layer of layers) {
-            const { projection, readout } = layer.props;
-            if (projection && readout) {
+            const { projection, readout, displaynum } = layer.props;
+            if (projection && readout && displaynum.includes(displayNum)) {
                 for (const i in readout) {
                     // added value formatter to allow custom formatting (ie timing/paintball)
                     const { data, prependText, decimals, units, interpolate, valueFormatter } =
@@ -110,19 +115,18 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                 ))}
 
                 {
-                    /* Conditional Rendering of extra HR line */
-                    rightClickMenu.readoutLatLonChecked && <hr />
-                }
-                {
                     /* Conditional Rendering of lat/lon readoutDiv */
                     rightClickMenu.readoutLatLonChecked && (
-                        <table>
-                            <tbody>
-                                <tr>
-                                    <td>{`Lat/Lon: ${lat.toFixed(2)}, ${lon.toFixed(2)}`}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <>
+                            <hr />
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td>{`Lat/Lon: ${lat.toFixed(2)}, ${lon.toFixed(2)}`}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </>
                     )
                 }
             </div>
@@ -130,41 +134,47 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
         content = div;
     }
 
-    const mouseOffset = {
-        x: 5,
-        y: 5,
-    };
-
     const stopMouseMovePropagation = (event) => {
         event.stopPropagation();
     };
 
     const handleMouseMove = useCallback(
-        (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const viewport = deckUtilities.getViewport(overlayRef, displayNum);
-            console.log('viewport:', viewport);
-            if (!viewport || rightClickMenu.isOpen) return null;
+        (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            // eslint-disable-next-line no-underscore-dangle
+            const deck = overlayRef?.current._deck;
+            if (!deck) return;
 
-            const dims = mapContainer?.current?.getBoundingClientRect(); // needed to make offsetX/Y work
-            const pixelWidth = dims.width;
-            const pixelHeight = dims.height;
-            // x += (xoffset / 100) * pixelWidth;
-            // y += (yoffset / 100) * pixelHeight;
+            const { canvas } = deck;
+            const rect = canvas.getBoundingClientRect();
 
-            const { offsetX, offsetY } = e;
-            console.log('offsetY:', offsetY);
-            console.log('offsetX:', offsetX);
-            const [newLon, newLat] = viewport.unproject([offsetX, offsetY]);
-            setPosition({
-                x: offsetX + viewport.x,
-                y: offsetY + viewport.y,
+            // get mouse position relative to canvas in pixels
+            const mouseX = evt.clientX - rect.left;
+            const mouseY = evt.clientY - rect.top;
+
+            // pass coords to only retrieve the viewport under the mouse
+            const viewport = deck.viewManager.getViewports({ x: mouseX, y: mouseY })[0];
+            // need to know the offset for the specific displayNum viewport
+            const { x: offsetX, y: offsetY } = deck.viewManager.getViewports()[displayNum] || {
+                x: 0,
+                y: 0,
+            };
+
+            if (!viewport || rightClickMenu.isOpen) return;
+
+            // convert mouse coords into local viewport coords
+            const [newLon, newLat] = viewport.unproject([mouseX - viewport.x, mouseY - viewport.y]);
+
+            const newPosition = {
+                x: mouseX - viewport.x + offsetX + MOUSE_OFFSET.x,
+                y: mouseY - viewport.y + offsetY + MOUSE_OFFSET.y,
                 lon: newLon,
                 lat: newLat,
-            });
+            };
+
+            setPosition(newPosition);
             setReadoutDivDisplay('block');
-            return null;
         },
         [displayNum, overlayRef, rightClickMenu.isOpen],
     );
@@ -187,8 +197,8 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
             setRightClickMenu({
                 ...rightClickMenu,
                 isOpen: true,
-                top: `${event.layerY + mouseOffset.y}px`,
-                left: `${event.layerX + mouseOffset.x}px`,
+                top: `${event.layerY + MOUSE_OFFSET.y}px`,
+                left: `${event.layerX + MOUSE_OFFSET.x}px`,
             });
         };
 
@@ -206,15 +216,7 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                 overlayElement.removeEventListener('mouseleave', handleMouseLeave, false);
             }
         };
-    }, [
-        mapContainer,
-        overlayRef,
-        displayNum,
-        rightClickMenu,
-        mouseOffset.y,
-        mouseOffset.x,
-        handleMouseMove,
-    ]);
+    }, [mapContainer, overlayRef, displayNum, rightClickMenu, handleMouseMove]);
 
     return (
         <div onMouseMove={stopMouseMovePropagation}>

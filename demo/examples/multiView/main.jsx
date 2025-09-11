@@ -274,7 +274,7 @@ function MapContainer() {
             id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
             dataDir: wdir,
             dataMag: wmag,
-            displaynum: [3],
+            displaynum: [3], // important for multi-panel!
             color: [255, 255, 255, 255],
             width: 1.5,
             numParticles: 10000,
@@ -312,7 +312,7 @@ function MapContainer() {
                     colorType,
                     projection,
                     elevation: 0,
-                    displaynum: [0],
+                    displaynum: [0], // important for multi-panel!
                     interpolateData: state.shadedInterpolateCheckbox,
                     parameters: { depthCompare: 'always', cullMode: 'back' },
                     readout: [
@@ -339,7 +339,7 @@ function MapContainer() {
                     contourLevels,
                     projection,
                     elevation: 0,
-                    displaynum: [1],
+                    displaynum: [1], // important for multi-panel!
                     parameters: {
                         depthCompare: 'always',
                         cullMode: 'back',
@@ -389,7 +389,7 @@ function MapContainer() {
                     dataMag: wmag,
                     getColor: [255, 255, 255, 255],
                     projection,
-                    displaynum: [2],
+                    displaynum: [2], // important for multi-panel!
                     angleOffset: state.isGlobeView ? 180 : 0,
                     parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
                     readout: [
@@ -508,30 +508,17 @@ function MapContainer() {
                         layerFilter={layerFilter}
                         interleaved
                     />
-                    <Readout
-                        mapContainer={mapContainer}
-                        overlayRef={overlayRef}
-                        title="Display 0"
-                        displayNum={0}
-                    />
-                    {/* <Readout
-                        mapContainer={mapContainer}
-                        overlayRef={overlayRef}
-                        title="Display 1"
-                        displayNum={1}
-                    />
-                    <Readout
-                        mapContainer={mapContainer}
-                        overlayRef={overlayRef}
-                        title="Display 2"
-                        displayNum={2}
-                    />
-                    <Readout
-                        mapContainer={mapContainer}
-                        overlayRef={overlayRef}
-                        title="Display 3"
-                        displayNum={3}
-                    /> */}
+                    {/* Render a Readout for each panel */}
+                    {state.views.map((view, i) => (
+                        <Readout
+                            key={i}
+                            mapContainer={mapContainer}
+                            overlayRef={overlayRef}
+                            title={`Display ${i}`}
+                            displayNum={i}
+                            views={state.views}
+                        />
+                    ))}
                     <Legend overlayRef={overlayRef} />
                 </Map>
             </div>
