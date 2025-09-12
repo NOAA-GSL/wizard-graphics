@@ -33,7 +33,12 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
         const uniqueArray = [];
         for (const layer of layers) {
             const { projection, readout, displaynum } = layer.props || {};
-            if (projection && readout && displaynum && displaynum.includes(displayNum)) {
+            if (
+                projection &&
+                readout &&
+                // if displaynum is empty array or undefined, show on all displays
+                (!displaynum || displaynum.includes(displayNum))
+            ) {
                 for (const i in readout) {
                     // added value formatter to allow custom formatting (ie timing/paintball)
                     const { data, prependText, decimals, units, interpolate, valueFormatter } =
