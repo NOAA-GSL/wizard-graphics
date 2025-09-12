@@ -509,16 +509,12 @@ function MapContainer() {
                         interleaved
                     />
                     {/* Render a Readout for each panel */}
-                    {state.views.map((view, i) => (
-                        <Readout
-                            key={i}
-                            mapContainer={mapContainer}
-                            overlayRef={overlayRef}
-                            title={`Display ${i}`}
-                            displayNum={i}
-                            views={state.views}
-                        />
-                    ))}
+                    <Readout
+                        mapContainer={mapContainer}
+                        overlayRef={overlayRef}
+                        title="Multi-Panel Display"
+                        views={state.views}
+                    />
                     <Legend overlayRef={overlayRef} />
                 </Map>
             </div>
