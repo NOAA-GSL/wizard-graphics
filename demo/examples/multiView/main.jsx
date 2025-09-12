@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
 import Stats from 'stats.js';
 import {
-    mapStyles,
+    // mapStyles,
     // Maps,
     DeckGLOverlay,
     Readout,
@@ -54,7 +54,7 @@ const checkboxConfig = [
 
 function MapContainer() {
     // const { mapToken } = process.env;
-    const style = useMemo(() => Object.keys(mapStyles)[0], []);
+    // const style = useMemo(() => Object.keys(mapStyles)[0], []);
     // const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
 
     const [state, dispatch] = useReducer((s, { key, value }) => ({ ...s, [key]: value }), {

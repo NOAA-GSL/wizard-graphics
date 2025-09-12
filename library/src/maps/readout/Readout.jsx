@@ -4,7 +4,8 @@ import { some } from 'lodash';
 import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.css';
 
-const MOUSE_OFFSET = { x: 10, y: 7 };
+const MOUSE_OFFSET = { x: 10, y: 10 };
+const CIRCLE_RADIUS = 5;
 
 // note about `views` prop:
 // this is only used for the length of the array to match the readout with the correct viewport
@@ -282,6 +283,17 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
 
         return (
             <div className="x4d-readout" style={{ display: readoutDivDisplay }}>
+                {views.length > 1 && (
+                    <span
+                        className="x4d-readout-circle"
+                        style={{
+                            top: `${-MOUSE_OFFSET.y - CIRCLE_RADIUS}px`,
+                            left: `${-MOUSE_OFFSET.x - CIRCLE_RADIUS}px`,
+                            height: `${CIRCLE_RADIUS * 2}px`,
+                            width: `${CIRCLE_RADIUS * 2}px`,
+                        }}
+                    />
+                )}
                 {title}
                 {title && <hr />}
                 <table>
@@ -383,6 +395,18 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
                                     pointerEvents: 'none',
                                 }}
                             >
+                                {/* {views.length > 1 && (
+                                    <span
+                                        className="x4d-readout-circle"
+                                        style={{
+                                            top: `${-MOUSE_OFFSET.y - CIRCLE_RADIUS}px`,
+                                            left: `${-MOUSE_OFFSET.x - CIRCLE_RADIUS}px`,
+                                            height: `${CIRCLE_RADIUS * 2}px`,
+                                            width: `${CIRCLE_RADIUS * 2}px`,
+                                        }}
+                                    />
+                                )} */}
+
                                 {makeReadout(index)}
                             </div>
                         );
