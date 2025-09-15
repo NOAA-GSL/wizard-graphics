@@ -1,10 +1,15 @@
+/* eslint-disable no-underscore-dangle */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { some } from 'lodash';
-import deckUtilities from '../../utilities/deckUtilities';
 import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.css';
 
-export default function Readout({ mapContainer, overlayRef, title, displayNum = 0 }) {
+const MOUSE_OFFSET = { x: 10, y: 10 };
+const CIRCLE_RADIUS = 5;
+
+// note about `views` prop:
+// this is only used for the length of the array to match the readout with the correct viewport
+export default function Readout({ mapContainer, overlayRef, title, views = ['placeholder'] }) {
     const [readoutDivDisplay, setReadoutDivDisplay] = useState('none');
     const [rightClickMenu, setRightClickMenu] = useState({
         isOpen: false,
@@ -13,24 +18,27 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
         top: '0px',
         left: '0px',
     });
-    const [position, setPosition] = useState({ x: 0, y: 0 });
 
-    // eslint-disable-next-line no-underscore-dangle
-    const layers = overlayRef?.current?._props?.layers;
-    const rightClickMenuRef = useRef(null);
+    // position & picking results that drive what we render
+    const [position, setPosition] = useState({ x: 0, y: 0, lon: 0, lat: 0 });
+    const [pickResults, setPickResults] = useState([]); // results from pickMultipleObjects
 
-    // Update the readout data
-    const { lon, lat, x, y } = position;
-    let content;
-    if (!lon || !lat || !x || !y || !layers) {
-        content = null;
-    } else {
-        // Gridded Readout
+    // Refs for stable access inside handler
+    const rafRef = useRef(null);
+    const lastMouseRef = useRef({ x: null, y: null });
+
+    const buildGriddedReadout = (lon, lat, displayNum, layers) => {
+        if (lon == null || lat == null || !layers) return [];
         const readoutArray = [];
         const uniqueArray = [];
         for (const layer of layers) {
-            const { projection, readout } = layer.props;
-            if (projection && readout) {
+            const { projection, readout, displaynum } = layer.props || {};
+            if (
+                projection &&
+                readout &&
+                // if displaynum is empty array or undefined, show on all displays
+                (!displaynum || displaynum.includes(displayNum))
+            ) {
                 for (const i in readout) {
                     // added value formatter to allow custom formatting (ie timing/paintball)
                     const { data, prependText, decimals, units, interpolate, valueFormatter } =
@@ -60,62 +68,260 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                 }
             }
         }
-
-        // Sort by prependText
         readoutArray.sort((a, b) => a.prependText.localeCompare(b.prependText));
-        const griddedReadout = readoutArray.map((d, i) => {
-            const { prependText, value } = d;
-            return (
-                <tr key={i}>
-                    <td>{`${prependText}: `}</td>
-                    <td>{value}</td>
-                </tr>
-            );
-        });
-        // Done Gridded Readout
+        return readoutArray;
+    };
 
-        // Pickable Readout
-        const pickingArr = [];
-        const objects = overlayRef.current.pickMultipleObjects({ x, y });
-        for (const o in objects) {
-            const object = objects[o];
-            const pickingFunction = object.sourceLayer?.props?.pickingFunction;
-            if (pickingFunction) {
-                const { readout } = pickingFunction(object);
-                // Don't allow duplicates
-                if (!some(pickingArr, readout)) {
-                    pickingArr.push(readout);
+    // Single stable mouse handler using raf to throttle
+    const handleMouseMove = useCallback(
+        (evt) => {
+            // schedule a single rAF; if already scheduled, update lastMouseRef and exit
+            lastMouseRef.current = evt;
+            if (rafRef.current) return;
+
+            rafRef.current = requestAnimationFrame(() => {
+                rafRef.current = null;
+                const event = lastMouseRef.current;
+                if (!event) return;
+
+                // if right-click menu open, skip updates
+                if (rightClickMenu.current?.isOpen) return;
+
+                const overlay = overlayRef?.current;
+                const deck =
+                    overlay?._deck || overlay?._deckInstance || overlay?._deckGL || overlay?._deck;
+                if (!deck) return;
+
+                // canvas rect and mouse in CSS pixels
+                const canvas = deck.canvas || deck._canvas;
+                if (!canvas) return;
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+
+                // Ask Deck for viewports and use viewManager.getViewports if available.
+                const { viewManager } = deck;
+                let viewports = [];
+                if (viewManager?.getViewports) {
+                    viewports = viewManager.getViewports();
+                } else if (deck.getViewports) {
+                    viewports = deck.getViewports();
                 }
+
+                if (!viewports || viewports.length === 0) return;
+
+                // find the viewport under the mouse. Prefer containsPoint if available.
+                const vp = viewports.find((v) =>
+                    typeof v.containsPoint === 'function'
+                        ? v.containsPoint([mouseX, mouseY])
+                        : mouseX >= v.x &&
+                          mouseX < v.x + v.width &&
+                          mouseY >= v.y &&
+                          mouseY < v.y + v.height,
+                );
+                if (!vp) return;
+
+                // compute lon/lat from viewport-local coords
+                const localX = mouseX - vp.x;
+                const localY = mouseY - vp.y;
+                const [lon, lat] = vp.unproject([localX, localY]);
+
+                // pick objects only when needed
+                let picks = [];
+                try {
+                    // pickMultipleObjects expects pixel coords relative to deck canvas (CSS px)
+                    // call on overlay (MapboxOverlay) if available, else call deck.pickMultipleObjects
+                    if (typeof overlay.pickMultipleObjects === 'function') {
+                        picks = overlay.pickMultipleObjects({ x: mouseX, y: mouseY }) || [];
+                    } else if (typeof deck.pickMultipleObjects === 'function') {
+                        picks = deck.pickMultipleObjects({ x: mouseX, y: mouseY }) || [];
+                    }
+                } catch (err) {
+                    picks = [];
+                }
+
+                // transform picks into readout strings via pickingFunction
+                const pickingArr = [];
+                for (const object of picks) {
+                    const pickingFunction = object?.sourceLayer?.props?.pickingFunction;
+                    if (typeof pickingFunction === 'function') {
+                        const { readout } = pickingFunction(object) || {};
+                        // Don't allow duplicates
+                        if (readout && !some(pickingArr, readout)) {
+                            pickingArr.push(readout);
+                        }
+                    }
+                }
+
+                // update state once per frame
+                setPosition({
+                    x: localX + MOUSE_OFFSET.x,
+                    y: localY + MOUSE_OFFSET.y,
+                    lon,
+                    lat,
+                });
+                setPickResults(pickingArr);
+                setReadoutDivDisplay('block');
+            });
+        },
+        [overlayRef, rightClickMenu],
+    );
+
+    const stopMouseMovePropagation = (event) => {
+        event.stopPropagation();
+    };
+
+    useEffect(() => {
+        const overlayElement = mapContainer?.current;
+        if (!overlayElement) return;
+
+        const hideReadout = () => {
+            setReadoutDivDisplay('none');
+            setPickResults([]);
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
             }
-        }
-        // Done Pickable Readout
+        };
 
-        const div = (
-            <div className="x4d-readout" style={{ display: readoutDivDisplay }}>
-                {title}
-                {
-                    /* Conditional Rendering of extra HR for title */
-                    title && <hr />
+        // Open right-click menu
+        const rightClickMenuOpen = (event) => {
+            const rect = overlayElement.getBoundingClientRect();
+            const left = event.clientX - rect.left;
+            const top = event.clientY - rect.top;
+            setRightClickMenu((prev) => ({
+                ...prev,
+                isOpen: true,
+                top: `${top + MOUSE_OFFSET.y}px`,
+                left: `${left + MOUSE_OFFSET.x}px`,
+            }));
+            event.preventDefault();
+            event.stopPropagation();
+        };
+
+        // Allow checkbox clicks to complete before closing the menu
+        const handleOverlayClick = () => {
+            setTimeout(() => {
+                setRightClickMenu((prev) => ({ ...prev, isOpen: false }));
+            }, 100);
+        };
+
+        // Lightweight document-level pointermove that determines if pointer is over overlay
+        // If pointer is over the overlay, forward the event to existing handler.
+        // Otherwise hide the readout immediately.
+        const documentPointerMove = (evt) => {
+            // use client coords
+            const x = evt.clientX;
+            const y = evt.clientY;
+
+            // quick rect test first
+            const rect = overlayElement.getBoundingClientRect();
+            const inRect = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+            if (!inRect) {
+                // pointer outside overlay
+                hideReadout();
+                return;
+            }
+
+            // More robust check: elementFromPoint (handles overlapping siblings/children)
+            const el = document.elementFromPoint(x, y);
+            if (el && overlayElement.contains(el)) {
+                // Pointer is inside overlay. Let existing move handler schedule the rAF work
+                try {
+                    handleMouseMove(evt);
+                } catch (err) {
+                    console.warn('handleMouseMove failed', err);
                 }
+                return;
+            }
 
+            // not inside overlay
+            hideReadout();
+        };
+
+        // overlay-local handlers
+        overlayElement.addEventListener('contextmenu', rightClickMenuOpen, false);
+        overlayElement.addEventListener('click', handleOverlayClick, false);
+        overlayElement.addEventListener('mousemove', handleMouseMove, false);
+
+        // using pointerleave + mouseleave for broader browser coverage
+        overlayElement.addEventListener('pointerleave', hideReadout, false);
+        overlayElement.addEventListener('mouseleave', hideReadout, false);
+
+        // global listener that runs everywhere and decides if pointer is in overlay
+        // capture true so it runs early
+        document.addEventListener('pointermove', documentPointerMove, true);
+
+        // eslint-disable-next-line consistent-return
+        return () => {
+            overlayElement.removeEventListener('contextmenu', rightClickMenuOpen);
+            overlayElement.removeEventListener('click', handleOverlayClick);
+            overlayElement.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('pointermove', documentPointerMove, true);
+
+            overlayElement.removeEventListener('pointerleave', hideReadout);
+            overlayElement.removeEventListener('mouseleave', hideReadout);
+
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, [handleMouseMove, mapContainer, overlayRef]);
+
+    // Render the readout. For offsets, match viewport by view.id to views array
+    // get latest deck for offsets when rendering
+    const overlay = overlayRef?.current;
+    const deck = overlay?._deck;
+    const viewports = deck?.viewManager?.getViewports?.() || deck?.getViewports?.() || [];
+    // build mapping from view id -> viewport
+    const vpById = new Map(viewports.map((v) => [v.id, v]));
+
+    const makeReadout = (displayNum) => {
+        const { lon, lat } = position;
+        if (lon == null || lat == null) return null;
+
+        // build gridded readout using current layers from overlay props
+        const layers = overlayRef?.current?._props?.layers || [];
+        const gridded = buildGriddedReadout(lon, lat, displayNum, layers);
+
+        return (
+            <div className="x4d-readout" style={{ display: readoutDivDisplay }}>
+                {views.length > 1 && (
+                    <span
+                        className="x4d-readout-circle"
+                        style={{
+                            top: `${-MOUSE_OFFSET.y - CIRCLE_RADIUS}px`,
+                            left: `${-MOUSE_OFFSET.x - CIRCLE_RADIUS}px`,
+                            height: `${CIRCLE_RADIUS * 2}px`,
+                            width: `${CIRCLE_RADIUS * 2}px`,
+                        }}
+                    />
+                )}
+                {title}
+                {title && <hr />}
                 <table>
-                    <tbody>{griddedReadout}</tbody>
+                    <tbody>
+                        {gridded.map((d, i) => (
+                            <tr key={i}>
+                                <td>{`${d.prependText}: `}</td>
+                                <td>{d.value}</td>
+                            </tr>
+                        ))}
+                    </tbody>
                 </table>
 
-                {pickingArr.map((item, index) => (
-                    <div key={index}>
+                {pickResults.map((item, i) => (
+                    <div key={i}>
                         <div>{item}</div>
-                        {index < pickingArr.length - 1 && <br />}
+                        {i < pickResults.length - 1 && <br />}
                     </div>
                 ))}
 
-                {
-                    /* Conditional Rendering of extra HR line */
-                    rightClickMenu.readoutLatLonChecked && <hr />
-                }
-                {
-                    /* Conditional Rendering of lat/lon readoutDiv */
-                    rightClickMenu.readoutLatLonChecked && (
+                {rightClickMenu.readoutLatLonChecked && (
+                    <>
+                        <hr />
                         <table>
                             <tbody>
                                 <tr>
@@ -123,92 +329,17 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                                 </tr>
                             </tbody>
                         </table>
-                    )
-                }
+                    </>
+                )}
             </div>
         );
-        content = div;
-    }
-
-    const mouseOffset = {
-        x: 5,
-        y: 5,
     };
-
-    const stopMouseMovePropagation = (event) => {
-        event.stopPropagation();
-    };
-
-    const handleMouseMove = useCallback(
-        (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const viewport = deckUtilities.getViewport(overlayRef, displayNum);
-            if (!viewport || rightClickMenu.isOpen) return null;
-
-            const { offsetX, offsetY } = e;
-            const [newLon, newLat] = viewport.unproject([offsetX, offsetY]);
-            setPosition({ x: offsetX, y: offsetY, lon: newLon, lat: newLat });
-            setReadoutDivDisplay('block');
-            return null;
-        },
-        [displayNum, overlayRef, rightClickMenu.isOpen],
-    );
-
-    const rightClickMenuClose = () => {
-        setTimeout(() => {
-            setRightClickMenu((prevState) => ({ ...prevState, isOpen: false }));
-            setReadoutDivDisplay('block');
-        }, 100);
-    };
-
-    useEffect(() => {
-        const overlayElement = mapContainer.current;
-
-        const handleMouseLeave = () => {
-            setReadoutDivDisplay('none');
-        };
-
-        const rightClickMenuOpen = (event) => {
-            setRightClickMenu({
-                ...rightClickMenu,
-                isOpen: true,
-                top: `${event.layerY + mouseOffset.y}px`,
-                left: `${event.layerX + mouseOffset.x}px`,
-            });
-        };
-
-        if (overlayElement) {
-            overlayElement.addEventListener('contextmenu', rightClickMenuOpen, false);
-            overlayElement.addEventListener('click', rightClickMenuClose, false);
-            overlayElement.addEventListener('mousemove', handleMouseMove, false);
-            overlayElement.addEventListener('mouseleave', handleMouseLeave, false);
-        }
-        return () => {
-            if (overlayElement) {
-                overlayElement.removeEventListener('contextmenu', rightClickMenuOpen, false);
-                overlayElement.removeEventListener('click', rightClickMenuClose, false);
-                overlayElement.removeEventListener('mousemove', handleMouseMove, false);
-                overlayElement.removeEventListener('mouseleave', handleMouseLeave, false);
-            }
-        };
-    }, [
-        mapContainer,
-        overlayRef,
-        displayNum,
-        rightClickMenu,
-        mouseOffset.y,
-        mouseOffset.x,
-        handleMouseMove,
-    ]);
 
     return (
         <div onMouseMove={stopMouseMovePropagation}>
-            {/* Right Click Menu */}
             {rightClickMenu.isOpen && (
                 <div
                     id="x4d-right-click-menu"
-                    ref={rightClickMenuRef}
                     style={{
                         position: 'absolute',
                         top: rightClickMenu.top,
@@ -217,17 +348,18 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                         minWidth: '150px',
                     }}
                 >
+                    {/* right click content (unchanged) */}
                     <div className="x4d-right-click-menu-div">
                         <label className="x4d-right-click-menu-label" htmlFor="x4d_data_readout">
                             <input
                                 type="checkbox"
                                 id="x4d_data_readout"
-                                onChange={() => {
-                                    setRightClickMenu({
-                                        ...rightClickMenu,
-                                        readoutChecked: !rightClickMenu.readoutChecked,
-                                    });
-                                }}
+                                onChange={() =>
+                                    setRightClickMenu((prev) => ({
+                                        ...prev,
+                                        readoutChecked: !prev.readoutChecked,
+                                    }))
+                                }
                                 checked={rightClickMenu.readoutChecked}
                             />
                             Sample
@@ -238,12 +370,12 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                             <input
                                 type="checkbox"
                                 id="x4d_latlon_readout"
-                                onChange={() => {
-                                    setRightClickMenu({
-                                        ...rightClickMenu,
-                                        readoutLatLonChecked: !rightClickMenu.readoutLatLonChecked,
-                                    });
-                                }}
+                                onChange={() =>
+                                    setRightClickMenu((prev) => ({
+                                        ...prev,
+                                        readoutLatLonChecked: !prev.readoutLatLonChecked,
+                                    }))
+                                }
                                 checked={rightClickMenu.readoutLatLonChecked}
                             />
                             Lat/Lon Readout
@@ -251,19 +383,41 @@ export default function Readout({ mapContainer, overlayRef, title, displayNum = 
                     </div>
                 </div>
             )}
-            {/* Readout */}
-            {!rightClickMenu.isOpen && rightClickMenu.readoutChecked ? (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: position.y,
-                        left: position.x,
-                        pointerEvents: 'none',
-                    }}
-                >
-                    {content}
-                </div>
-            ) : null}
+
+            {!rightClickMenu.isOpen && rightClickMenu.readoutChecked && (
+                <>
+                    {views.map((view, index) => {
+                        const vp = vpById.get(view.id) || viewports[index] || { x: 0, y: 0 };
+                        const offsetX = vp.x || 0;
+                        const offsetY = vp.y || 0;
+                        return (
+                            <div
+                                key={view.id || index}
+                                style={{
+                                    position: 'absolute',
+                                    top: position.y + offsetY,
+                                    left: position.x + offsetX,
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                {/* {views.length > 1 && (
+                                    <span
+                                        className="x4d-readout-circle"
+                                        style={{
+                                            top: `${-MOUSE_OFFSET.y - CIRCLE_RADIUS}px`,
+                                            left: `${-MOUSE_OFFSET.x - CIRCLE_RADIUS}px`,
+                                            height: `${CIRCLE_RADIUS * 2}px`,
+                                            width: `${CIRCLE_RADIUS * 2}px`,
+                                        }}
+                                    />
+                                )} */}
+
+                                {makeReadout(index)}
+                            </div>
+                        );
+                    })}
+                </>
+            )}
         </div>
     );
 }
