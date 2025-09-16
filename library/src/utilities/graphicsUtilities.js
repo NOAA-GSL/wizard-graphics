@@ -1,3 +1,34 @@
+const weekdaynames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const weekdaynamesshort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const monthnames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+];
+const monthnamesshort = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+];
+
 export default class gUtilities {
     static ijToIdx(i, j, width, height, size = 1) {
         if (i < 0 || i >= width || j < 0 || j >= height) return NaN;
@@ -368,5 +399,89 @@ export default class gUtilities {
         
         return nvalue
         */
+    }
+
+    //* note: date should be a date object
+    static formatdate(date, style, settings = undefined) {
+        const timezoneoption = settings?.timeZone || 'local';
+        const hourFormat = settings?.hourFormat || 12;
+
+        // timezoneoption can be local or UTC
+
+        let datex = new Date(date.getTime());
+        if (timezoneoption === 'UTC')
+            datex = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const month = datex.getMonth();
+        const day = datex.getDate();
+        const dayofweek = datex.getDay();
+        const year = datex.getFullYear();
+        let hours = datex.getHours();
+        let minutes = datex.getMinutes();
+        let zone = datex
+            .toLocaleDateString('en-US', { day: '2-digit', timeZoneName: 'short' })
+            .substring(4);
+        if (timezoneoption !== 'local') zone = 'UTC';
+        let ampm;
+        // adding space to end of ampm to allow for correct spacing before zone, eg: 18 UTC or 6pm MST
+        if (hourFormat === 12) {
+            ampm = hours >= 12 ? 'pm ' : 'am ';
+            hours %= 12;
+            hours = hours || 12;
+        } else {
+            ampm = ' ';
+        }
+        const hoursshort = hours;
+        hours = hours < 10 ? `0${hours}` : hours;
+        minutes = minutes < 10 ? `0${minutes}` : minutes;
+
+        let descriptiveTime = '';
+        if (hoursshort < 12) {
+            descriptiveTime = `${weekdaynames[dayofweek]} Morning`;
+        } else if (hoursshort < 18) {
+            descriptiveTime = `${weekdaynames[dayofweek]} Afternoon`;
+        } else {
+            descriptiveTime = `${weekdaynames[dayofweek]} Evening`;
+        }
+
+        let datetext;
+        // Format the datetext
+        if (style === 'short') {
+            datetext = `${weekdaynamesshort[dayofweek]} ${hours} ${ampm}${zone}`;
+        } else if (style === 'YYYYMMDDHHMM') {
+            datetext =
+                String(year).padStart(4, '0') +
+                String(month + 1).padStart(2, '0') +
+                String(day).padStart(2, '0') +
+                String(hours).padStart(2, '0') +
+                String(minutes).padStart(2, '0');
+        } else if (style === 'YYYYMMDD HH') {
+            datetext = `${
+                String(year).padStart(4, '0') +
+                String(month + 1).padStart(2, '0') +
+                String(day).padStart(2, '0')
+            } ${String(hours).padStart(2, '0')}`;
+        } else if (style === 'shorter') {
+            datetext = `${weekdaynamesshort[dayofweek]} ${hours}:${minutes} ${ampm} ${zone}, ${monthnamesshort[month]} ${day}`;
+        } else if (style === 'selectbox') {
+            datetext = `${String(datex.getUTCHours()).padStart(2, '0')}Z ${
+                monthnames[datex.getUTCMonth()]
+            } ${datex.getUTCDate()}, ${datex.getUTCFullYear()}`;
+        } else if (style === 'graphics') {
+            datetext = `${weekdaynamesshort[dayofweek]}, ${monthnamesshort[month]} ${day}, ${year}, ${hoursshort} ${ampm}${zone}`;
+        } else if (style === 'descriptiveTime') {
+            datetext = `${descriptiveTime}, ${monthnamesshort[month]} ${day}`;
+        } else if (style === 'timing') {
+            // only have time zone if UTC
+            datetext = `${weekdaynamesshort[dayofweek]} ${hoursshort}${ampm} ${zone === 'UTC' ? zone : ''}`;
+        } else if (style === 'timezone') {
+            datetext = zone;
+        } else {
+            datetext = `${weekdaynames[dayofweek]} ${hours} ${ampm}${zone}, ${monthnames[month]} ${day}, ${year}`;
+        }
+
+        // Remove any extra spaces
+        datetext = datetext.replace(/\s+/g, ' ').trim();
+
+        return datetext;
     }
 }
