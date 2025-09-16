@@ -15,7 +15,6 @@ const defaultProps = {
     getAlignmentBaseline: 'bottom', // was 'center' but descenders were cut off
     getPixelOffset: [0, 10], // prevent descenders from being cut off
     characterSet: 'auto',
-    getColor: [255, 255, 255, 255],
     fontSettings: {
         sdf: true,
         radius: 12,
@@ -30,7 +29,7 @@ const defaultProps = {
     getLabel: (x) => x.label,
     getWeight: (x) => x.weight || 1,
     getPosition: (x) => x.position,
-    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'front' },
+    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
 };
 
 const findPopulationScale = (d) => {
@@ -80,7 +79,6 @@ export default class CitiesLayer extends CompositeLayer {
 
             // Get RBUSH tree
             const { cityList, dataLabels } = props;
-            console.log('data labels', dataLabels);
             const cityLength = cityList?.length;
             if (!tree || cityLength !== cityLengthLast) {
                 tree = computeProgressiveDisclosure(props.cityList);
@@ -119,14 +117,12 @@ export default class CitiesLayer extends CompositeLayer {
                         interpolate,
                     );
                     fvalue = gUtilities.roundto(value, decimals) + units;
-                    console.log('\nTravis, add timing logic back into citiesLayer.js\n');
-                    /*
-                    if (props.layers[id].colorbar_used === 'timing' && !Number.isNaN(value)) {
-                        const initDate = new Date(props.layers[id].initDate);
+
+                    if (props.isTiming && !Number.isNaN(value)) {
+                        const initDate = new Date(props.initDate);
                         initDate.setHours(initDate.getHours() + Number(fvalue));
                         fvalue = gUtilities.formatdate(initDate, 'timing', props.settings);
                     }
-                    */
                 }
 
                 cityData.push({
