@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import { CompositeLayer } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
-import barbsPNG from './barbs.png?url';
+import barbsPNG from './barbs-new.png?url';
 import gUtilities from '../../utilities/graphicsUtilities';
 import deckUtilities from '../../utilities/deckUtilities';
 

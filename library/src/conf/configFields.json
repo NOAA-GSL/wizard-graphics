@@ -3210,7 +3210,7 @@
                 "colorType": "scaleThreshold",
                 "contourLevels": [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100],
                 "isLeftCap": false,
-                "ticks": "linear"
+                "ticks": "byColorLevels"
             },
             "difference": {
                 "colorLevels": [-30, -24, -20, -16, -12, -8, -4, 4, 8, 12, 16, 20, 24, 30]
@@ -3225,6 +3225,34 @@
         "nameShort": "Wind",
         "roundto": 0,
         "units": "mph"
+    },
+    "ws2": {
+        "//": "This is a temp fix for wind ninja, which needs more detail at low wind speeds",
+        "defaults": "ws",
+        "colorBars": {
+            "default": {
+                "colorLevels": [0, 2, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50, 60],
+                "colors": [
+                    "rgba(74, 139, 196, 0)",
+                    "rgba(110, 159, 212, 1)",
+                    "rgba(104, 172, 194, 1)",
+                    "rgba(98, 186, 176, 1)",
+                    "rgba(92, 199, 158, 1)",
+                    "rgba(144, 199, 132, 1)",
+                    "rgba(197, 199, 105, 1)",
+                    "rgba(249, 199, 79, 1)",
+                    "rgba(239, 158, 78, 1)",
+                    "rgba(229, 118, 78, 1)",
+                    "rgba(219, 77, 77, 1)",
+                    "rgba(200, 76, 110, 1)",
+                    "rgba(182, 76, 142, 1)",
+                    "rgba(163, 75, 175, 1)"
+                ],
+                "colorType": "scaleThreshold",
+                "contourLevels": [0, 2, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50, 60],
+                "ticks": "byColorLevels"
+            }
+        }
     },
     "ws-cumulative": {
         "defaults": "ws",
