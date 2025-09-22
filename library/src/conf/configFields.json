@@ -1524,7 +1524,9 @@
         "defaults": "default",
         "colorBars": {
             "default": {
-                "colorLevels": [0, 1, 2, 3, 4, 6, 8, 10, 20, 30, 40, 50, 75, 100, 150],
+                "colorLevels": [
+                    0, 1, 2, 3, 4, 6, 8, 10, 20, 30, 40, 50, 75, 100, 150, 250, 500, 750, 1000
+                ],
                 "colors": [
                     "rgba(94, 79, 162, 0)",
                     "rgba(94, 79, 162, 0)",
@@ -1541,10 +1543,16 @@
                     "rgba(245, 118, 71, 1)",
                     "rgba(226, 82, 74, 1)",
                     "rgba(197, 45, 75, 1)",
-                    "rgba(158, 1, 66, 1)"
+                    "rgba(158, 1, 66, 1)",
+                    "rgba(120, 0, 120, 1)",
+                    "rgba(77, 0, 153,1)",
+                    "rgba(50, 0, 100, 1)",
+                    "rgba(0, 0, 0, 1)"
                 ],
                 "colorType": "scaleThreshold",
-                "contourLevels": [0, 1, 2, 3, 4, 6, 8, 10, 20, 30, 40, 50, 75, 100, 150],
+                "contourLevels": [
+                    0, 1, 2, 3, 4, 6, 8, 10, 20, 30, 40, 50, 75, 100, 150, 250, 500, 750, 1000
+                ],
                 "isLeftCap": false,
                 "ticks": "byColorLevels"
             },
@@ -1636,11 +1644,23 @@
         "namePublic": "48 hr Precipitation",
         "nameShort": "48hr Precip"
     },
+    "p48_ari": {
+        "defaults": "p6_ari",
+        "nameLegend": "48 hr Precip ARI",
+        "namePublic": "48 hr Precipitation ARI",
+        "nameShort": "48hr Precip ARI"
+    },
     "p72": {
         "defaults": "ptotal",
         "nameLegend": "72 hr Precipitation",
         "namePublic": "72 hr Precipitation",
         "nameShort": "72hr Precip"
+    },
+    "p72_ari": {
+        "defaults": "p6_ari",
+        "nameLegend": "72 hr Precip ARI",
+        "namePublic": "72 hr Precipitation ARI",
+        "nameShort": "72hr Precip ARI"
     },
     "PSSF": {
         "defaults": "default",
