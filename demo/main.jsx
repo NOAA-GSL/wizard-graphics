@@ -28,6 +28,9 @@ function App() {
                     <a href="examples/globeView/index.html">Globe/Gridded Layers Examples</a>
                 </li>
                 <li>
+                    <a href="examples/terrain/index.html">Terrain Examples</a>
+                </li>
+                <li>
                     <a href="examples/multiPanel/index.html">Multi-Panel Examples</a>
                 </li>
                 <li>
