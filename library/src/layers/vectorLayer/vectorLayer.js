@@ -33,6 +33,7 @@ const defaultProps = {
     getLabel: (x) => x.label,
     getWeight: (x) => x.weight || 1,
     getPosition: (x) => x.position,
+    parameters: { depthCompare: 'always', cullMode: 'front' },
 };
 
 export default class VectorLayer extends CompositeLayer {

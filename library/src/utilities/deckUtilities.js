@@ -126,4 +126,46 @@ export default class deckUtilities {
 
         return diff;
     }
+
+    // The following two functions are hacks to get billboarding to work properly on
+    // globe projection, and hide text behind the globe. See this for more details:
+    // https://github.com/visgl/deck.gl/issues/9554#issuecomment-2785192798
+
+    // Tune this mapping to match your renderer behavior
+    static zoomToFOV(zoom) {
+        const clamped = Math.max(Math.min(zoom, 20), 1);
+        // At zoom 1 → full hemisphere (≈130° FOV), at zoom 20 → tight 0° FOV
+        return 130 * (1 - (clamped - 1) / 19); // Range: 130 → 0 degrees
+    }
+
+    // Helper function to determine if a feature is visible from a camera's pov on globe projection
+    static isFeatureVisibleOnGlobe(cameraLat, cameraLon, featureLat, featureLon, zoom) {
+        const toRad = (deg) => (deg * Math.PI) / 180;
+
+        // Convert lat/lon to radians
+        const camLatRad = toRad(cameraLat);
+        const camLonRad = toRad(cameraLon);
+        const featLatRad = toRad(featureLat);
+        const featLonRad = toRad(featureLon);
+
+        // Convert to unit vectors
+        const toVec3 = (lat, lon) => [
+            Math.cos(lat) * Math.cos(lon),
+            Math.sin(lat),
+            Math.cos(lat) * Math.sin(lon),
+        ];
+
+        const camVec = toVec3(camLatRad, camLonRad);
+        const featVec = toVec3(featLatRad, featLonRad);
+
+        // Compute dot product
+        const dot = camVec[0] * featVec[0] + camVec[1] * featVec[1] + camVec[2] * featVec[2];
+
+        // Convert zoom level to a tighter FOV threshold
+        const fovDegrees = this.zoomToFOV(zoom); // field of view in degrees
+        const halfFovCos = Math.cos(toRad(fovDegrees / 2));
+
+        // If the angle between the vectors is within the cone, dot ≥ cos(halfFOV)
+        return dot >= halfFovCos;
+    }
 }

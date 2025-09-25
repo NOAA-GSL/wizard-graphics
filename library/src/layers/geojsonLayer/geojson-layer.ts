@@ -1,10 +1,18 @@
 // my-point-cloud-layer.js
 // Example to add per-point size to point cloud layer
-import { GeoJsonLayer } from 'deck.gl';
+import { GeoJsonLayer, GeoJsonLayerProps } from 'deck.gl';
 import { LINE_LAYER, forwardProps } from './sub-layer-map';
-import { Layer } from '@deck.gl/core';
+import { DefaultProps, Layer } from '@deck.gl/core';
 
 export default class DESIGeoJsonLayer extends GeoJsonLayer {
+    static defaultProps: any = {
+        ...GeoJsonLayer.defaultProps,
+        parameters: {
+            depthCompare: 'always',
+            cullMode: 'back',
+        },
+    };
+
     initializeState() {
         super.initializeState();
     }

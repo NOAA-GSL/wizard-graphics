@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// THW modified deck.gl 
+// THW modified deck.gl
 // In the future compare tag v9.1.13 with whatever version you are trying to upgrade
 // - 7/15/2025: updated to deck.gl v9.1.13
 // - ?/?/2024: updated to deck.gl v9.0.33
 
 import { Layer, project32, picking, COORDINATE_SYSTEM } from '@deck.gl/core';
 import { Model, Geometry } from '@luma.gl/engine';
-import {gouraudMaterial} from '@luma.gl/shadertools';
+import { gouraudMaterial } from '@luma.gl/shadertools';
 import { Texture } from '@luma.gl/core';
 
 // Polygon geometry generation is managed by the polygon tesselator
 import PolygonTesselator from './polygon-tesselator';
 
-import {solidPolygonUniforms, SolidPolygonProps} from './solid-polygon-layer-uniforms';
+import { solidPolygonUniforms, SolidPolygonProps } from './solid-polygon-layer-uniforms';
 import vsTop from './solid-polygon-layer-vertex-top.glsl';
 import vsSide from './solid-polygon-layer-vertex-side.glsl';
 import fs from './solid-polygon-layer-fragment.glsl';
@@ -140,10 +140,12 @@ const defaultProps: DefaultProps<SolidPolygonLayerProps> = {
     _windingOrder: 'CW',
     _full3d: false,
 
+    parameters: { depthCompare: 'always', cullMode: 'back' },
+
     elevationScale: { type: 'number', min: 0, value: 1 },
 
     getPolygon: { type: 'accessor', value: (f: any) => f.polygon },
-    getElevation: { type: 'accessor', value: 1000 },
+    getElevation: { type: 'accessor', value: 0 },
 
     // THW ADD
     getVertex1: { type: 'accessor', value: -1 },
@@ -199,7 +201,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 RING_WINDING_ORDER_CW:
                     !this.props._normalize && this.props._windingOrder === 'CCW' ? 0 : 1,
             },
-            modules: [project32, gouraudMaterial, picking, solidPolygonUniforms]
+            modules: [project32, gouraudMaterial, picking, solidPolygonUniforms],
         });
     }
 
@@ -387,25 +389,27 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         const renderUniforms: SolidPolygonProps = {
             extruded: Boolean(extruded),
             elevationScale,
-            isWireframe: false
+            isWireframe: false,
         };
 
         // Note - the order is important
         if (wireframeModel && wireframe) {
             wireframeModel.setInstanceCount(polygonTesselator.instanceCount - 1);
-            wireframeModel.shaderInputs.setProps({solidPolygon: {...renderUniforms, isWireframe: true}});
+            wireframeModel.shaderInputs.setProps({
+                solidPolygon: { ...renderUniforms, isWireframe: true },
+            });
             wireframeModel.draw(this.context.renderPass);
         }
 
         if (sideModel && filled) {
             sideModel.setInstanceCount(polygonTesselator.instanceCount - 1);
-            sideModel.shaderInputs.setProps({solidPolygon: renderUniforms});
+            sideModel.shaderInputs.setProps({ solidPolygon: renderUniforms });
             sideModel.draw(this.context.renderPass);
         }
 
         if (topModel && filled) {
             topModel.setVertexCount(polygonTesselator.vertexCount);
-            topModel.shaderInputs.setProps({solidPolygon: renderUniforms});
+            topModel.shaderInputs.setProps({ solidPolygon: renderUniforms });
             topModel.draw(this.context.renderPass);
         }
     }
@@ -443,7 +447,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             this.setState(this._getModels());
             attributeManager!.invalidateAll();
         }
-        
+
         if (colorsChanged) {
             console.log('Updating Texture!');
             this.setTexture();

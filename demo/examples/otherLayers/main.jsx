@@ -51,14 +51,14 @@ function MapContainer() {
     const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
     const [state, setState] = useState({
         iconLayerCheckbox: false,
-        citiesLayerCheckbox: false,
+        citiesLayerCheckbox: true,
         citiesDataLabelsCheckbox: true,
         spotLayerCheckbox: false,
         nifcLayerCheckbox: false,
         cpcLayerCheckbox: false,
         spcLayerCheckbox: false,
         wpcLayerCheckbox: false,
-        wwaLayerCheckbox: true,
+        wwaLayerCheckbox: false,
         isGlobeView: true,
     });
 
@@ -253,7 +253,6 @@ function MapContainer() {
     );
 
     if (state.iconLayerCheckbox) {
-        console.log('demoCities', demoCities.length);
         const iconLayer = new IconClusterLayer({
             id: 'iconLayer',
             data: demoCities,
@@ -280,9 +279,6 @@ function MapContainer() {
                 },
             }),
             pickable: true,
-            // background: false,
-            // cityBaseScale: layer.fontSize,
-            // settings,
         });
         layers.push(citiesLayer);
     }
@@ -491,7 +487,7 @@ function MapContainer() {
                     antialias
                     reuseMaps
                     mapStyle={mapStyle}
-                    projection={'globe'}
+                    projection="globe"
                 >
                     <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
                     <Readout

@@ -37,7 +37,6 @@ import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import 'desi-graphics/desi-graphics.css';
-import coastLines from './ne_10m_coastline.json';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
@@ -47,8 +46,6 @@ const checkboxConfig = [
     { key: 'vectorCheckbox', label: 'Vector Layer' },
     { key: 'particleCheckbox', label: 'Particle Layer' },
     { key: 'terrainCheckbox', label: 'Terrain Layer' },
-    { key: 'isGlobeView', label: 'Globe View' },
-    { key: 'geojsonLayer', label: 'GeoJSON Layer' },
     { key: 'showStats', label: 'Show Performance Stats' },
 ];
 
@@ -59,14 +56,12 @@ function MapContainer() {
 
     const [state, dispatch] = useReducer((s, { key, value }) => ({ ...s, [key]: value }), {
         contourCheckbox: false,
-        contourLabels: true,
-        shadedCheckbox: true,
+        contourLabels: false,
+        shadedCheckbox: false,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
-        particleCheckbox: true,
-        terrainCheckbox: false,
-        isGlobeView: true,
-        geojsonLayer: true,
+        particleCheckbox: false,
+        terrainCheckbox: true,
         showStats: false, // Enable stats by default
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
@@ -146,6 +141,7 @@ function MapContainer() {
     }, [state.showStats]);
 
     // Cleanup stats on unmount
+    // eslint-disable-next-line arrow-body-style
     useEffect(() => {
         return () => {
             if (statsRef.current && statsRef.current.dom.parentNode) {
@@ -188,43 +184,53 @@ function MapContainer() {
     const projection = useMemo(() => {
         const p = new Projection(projDict, resLevel);
         p.makeLonLatGrid();
-        p.isGlobe = state.isGlobeView;
         return p;
-    }, [state.isGlobeView, currentDataset]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentDataset]);
 
     const field = 't2';
     const { colors, colorLevels, contourLevels, colorType } = configFields[field].colorBars.default;
 
-    const terrainLayer = useMemo(
-        () =>
-            new TerrainLayer({
-                id: `terrain-layer-${state.isGlobeView ? 'globe' : 'mercator'}`,
-                //texture: 'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png',
-                elevationData:
-                    'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
-                elevationDecoder: { rScaler: 256, gScaler: 1, bScaler: 0.00390625, offset: -32768 },
-                visible: state.terrainCheckbox,
-                //wireframe: true,
-                strategy: 'no-overlap',
-                color: [255, 255, 255, 170],
-                operation: 'terrain+draw',
-                parameters: { depthTest: true },
-                //onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
-                //onTileError: (err) => console.error('Terrain tile error:', err),
-            }),
-        [state.terrainCheckbox],
-    );
+    const terrainLayer = useMemo(() => {
+        // Mapzen
+        const elevationDecoder = {
+            rScaler: 256,
+            gScaler: 1,
+            bScaler: 0.00390625,
+            offset: -32768,
+        };
+        const elevationData =
+            'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+        const texture =
+            'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png';
+        const magicalTerrainLayer = new TerrainLayer({
+            id: `terrain-layer`,
+            elevationData,
+            texture,
+            elevationDecoder,
+            wireframe: false,
+            visible: state.terrainCheckbox,
+            strategy: 'no-overlap',
+            color: [255, 255, 255],
+            operation: 'terrain+draw',
+            // parameters: { depthCompare: 'always' },
+            // onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
+            // onTileError: (err) => console.error('Terrain tile error:', err),
+        });
+        return magicalTerrainLayer;
+    }, [state.terrainCheckbox]);
 
     const particleLayer = useMemo(() => {
         if (!state.particleCheckbox) return null;
         return new ParticleLayer({
-            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+            id: `particleLayer`,
             dataDir: wdir,
             dataMag: wmag,
-            color: [0, 0, 0, 255],
+            color: [255, 255, 255, 255],
             width: 1.5,
             numParticles: 10000,
             projection,
+            parameters: { depthCompare: 'always', cullMode: 'front' },
             readout: [
                 {
                     data: wmag,
@@ -242,7 +248,7 @@ function MapContainer() {
                 },
             ],
         });
-    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag, style]);
+    }, [state.particleCheckbox, projection, wdir, wmag]);
 
     const layers = useMemo(() => {
         const result = [];
@@ -250,7 +256,7 @@ function MapContainer() {
         if (state.shadedCheckbox)
             result.push(
                 new ShadedLayer({
-                    id: `shadedLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${state.shadedInterpolateCheckbox ? 'interp' : 'nointerp'}`,
+                    id: `shadedLayer`,
                     beforeId: mapStyles[style].beforeId,
                     data,
                     colors,
@@ -258,9 +264,11 @@ function MapContainer() {
                     colorType,
                     projection,
                     elevation: 0,
-                    //extensions: [new TerrainExtension()],
-                    //terrainDrawMode:'drape',
+                    extensions: [new TerrainExtension()],
+                    terrainDrawMode: 'drape',
                     interpolateData: state.shadedInterpolateCheckbox,
+                    // parameters: { depthCompare: 'always', cullMode: 'back' },
+                    // parameters: { depthCompare: 'always', cullMode: 'back', frontFace: 'ccw' },
                     readout: [
                         {
                             data,
@@ -276,7 +284,7 @@ function MapContainer() {
         if (state.contourCheckbox)
             result.push(
                 new ContourLayer({
-                    id: `contourLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+                    id: `contourLayer`,
                     beforeId: mapStyles[style].beforeId,
                     data,
                     colors,
@@ -285,8 +293,12 @@ function MapContainer() {
                     contourLevels,
                     projection,
                     elevation: 0,
-                    //extensions: [new TerrainExtension()],
-                    //terrainDrawMode: 'drape',
+                    extensions: [new TerrainExtension()],
+                    terrainDrawMode: 'drape',
+                    parameters: {
+                        depthCompare: 'always',
+                        cullMode: 'back',
+                    },
                     labels: { enabled: state.contourLabels, getSize: 14 },
                     readout: [
                         {
@@ -300,33 +312,19 @@ function MapContainer() {
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
                 }),
             );
-        if (state.geojsonLayer) {
-            result.push(
-                new GeoJsonLayer({
-                    id: 'GeoJsonLayer',
-                    data: coastLines,
-
-                    stroked: true,
-                    filled: true,
-                    lineWidthUnits: 'pixels',
-                    lineWidthMinPixels: 2,
-                    getLineWidth: 2,
-                    getFillColor: [255, 160, 180, 200],
-                    getLineColor: [255, 0, 0],
-                    getPointRadius: 4,
-                    getTextSize: 12,
-                }),
-            );
-        }
         if (state.vectorCheckbox)
             result.push(
                 new VectorLayer({
-                    id: `vectorLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+                    id: `vectorLayer`,
                     beforeId: mapStyles[style].beforeId,
+                    getColor: [255, 255, 255, 255],
                     dataDir: wdir,
                     dataMag: wmag,
                     projection,
-                    angleOffset: state.isGlobeView ? 180 : 0,
+                    angleOffset: 0,
+                    extensions: [new TerrainExtension()],
+                    terrainDrawMode: 'drape',
+                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
                     readout: [
                         {
                             data: wmag,
@@ -356,16 +354,17 @@ function MapContainer() {
         state.contourLabels,
         state.vectorCheckbox,
         state.particleCheckbox,
-        state.geojsonLayer,
         terrainLayer,
-        particleLayer,
+        style,
         data,
         colors,
         colorLevels,
-        contourLevels,
         colorType,
         projection,
-        style,
+        contourLevels,
+        wdir,
+        wmag,
+        particleLayer,
     ]);
 
     return (
@@ -403,15 +402,16 @@ function MapContainer() {
                 ))}
             </div>
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
+                {console.log('layers:', layers)}
                 <Map
                     initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
-                    maxPitch={0}
+                    // maxPitch={0}
                     ref={mapRef}
                     antialias
                     mapStyle={mapStyle}
-                    projection={state.isGlobeView ? 'globe' : 'mercator'}
+                    projection="mercator"
                 >
-                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} />
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}

@@ -12,6 +12,11 @@ const defaultProps = {
     widthScale: 30,
     widthMinPixels: 2,
     getWidth: 10,
+    // properties to make globe projection work without bleed
+    parameters: {
+        depthCompare: 'always',
+        cullMode: 'back',
+    },
 };
 
 export default class ContourLayer extends CompositeLayer {
