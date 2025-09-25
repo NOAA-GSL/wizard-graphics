@@ -29,7 +29,7 @@ const defaultProps = {
     getLabel: (x) => x.label,
     getWeight: (x) => x.weight || 1,
     getPosition: (x) => x.position,
-    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
+    parameters: { depthCompare: 'always', cullMode: 'none' },
 };
 
 const findPopulationScale = (d) => {
@@ -166,11 +166,19 @@ export default class CitiesLayer extends CompositeLayer {
         const baseScale = this.props.cityBaseScale;
         const readoutScale = 1.5; // was 1.2
 
+        // access the camera position
+        const { viewport } = this.context;
+        const { zoom } = viewport;
+        const cameraLat = viewport.latitude;
+        const cameraLon = viewport.longitude;
+
         const layers = [
             new TextLayer(this.props, {
                 id: `${this.props.id}-tagmap-layer`,
-                data: cityData,
-                // outlineWidth: 4,
+                // hack to prevent labels on the opposite side of the globe from being visible
+                data: cityData.filter((d) =>
+                    deckUtilities.isFeatureVisibleOnGlobe(cameraLat, cameraLon, d.lat, d.lon, zoom),
+                ),
                 getText: (d) => d.name,
                 getPosition: (d) => [Number(d.lon), Number(d.lat), elevation],
                 getSize: (d) => {
@@ -184,7 +192,16 @@ export default class CitiesLayer extends CompositeLayer {
             layers.push(
                 new TextLayer(this.props, {
                     id: `${this.props.id}-tagmap-dataLabels`,
-                    data: cityData,
+                    // hack to prevent labels on the opposite side of the globe from being visible
+                    data: cityData.filter((d) =>
+                        deckUtilities.isFeatureVisibleOnGlobe(
+                            cameraLat,
+                            cameraLon,
+                            d.lat,
+                            d.lon,
+                            zoom,
+                        ),
+                    ),
                     fontWeight: '700',
                     outlineWidth: 3,
                     getText: (d) => d.value,

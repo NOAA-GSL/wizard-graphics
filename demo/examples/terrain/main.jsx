@@ -57,8 +57,8 @@ function MapContainer() {
     const [state, dispatch] = useReducer((s, { key, value }) => ({ ...s, [key]: value }), {
         contourCheckbox: false,
         contourLabels: false,
-        shadedCheckbox: true,
-        shadedInterpolateCheckbox: false,
+        shadedCheckbox: false,
+        shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
         particleCheckbox: false,
         terrainCheckbox: true,
@@ -226,7 +226,7 @@ function MapContainer() {
             id: `particleLayer`,
             dataDir: wdir,
             dataMag: wmag,
-            color: [0, 0, 0, 255],
+            color: [255, 255, 255, 255],
             width: 1.5,
             numParticles: 10000,
             projection,
@@ -253,44 +253,6 @@ function MapContainer() {
     const layers = useMemo(() => {
         const result = [];
         if (state.terrainCheckbox) result.push(terrainLayer);
-        result.push(
-            new GeoJsonLayer({
-                id: 'test-line',
-                data: {
-                    type: 'FeatureCollection',
-                    features: [
-                        {
-                            type: 'Feature',
-                            properties: { name: 'Rockies Crossing' },
-                            geometry: {
-                                type: 'LineString',
-                                coordinates: [
-                                    [-117.8, 49.6],
-                                    [-106.4, 39.6],
-                                    [-109.3, 32.7],
-                                ],
-                            },
-                        },
-                    ],
-                },
-                stroked: true,
-                filled: true,
-                lineWidthUnits: 'pixels',
-                lineWidthMinPixels: 3,
-                getLineWidth: 3,
-                getFillColor: [255, 160, 180, 200],
-                getLineColor: [255, 0, 0],
-                parameters: {
-                    depthCompare: 'always',
-                    frontFace: 'ccw',
-                    cullMode: 'back',
-                },
-                getPointRadius: 4,
-                getTextSize: 12,
-                extensions: [new TerrainExtension()],
-                terrainDrawMode: 'drape',
-            }),
-        );
         if (state.shadedCheckbox)
             result.push(
                 new ShadedLayer({
@@ -355,6 +317,7 @@ function MapContainer() {
                 new VectorLayer({
                     id: `vectorLayer`,
                     beforeId: mapStyles[style].beforeId,
+                    getColor: [255, 255, 255, 255],
                     dataDir: wdir,
                     dataMag: wmag,
                     projection,
@@ -448,7 +411,7 @@ function MapContainer() {
                     mapStyle={mapStyle}
                     projection="mercator"
                 >
-                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} />
                     <Readout
                         mapContainer={mapContainer}
                         overlayRef={overlayRef}

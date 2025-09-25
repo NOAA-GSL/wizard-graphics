@@ -63,7 +63,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: false,
-        particleCheckbox: false,
+        particleCheckbox: true,
         terrainCheckbox: false,
         isGlobeView: true,
         geojsonLayer: true,
@@ -225,7 +225,6 @@ function MapContainer() {
             width: 1.5,
             numParticles: 10000,
             projection,
-            parameters: { depthCompare: 'always', cullMode: 'front' },
             readout: [
                 {
                     data: wmag,
@@ -262,7 +261,6 @@ function MapContainer() {
                     //extensions: [new TerrainExtension()],
                     //terrainDrawMode:'drape',
                     interpolateData: state.shadedInterpolateCheckbox,
-                    parameters: { depthCompare: 'always', cullMode: 'back' },
                     readout: [
                         {
                             data,
@@ -289,10 +287,6 @@ function MapContainer() {
                     elevation: 0,
                     //extensions: [new TerrainExtension()],
                     //terrainDrawMode: 'drape',
-                    parameters: {
-                        depthCompare: 'always',
-                        cullMode: 'back',
-                    },
                     labels: { enabled: state.contourLabels, getSize: 14 },
                     readout: [
                         {
@@ -319,11 +313,6 @@ function MapContainer() {
                     getLineWidth: 2,
                     getFillColor: [255, 160, 180, 200],
                     getLineColor: [255, 0, 0],
-                    parameters: {
-                        depthCompare: 'always',
-                        frontFace: 'ccw',
-                        cullMode: 'back',
-                    },
                     getPointRadius: 4,
                     getTextSize: 12,
                 }),
@@ -338,7 +327,6 @@ function MapContainer() {
                     dataMag: wmag,
                     projection,
                     angleOffset: state.isGlobeView ? 180 : 0,
-                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
                     readout: [
                         {
                             data: wmag,
