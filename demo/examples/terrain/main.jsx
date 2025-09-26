@@ -44,7 +44,7 @@ function MapContainer() {
     const [state, dispatch] = useReducer((s, { key, value }) => ({ ...s, [key]: value }), {
         contourCheckbox: true,
         contourLabels: true,
-        shadedCheckbox: false,
+        shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         terrainCheckbox: true,
     });
