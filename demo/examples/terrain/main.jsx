@@ -22,7 +22,7 @@ import rrfsProjDict from 'demo-data/RRFS/projection';
 import eagleTemperatures from 'demo-data/EAGLE/temp';
 import eagleProjDict from 'demo-data/EAGLE/projection';
 
-import { TerrainLayer } from 'deck.gl';
+import { TerrainLayer, SolidPolygonLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -34,6 +34,7 @@ const checkboxConfig = [
     { key: 'shadedCheckbox', label: 'Shaded Layer' },
     { key: 'shadedInterpolateCheckbox', label: 'Interpolate Data', parent: 'shadedCheckbox' },
     { key: 'terrainCheckbox', label: 'Terrain Layer' },
+    { key: 'solidPolygonLayer', label: 'Solid Polygon Layer' },
 ];
 
 function MapContainer() {
@@ -47,6 +48,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         terrainCheckbox: true,
+        solidPolygonLayer: true,
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
     const [currentDataset, setCurrentDataset] = React.useState(radioOptions[0]);
@@ -128,6 +130,23 @@ function MapContainer() {
     const layers = useMemo(() => {
         const result = [];
         if (state.terrainCheckbox) result.push(terrainLayer);
+        if (state.solidPolygonLayer) {
+            result.push(
+                new SolidPolygonLayer({
+                    id: 'SolidPolygonLayer',
+                    data: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-zipcodes.json',
+                    extensions: [new TerrainExtension()],
+                    terrainDrawMode: 'drape',
+                    extruded: true,
+                    wireframe: true,
+                    getPolygon: (d) => d.contour,
+                    getElevation: (d) => d.population / d.area / 10,
+                    getFillColor: (d) => [d.population / d.area / 60, 140, 0],
+                    getLineColor: [80, 80, 80],
+                    pickable: true,
+                }),
+            );
+        }
         if (state.shadedCheckbox)
             result.push(
                 new ShadedLayer({
@@ -184,6 +203,7 @@ function MapContainer() {
         return result;
     }, [
         state.terrainCheckbox,
+        state.solidPolygonLayer,
         state.shadedCheckbox,
         state.shadedInterpolateCheckbox,
         state.contourCheckbox,
