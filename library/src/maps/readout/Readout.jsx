@@ -175,12 +175,12 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
         const overlayElement = mapContainer?.current;
         if (!overlayElement) return;
 
-        // --- Right click and hold vs. right click menu logic ---
+        // Right click and hold vs. right click menu logic
         let rightClickTimer = null;
         let rightClickStart = null;
         let rightClickMoved = false;
-        const RIGHT_CLICK_HOLD_MS = 250; // adjust as needed
-        const MOVE_THRESHOLD = 5; // px
+        const RIGHT_CLICK_HOLD_MS = 250;
+        const MOVE_THRESHOLD = 5;
 
         // Open right-click menu only if not a drag/hold
         const rightClickMenuOpen = (event) => {
@@ -203,7 +203,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
                 rightClickStart = { x: event.clientX, y: event.clientY };
                 rightClickMoved = false;
                 rightClickTimer = setTimeout(() => {
-                    rightClickTimer = null; // timer expired, treat as hold (do nothing)
+                    rightClickTimer = null; // timer expired
                 }, RIGHT_CLICK_HOLD_MS);
             }
         };
