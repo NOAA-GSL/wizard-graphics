@@ -175,16 +175,14 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
         const overlayElement = mapContainer?.current;
         if (!overlayElement) return;
 
-        const hideReadout = () => {
-            setReadoutDivDisplay('none');
-            setPickResults([]);
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
-            }
-        };
+        // Right click and hold vs. right click menu logic
+        let rightClickTimer = null;
+        let rightClickStart = null;
+        let rightClickMoved = false;
+        const RIGHT_CLICK_HOLD_MS = 250;
+        const MOVE_THRESHOLD = 5;
 
-        // Open right-click menu
+        // Open right-click menu only if not a drag/hold
         const rightClickMenuOpen = (event) => {
             const rect = overlayElement.getBoundingClientRect();
             const left = event.clientX - rect.left;
@@ -197,6 +195,60 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
             }));
             event.preventDefault();
             event.stopPropagation();
+        };
+
+        const onMouseDown = (event) => {
+            if (event.button === 2) {
+                // right mouse button
+                rightClickStart = { x: event.clientX, y: event.clientY };
+                rightClickMoved = false;
+                rightClickTimer = setTimeout(() => {
+                    rightClickTimer = null; // timer expired
+                }, RIGHT_CLICK_HOLD_MS);
+            }
+        };
+
+        const onMouseMove = (event) => {
+            if (rightClickStart) {
+                const dx = event.clientX - rightClickStart.x;
+                const dy = event.clientY - rightClickStart.y;
+                if (Math.sqrt(dx * dx + dy * dy) > MOVE_THRESHOLD) {
+                    rightClickMoved = true;
+                    if (rightClickTimer) {
+                        clearTimeout(rightClickTimer);
+                        rightClickTimer = null;
+                    }
+                }
+            }
+        };
+
+        const onMouseUp = (event) => {
+            if (event.button === 2 && rightClickStart) {
+                if (rightClickTimer && !rightClickMoved) {
+                    // treat as right click (open menu)
+                    rightClickMenuOpen(event);
+                }
+                if (rightClickTimer) {
+                    clearTimeout(rightClickTimer);
+                    rightClickTimer = null;
+                }
+                rightClickStart = null;
+                rightClickMoved = false;
+            }
+        };
+
+        // Prevent default context menu if you handle it yourself
+        const onContextMenu = (event) => {
+            event.preventDefault();
+        };
+
+        const hideReadout = () => {
+            setReadoutDivDisplay('none');
+            setPickResults([]);
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
         };
 
         // Allow checkbox clicks to complete before closing the menu
@@ -241,7 +293,10 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
         };
 
         // overlay-local handlers
-        overlayElement.addEventListener('contextmenu', rightClickMenuOpen, false);
+        overlayElement.addEventListener('mousedown', onMouseDown, false);
+        overlayElement.addEventListener('mousemove', onMouseMove, false);
+        overlayElement.addEventListener('mouseup', onMouseUp, false);
+        overlayElement.addEventListener('contextmenu', onContextMenu, false);
         overlayElement.addEventListener('click', handleOverlayClick, false);
         overlayElement.addEventListener('mousemove', handleMouseMove, false);
 
@@ -255,7 +310,10 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
 
         // eslint-disable-next-line consistent-return
         return () => {
-            overlayElement.removeEventListener('contextmenu', rightClickMenuOpen);
+            overlayElement.removeEventListener('mousedown', onMouseDown, false);
+            overlayElement.removeEventListener('mousemove', onMouseMove, false);
+            overlayElement.removeEventListener('mouseup', onMouseUp, false);
+            overlayElement.removeEventListener('contextmenu', onContextMenu, false);
             overlayElement.removeEventListener('click', handleOverlayClick);
             overlayElement.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('pointermove', documentPointerMove, true);

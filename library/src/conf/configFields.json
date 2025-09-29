@@ -23,6 +23,15 @@
         "roundto": 2,
         "units": ""
     },
+    "aqi": {
+        "defaults": "default",
+        "colorBars": {
+            "default": {
+                "colorType": "scaleThreshold",
+                "ticks": "byColorLevels"
+            }
+        }
+    },
     "bposelay": {
         "defaults": "default",
         "colorBars": {

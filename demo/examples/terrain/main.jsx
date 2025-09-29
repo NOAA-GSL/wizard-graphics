@@ -1,7 +1,6 @@
 import React, { StrictMode, useMemo, useRef, useCallback, useReducer, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import Stats from 'stats.js';
 import {
     mapStyles,
     Maps,
@@ -9,30 +8,21 @@ import {
     Readout,
     Legend,
     Projection,
-    ContourLayer,
     ShadedLayer,
-    VectorLayer,
-    ParticleLayer,
+    ContourLayer,
     configFields,
-    GeoJsonLayer,
 } from 'desi-graphics';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
-import hrefWdir from 'demo-data/HREF/wdir';
-import hrefWmag from 'demo-data/HREF/wmag';
 import hrefProjDict from 'demo-data/HREF/projection';
 
 import rrfsTemperatures from 'demo-data/RRFS/temp';
-import rrfsWdir from 'demo-data/RRFS/wdir';
-import rrfsWmag from 'demo-data/RRFS/wmag';
 import rrfsProjDict from 'demo-data/RRFS/projection';
 
 import eagleTemperatures from 'demo-data/EAGLE/temp';
-import eagleWdir from 'demo-data/EAGLE/wdir';
-import eagleWmag from 'demo-data/EAGLE/wmag';
 import eagleProjDict from 'demo-data/EAGLE/projection';
 
-import { TerrainLayer } from 'deck.gl';
+import { TerrainLayer, SolidPolygonLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -43,10 +33,8 @@ const checkboxConfig = [
     { key: 'contourLabels', label: 'Contour Labels', parent: 'contourCheckbox' },
     { key: 'shadedCheckbox', label: 'Shaded Layer' },
     { key: 'shadedInterpolateCheckbox', label: 'Interpolate Data', parent: 'shadedCheckbox' },
-    { key: 'vectorCheckbox', label: 'Vector Layer' },
-    { key: 'particleCheckbox', label: 'Particle Layer' },
     { key: 'terrainCheckbox', label: 'Terrain Layer' },
-    { key: 'showStats', label: 'Show Performance Stats' },
+    { key: 'solidPolygonLayer', label: 'Solid Polygon Layer' },
 ];
 
 function MapContainer() {
@@ -55,14 +43,12 @@ function MapContainer() {
     const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
 
     const [state, dispatch] = useReducer((s, { key, value }) => ({ ...s, [key]: value }), {
-        contourCheckbox: false,
-        contourLabels: false,
-        shadedCheckbox: false,
+        contourCheckbox: true,
+        contourLabels: true,
+        shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
-        vectorCheckbox: false,
-        particleCheckbox: false,
         terrainCheckbox: true,
-        showStats: false, // Enable stats by default
+        solidPolygonLayer: true,
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
     const [currentDataset, setCurrentDataset] = React.useState(radioOptions[0]);
@@ -72,40 +58,29 @@ function MapContainer() {
     const overlayRef = useRef();
     const mapContainer = useRef();
     const mapRef = useRef();
-    const statsRef = useRef();
 
     let temperatures;
-    let wdir;
-    let wmag;
     let projDict;
     let resLevel;
     switch (currentDataset) {
         case 'HREF':
             temperatures = hrefTemperatures;
-            wdir = hrefWdir;
-            wmag = hrefWmag;
             projDict = hrefProjDict;
             resLevel = 4; // sample data is every 4th point
             break;
         case 'RRFS':
             temperatures = rrfsTemperatures;
-            wdir = rrfsWdir;
-            wmag = rrfsWmag;
             projDict = rrfsProjDict;
             resLevel = 8; // sample data is every 8th point
             break;
         case 'EAGLE':
             temperatures = eagleTemperatures;
-            wdir = eagleWdir;
-            wmag = eagleWmag;
             projDict = eagleProjDict;
             resLevel = 8; // sample data is every 8th point
             break;
         default:
             console.error('ERROR', `Unknown dataset: ${currentDataset}`);
     }
-    wdir = useMemo(() => wdir.flat(), [wdir]);
-    wmag = useMemo(() => wmag.flat().map((v) => v * 2.23694), [wmag]);
     const data = useMemo(
         () =>
             new Float32Array(
@@ -113,73 +88,6 @@ function MapContainer() {
             ),
         [temperatures],
     );
-
-    // Initialize Stats.js
-    useEffect(() => {
-        if (state.showStats && !statsRef.current) {
-            const stats = new Stats();
-            stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-
-            // Style the stats panel
-            stats.dom.style.position = 'absolute';
-            stats.dom.style.top = '10px';
-            stats.dom.style.left = '10px';
-            stats.dom.style.zIndex = '10000';
-
-            // Add to the map container instead of body for better positioning
-            if (mapContainer.current) {
-                mapContainer.current.appendChild(stats.dom);
-                statsRef.current = stats;
-            }
-        } else if (!state.showStats && statsRef.current) {
-            // Remove stats when disabled
-            if (statsRef.current.dom.parentNode) {
-                statsRef.current.dom.parentNode.removeChild(statsRef.current.dom);
-            }
-            statsRef.current = null;
-        }
-    }, [state.showStats]);
-
-    // Cleanup stats on unmount
-    // eslint-disable-next-line arrow-body-style
-    useEffect(() => {
-        return () => {
-            if (statsRef.current && statsRef.current.dom.parentNode) {
-                statsRef.current.dom.parentNode.removeChild(statsRef.current.dom);
-            }
-        };
-    }, []);
-
-    // Animation loop for stats
-    useEffect(() => {
-        let animationId;
-
-        function animate() {
-            if (statsRef.current) {
-                statsRef.current.begin();
-
-                // The actual rendering is handled by deck.gl/mapbox
-                // We just need to call end() after each frame
-                requestAnimationFrame(() => {
-                    if (statsRef.current) {
-                        statsRef.current.end();
-                    }
-                });
-            }
-
-            animationId = requestAnimationFrame(animate);
-        }
-
-        if (state.showStats && statsRef.current) {
-            animate();
-        }
-
-        return () => {
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-            }
-        };
-    }, [state.showStats]);
 
     const projection = useMemo(() => {
         const p = new Projection(projDict, resLevel);
@@ -213,46 +121,32 @@ function MapContainer() {
             strategy: 'no-overlap',
             color: [255, 255, 255],
             operation: 'terrain+draw',
-            // parameters: { depthCompare: 'always' },
             // onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
             // onTileError: (err) => console.error('Terrain tile error:', err),
         });
         return magicalTerrainLayer;
     }, [state.terrainCheckbox]);
 
-    const particleLayer = useMemo(() => {
-        if (!state.particleCheckbox) return null;
-        return new ParticleLayer({
-            id: `particleLayer`,
-            dataDir: wdir,
-            dataMag: wmag,
-            color: [255, 255, 255, 255],
-            width: 1.5,
-            numParticles: 10000,
-            projection,
-            parameters: { depthCompare: 'always', cullMode: 'front' },
-            readout: [
-                {
-                    data: wmag,
-                    prependText: 'Wind Speed',
-                    units: 'mph',
-                    interpolate: true,
-                    decimals: 0,
-                },
-                {
-                    data: wdir,
-                    prependText: 'Wind Direction',
-                    units: '°',
-                    interpolate: true,
-                    decimals: 0,
-                },
-            ],
-        });
-    }, [state.particleCheckbox, projection, wdir, wmag]);
-
     const layers = useMemo(() => {
         const result = [];
         if (state.terrainCheckbox) result.push(terrainLayer);
+        if (state.solidPolygonLayer) {
+            result.push(
+                new SolidPolygonLayer({
+                    id: 'SolidPolygonLayer',
+                    data: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-zipcodes.json',
+                    extensions: [new TerrainExtension()],
+                    terrainDrawMode: 'drape',
+                    extruded: true,
+                    wireframe: true,
+                    getPolygon: (d) => d.contour,
+                    getElevation: (d) => d.population / d.area / 10,
+                    getFillColor: (d) => [d.population / d.area / 60, 140, 0],
+                    getLineColor: [80, 80, 80],
+                    pickable: true,
+                }),
+            );
+        }
         if (state.shadedCheckbox)
             result.push(
                 new ShadedLayer({
@@ -267,8 +161,6 @@ function MapContainer() {
                     extensions: [new TerrainExtension()],
                     terrainDrawMode: 'drape',
                     interpolateData: state.shadedInterpolateCheckbox,
-                    // parameters: { depthCompare: 'always', cullMode: 'back' },
-                    // parameters: { depthCompare: 'always', cullMode: 'back', frontFace: 'ccw' },
                     readout: [
                         {
                             data,
@@ -284,7 +176,7 @@ function MapContainer() {
         if (state.contourCheckbox)
             result.push(
                 new ContourLayer({
-                    id: `contourLayer`,
+                    id: `contourLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
                     beforeId: mapStyles[style].beforeId,
                     data,
                     colors,
@@ -295,10 +187,6 @@ function MapContainer() {
                     elevation: 0,
                     extensions: [new TerrainExtension()],
                     terrainDrawMode: 'drape',
-                    parameters: {
-                        depthCompare: 'always',
-                        cullMode: 'back',
-                    },
                     labels: { enabled: state.contourLabels, getSize: 14 },
                     readout: [
                         {
@@ -312,48 +200,15 @@ function MapContainer() {
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
                 }),
             );
-        if (state.vectorCheckbox)
-            result.push(
-                new VectorLayer({
-                    id: `vectorLayer`,
-                    beforeId: mapStyles[style].beforeId,
-                    getColor: [255, 255, 255, 255],
-                    dataDir: wdir,
-                    dataMag: wmag,
-                    projection,
-                    angleOffset: 0,
-                    extensions: [new TerrainExtension()],
-                    terrainDrawMode: 'drape',
-                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
-                    readout: [
-                        {
-                            data: wmag,
-                            prependText: 'Wind Speed',
-                            decimals: 0,
-                            units: 'mph',
-                            interpolate: true,
-                        },
-                        {
-                            data: wdir,
-                            prependText: 'Wind Direction',
-                            decimals: 0,
-                            units: '°',
-                            interpolate: true,
-                        },
-                    ],
-                }),
-            );
-        if (state.particleCheckbox) result.push(particleLayer);
-
         return result;
     }, [
         state.terrainCheckbox,
+        state.solidPolygonLayer,
         state.shadedCheckbox,
         state.shadedInterpolateCheckbox,
         state.contourCheckbox,
+        state.isGlobeView,
         state.contourLabels,
-        state.vectorCheckbox,
-        state.particleCheckbox,
         terrainLayer,
         style,
         data,
@@ -362,9 +217,6 @@ function MapContainer() {
         colorType,
         projection,
         contourLevels,
-        wdir,
-        wmag,
-        particleLayer,
     ]);
 
     return (
