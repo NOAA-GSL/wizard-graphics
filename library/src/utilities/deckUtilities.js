@@ -140,6 +140,15 @@ export default class deckUtilities {
 
     // Helper function to determine if a feature is visible from a camera's pov on globe projection
     static isFeatureVisibleOnGlobe(cameraLat, cameraLon, featureLat, featureLon, zoom) {
+        // check for valid numbers to prevent errors from 'undefined' values
+        if (
+            [cameraLat, cameraLon, featureLat, featureLon, zoom].some(
+                (v) => typeof v !== 'number' || Number.isNaN(v),
+            )
+        ) {
+            return false;
+        }
+
         const toRad = (deg) => (deg * Math.PI) / 180;
 
         // Convert lat/lon to radians
