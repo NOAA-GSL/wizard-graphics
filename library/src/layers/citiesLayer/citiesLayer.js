@@ -176,9 +176,16 @@ export default class CitiesLayer extends CompositeLayer {
             new TextLayer(this.props, {
                 id: `${this.props.id}-tagmap-layer`,
                 // hack to prevent labels on the opposite side of the globe from being visible
-                data: cityData.filter((d) =>
-                    deckUtilities.isFeatureVisibleOnGlobe(cameraLat, cameraLon, d.lat, d.lon, zoom),
-                ),
+                data:
+                    cityData?.filter((d) =>
+                        deckUtilities.isFeatureVisibleOnGlobe(
+                            cameraLat,
+                            cameraLon,
+                            d.lat,
+                            d.lon,
+                            zoom,
+                        ),
+                    ) || false,
                 getText: (d) => d.name,
                 getPosition: (d) => [Number(d.lon), Number(d.lat), elevation],
                 getSize: (d) => {
@@ -193,14 +200,15 @@ export default class CitiesLayer extends CompositeLayer {
                 new TextLayer(this.props, {
                     id: `${this.props.id}-tagmap-dataLabels`,
                     // hack to prevent labels on the opposite side of the globe from being visible
-                    data: cityData.filter((d) =>
-                        deckUtilities.isFeatureVisibleOnGlobe(
-                            cameraLat,
-                            cameraLon,
-                            d.lat,
-                            d.lon,
-                            zoom,
-                        ),
+                    data: cityData?.filter(
+                        (d) =>
+                            deckUtilities.isFeatureVisibleOnGlobe(
+                                cameraLat,
+                                cameraLon,
+                                d.lat,
+                                d.lon,
+                                zoom,
+                            ) || false,
                     ),
                     fontWeight: '700',
                     outlineWidth: 3,
