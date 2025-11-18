@@ -73,7 +73,7 @@ function MapContainer() {
     const [currentDataset, setCurrentDataset] = React.useState(radioOptions[0]);
 
     const controllerOptions = ['MapLibre-GL', 'DeckGL'];
-    const [currentController, setCurrentController] = React.useState(controllerOptions[1]);
+    const [currentController, setCurrentController] = React.useState(controllerOptions[0]);
 
     const toggle = useCallback((key) => (e) => dispatch({ key, value: e.target.checked }), []);
 
