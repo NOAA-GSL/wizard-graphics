@@ -331,7 +331,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
     // Render the readout. For offsets, match viewport by view.id to views array
     // get latest deck for offsets when rendering
     const overlay = overlayRef?.current;
-    const deck = overlay?._deck;
+    const deck = overlay?._deck || overlay?.deck;
     const viewports = deck?.viewManager?.getViewports?.() || deck?.getViewports?.() || [];
     // build mapping from view id -> viewport
     const vpById = new Map(viewports.map((v) => [v.id, v]));
