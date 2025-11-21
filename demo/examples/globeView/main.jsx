@@ -15,8 +15,10 @@ import {
     ParticleLayer,
     configFields,
     GeoJsonLayer,
+    LegendStaticBarNew,
 } from 'desi-graphics';
 import { DeckGL } from '@deck.gl/react';
+
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
 import hrefWmag from 'demo-data/HREF/wmag';
@@ -38,6 +40,7 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import 'desi-graphics/desi-graphics.css';
 import coastLines from './ne_10m_coastline.json';
+import LegendStaticBar from '../../../library/src/maps/legend/LegendStaticBar';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
@@ -282,7 +285,11 @@ function MapContainer() {
                             interpolate: true,
                         },
                     ],
-                    legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
+                    legend: {
+                        type: 'staticBar',
+                        title: 'Temperature',
+                        units: '°F',
+                    },
                 }),
             );
         if (state.contourCheckbox)
@@ -435,6 +442,40 @@ function MapContainer() {
                     </label>
                 ))}
             </div>
+            <LegendStaticBarNew
+                options={{
+                    colors: ['#34a3aa', '#eaaaba', '#af3013'],
+                    colorLevels: [1, 2],
+                    colorType: 'scaleThreshold',
+                    title: 'Temperature',
+                    units: '°F',
+                    orient: 'horizontal',
+                    barLength: 800,
+                    thickness: 40,
+                    ticks: 'byColorLevels',
+                    tickAngle: 0,
+                    tickValues: ['hello', 'world'],
+                    isLeftCap: true,
+                    isRightCap: true,
+                }}
+            />
+            <LegendStaticBarNew
+                options={{
+                    colors: ['#34a3aa', '#eaaaba', '#af3013'],
+                    colorLevels: [1, 2],
+                    colorType: 'scaleThreshold',
+                    title: 'Temperature',
+                    units: '°F',
+                    orient: 'vertical',
+                    barLength: 600,
+                    thickness: 40,
+                    ticks: 'byColorLevels',
+                    tickAngle: 0,
+                    tickValues: ['hello', 'world'],
+                    isLeftCap: true,
+                    isRightCap: true,
+                }}
+            />
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
                 {currentController === 'MapLibre-GL' && (
                     <Map
