@@ -1,4 +1,4 @@
-/* eslint-disable import/prefer-default-export */
+import { scaleLinear, scaleThreshold } from 'd3';
 
 // setting up canvas outside of function to prevent repeated creation
 const canvas = document.createElement('canvas');
@@ -19,11 +19,9 @@ const context = canvas.getContext('2d');
  * console.log(metrics.width);
  */
 export function getTextDimensions(text, font, rotate = 0) {
-    console.log('rotate:', rotate);
     context.save();
     context.font = font;
     const metrics = context.measureText(text);
-    console.log('metrics:', metrics);
     const { width } = metrics;
     const height = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
     // now we need to calculate the rotated width and height
@@ -33,4 +31,55 @@ export function getTextDimensions(text, font, rotate = 0) {
         Math.abs(width * Math.sin(radians)) + Math.abs(height * Math.cos(radians));
     context.restore();
     return { width: rotatedWidth, height: rotatedHeight };
+}
+
+// takes in an array of labels with a name property and a font, '700 14px Arial'
+export function getMaxTextDimensions(textArray, font, rotate = 0) {
+    // variable to store the maximum label width
+    let maxLabelWidth = 0;
+    let maxLabelHeight = 0;
+
+    // Iterate over all the labels to find the maximum width
+    textArray.forEach((item) => {
+        const { width: labelWidth, height: labelHeight } = getTextDimensions(item, font, rotate);
+        if (labelWidth > maxLabelWidth) {
+            maxLabelWidth = Math.ceil(labelWidth);
+        }
+        if (labelHeight > maxLabelHeight) {
+            maxLabelHeight = Math.ceil(labelHeight);
+        }
+    });
+
+    return { width: maxLabelWidth, height: maxLabelHeight };
+}
+
+export function getColors(colorLevels, colors, colorType) {
+    const clen = colors.length;
+    const llen = colorLevels.length;
+    if (colorType === 'scaleThreshold') {
+        if (llen + 1 !== clen) {
+            console.log(
+                `ERROR: When using the threshold colorbar the number of colors must be one greater than the number of levels.` +
+                    `\nColors Length: ${clen}\nLevels Length: ${llen}
+                    \nLevels: ${colorLevels}
+                    \nColors: ${colors}`,
+            );
+        }
+    } else if (colorType === 'scaleLinear') {
+        if (llen !== clen) {
+            console.log(
+                `ERROR: When using the linear colorbar the number of colors and levels must be equal` +
+                    `\nColors Length: ${clen}\nLevels Length: ${llen}
+                    \nLevels: ${colorLevels}
+                    \nColors: ${colors}`,
+            );
+        }
+    } else {
+        console.log('ERROR: Colorbar of type', colorType, 'not found');
+    }
+
+    const colorScale = colorType === 'scaleLinear' ? scaleLinear() : scaleThreshold();
+
+    colorScale.domain(colorLevels).range(colors);
+    return colorScale;
 }

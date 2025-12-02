@@ -1,38 +1,7 @@
 import * as d3 from 'd3';
-import { scaleLinear, range } from 'd3';
+import { scaleLinear, scaleThreshold, range, format } from 'd3';
 import { useEffect, useRef } from 'react';
-import { getTextDimensions } from './legendHelperFunctions';
-
-export function getcolors(colorLevels, colors, colorType) {
-    const clen = colors.length;
-    const llen = colorLevels.length;
-    if (colorType === 'scaleThreshold') {
-        if (llen + 1 !== clen) {
-            console.log(
-                `ERROR: When using the threshold colorbar the number of colors must be one greater than the number of levels.` +
-                    `\nColors Length: ${clen}\nLevels Length: ${llen}
-                    \nLevels: ${colorLevels}
-                    \nColors: ${colors}`,
-            );
-        }
-    } else if (colorType === 'scaleLinear') {
-        if (llen !== clen) {
-            console.log(
-                `ERROR: When using the linear colorbar the number of colors and levels must be equal` +
-                    `\nColors Length: ${clen}\nLevels Length: ${llen}
-                    \nLevels: ${colorLevels}
-                    \nColors: ${colors}`,
-            );
-        }
-    } else {
-        console.log('ERROR: Colorbar of type', colorType, 'not found');
-    }
-
-    const colorScale = colorType === 'scaleLinear' ? d3.scaleLinear() : d3.scaleThreshold();
-
-    colorScale.domain(colorLevels).range(colors);
-    return colorScale;
-}
+import { getTextDimensions, getColors, getMaxTextDimensions } from './legendHelperFunctions';
 
 export default function LegendStaticBar({ options }) {
     // destructuring `options` with default values
@@ -43,13 +12,10 @@ export default function LegendStaticBar({ options }) {
         colorType, // scaleLinear, scaleThreshold
         // optional variables
         animationSpeed = 1000,
-        className = '',
         ticks: tickStyle = 'linear', // 'linear', 'byColorLevels'
         orient = 'vertical', // vertical or horizontal
         barLength = 600, // how long is the bar
         thickness = 10, // how thick is the bar
-        tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
-        tickValues = null, // specific tick values for the colorbar
         title = '', // title on legend
         units = '', // units on legend
         x = 0, // position relative to the div container
@@ -61,11 +27,18 @@ export default function LegendStaticBar({ options }) {
         titleSx = {},
         tickClassName = 'desi-default-legend-tick',
         tickSx = {},
+        tickLength = 5, // length of the tick lines
+        tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
+        tickValues = null, // specific tick values for the colorbar
         // font props
-        fontFamily = 'sans-serif',
-        fontSize = 12,
-        fontWeight = 400,
-        fontColor = '#fff',
+        titleFontFamily = 'sans-serif',
+        titleFontSize = 12,
+        titleFontWeight = 400,
+        titleFontColor = '#fff',
+        tickFontFamily = 'sans-serif',
+        tickFontSize = 10,
+        tickFontWeight = 400,
+        tickFontColor = '#fff',
     } = options;
 
     // scaleLinear should always have isLeftCap and isRightCap set to false
@@ -83,38 +56,19 @@ export default function LegendStaticBar({ options }) {
         return ticksToFilter.filter((tick) => tick >= min && tick <= max);
     }
 
-    useEffect(() => {
-        /*
-		Copyright (c) 2013, Benjamin Schmidt
-		All rights reserved.
-		Modified by Travis Wilson for D3v6 and this application
-		
-		Redistribution and use in source and binary forms, with or without modification,
-		are permitted provided that the following conditions are met:
-		
-		* Redistributions of source code must retain the above copyright notice, this
-			list of conditions and the following disclaimer.
-		
-		* Redistributions in binary form must reproduce the above copyright notice, this
-			list of conditions and the following disclaimer in the documentation and/or
-			other materials provided with the distribution.
-		
-		* Neither the name of the {organization} nor the names of its
-			contributors may be used to endorse or promote products derived from
-			this software without specific prior written permission.
-		
-		THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-		ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-		WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-		DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-		ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-		(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-		LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-		ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-		(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-		SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-		*/
+    // todo: actually, I might not need this...
+    function filterTicksTest(domain, ticksToFilter) {
+        const min = domain[0];
+        const max = domain[domain.length - 1];
+        return ticksToFilter.map((tick) => {
+            if (tick >= min && tick <= max) {
+                return tick;
+            }
+            return '';
+        });
+    }
 
+    useEffect(() => {
         const origin = { x, y };
 
         let thicknessAttr;
@@ -131,7 +85,7 @@ export default function LegendStaticBar({ options }) {
         let additionalTextTranslate = 'translate(0,0)';
 
         // Grab the color scale
-        const colorScale = getcolors(colorLevels, colors, colorType);
+        const colorScale = getColors(colorLevels, colors, colorType);
 
         const titlePadding = title ? 17 : 0;
 
@@ -365,25 +319,9 @@ export default function LegendStaticBar({ options }) {
     const isHorizontal = orient === 'horizontal';
     const titleRotate = isHorizontal ? 0 : -90;
 
-    // don't include the () when no units are provided
-    // using .trim() because sometimes we get a space in the empty string
-    const titleText = `${title} ${units.trim() ? `(${units})` : ''}`;
-
-    const titleDimensions = getTextDimensions(
-        titleText,
-        `${fontWeight} ${fontSize}px ${fontFamily}`,
-        titleRotate,
-    );
-
-    // todo: fix the 10px hardcoding here
-    const svgWidth = isHorizontal ? barLength + 10 : thickness + 10 + titleDimensions.width;
-    console.log('svgWidth:', svgWidth);
-    const svgHeight = isHorizontal ? thickness + 10 + titleDimensions.height : barLength + 10;
-    console.log('svgHeight:', svgHeight);
-
+    // do all the tick calculations
     // Grab the color scale
-    const colorScale = getcolors(colorLevels, colors, colorType);
-    console.log('colorScale:', colorScale);
+    const colorScale = getColors(colorLevels, colors, colorType);
 
     // Make the fillLegendScale
     const domain = colorScale.domain();
@@ -392,7 +330,6 @@ export default function LegendStaticBar({ options }) {
     if (isLeftCap) domain.unshift(domain[0] - 1);
     console.log('domain:', domain);
     const fillLegendScale = scaleLinear().domain(domain);
-    console.log('fillLegendScale:', fillLegendScale);
 
     // the legendRange determines where the colors are placed along the bar
     const legendRange = range(0, barLength, barLength / (fillLegendScale.domain().length - 1));
@@ -400,13 +337,99 @@ export default function LegendStaticBar({ options }) {
         legendRange.push(barLength);
     }
     // Vertical should go bottom to top, horizontal from left to right.
-    // This should be configurable in the options, ideally.
     if (orient === 'vertical') {
         legendRange.reverse();
     }
     console.log('legendRange:', legendRange);
     fillLegendScale.range(legendRange);
-    console.log('fillLegendScale:', fillLegendScale);
+
+    // Compute tick values and labels
+    let finalTickValues = [];
+    let finalTickLabels = [];
+    const maxTicks = 20;
+
+    if (tickStyle === 'byColorLevels' && tickValues) {
+        // Use provided tick values and labels
+        finalTickValues = fillLegendScale.domain();
+        finalTickValues = filterTicks(colorScale.domain(), finalTickValues);
+        finalTickLabels = tickValues;
+    } else if (tickStyle === 'byColorLevels') {
+        // Use color levels, but limit number of ticks
+        finalTickValues = fillLegendScale.domain();
+        finalTickValues = filterTicks(colorScale.domain(), finalTickValues);
+        if (finalTickValues.length > maxTicks) {
+            // Downsample ticks
+            const step = Math.ceil(finalTickValues.length / maxTicks);
+            finalTickValues = finalTickValues.filter((_, i) => i % step === 0);
+        }
+        finalTickLabels = finalTickValues.map((d) => format(',.2~f')(d));
+    } else {
+        // Default: use scale ticks
+        finalTickValues = fillLegendScale.ticks
+            ? fillLegendScale.ticks()
+            : fillLegendScale.domain();
+        finalTickValues = filterTicks(colorScale.domain(), finalTickValues);
+        finalTickLabels = finalTickValues.map((d) => format(',.2~f')(d));
+    }
+    console.log('finalTickValues:', finalTickValues);
+    console.log('finalTickLabels:', finalTickLabels);
+
+    // don't include the () when no units are provided
+    // using .trim() because sometimes we get a space in the empty string
+    const titleText = `${title} ${units.trim() ? `(${units})` : ''}`;
+    console.log('titleText:', titleText);
+
+    const titleDimensions = getTextDimensions(
+        titleText,
+        `${titleFontWeight} ${titleFontSize}px ${titleFontFamily}`,
+        titleRotate,
+    );
+
+    const textPaddingMultiplier = 1.2;
+    const titleSize = isHorizontal
+        ? titleDimensions.height * textPaddingMultiplier
+        : titleDimensions.width * textPaddingMultiplier;
+
+    const tickDimensions = getMaxTextDimensions(
+        finalTickLabels,
+        `${tickFontWeight} ${tickFontSize}px ${tickFontFamily}`,
+        tickAngle,
+    );
+
+    const tickPadding = 2; // extra padding between ticks and labels
+    const tickSize = isHorizontal
+        ? tickDimensions.height + tickLength + tickPadding
+        : tickDimensions.width + tickLength + tickPadding;
+
+    // The logic below is used to add space for the first and last tick labels.
+    // Without this, it's possible for the first and last labels to be cut off
+    let labelSizeStart = 0;
+    let labelSizeEnd = 0;
+    if (finalTickValues[0] === domain[0]) {
+        const labelDimensionsStart = getTextDimensions(
+            finalTickLabels[0],
+            `${tickFontWeight} ${tickFontSize}px ${tickFontFamily}`,
+        );
+        labelSizeStart = isHorizontal
+            ? labelDimensionsStart.width / 2
+            : labelDimensionsStart.height / 2;
+        console.log('labelSizeStart:', labelSizeStart);
+    }
+    if (finalTickValues[finalTickValues.length - 1] === domain[domain.length - 1]) {
+        const labelDimensionsEnd = getTextDimensions(
+            finalTickLabels[finalTickLabels.length - 1],
+            `${tickFontWeight} ${tickFontSize}px ${tickFontFamily}`,
+        );
+        labelSizeEnd = isHorizontal ? labelDimensionsEnd.width / 2 : labelDimensionsEnd.height / 2;
+        console.log('labelSizeEnd:', labelSizeEnd);
+    }
+
+    const svgWidth = isHorizontal
+        ? barLength + labelSizeStart + labelSizeEnd
+        : thickness + titleSize + tickSize;
+    const svgHeight = isHorizontal
+        ? thickness + titleSize + tickSize
+        : barLength + labelSizeStart + labelSizeEnd;
 
     // Compute segment positions
     const stops = fillLegendScale.domain();
@@ -418,53 +441,155 @@ export default function LegendStaticBar({ options }) {
             color: colorScale(stops[i]),
         });
     }
-    console.log('titleDimensions.height:', titleDimensions.height);
 
     return (
-        <div
+        <svg
+            width={svgWidth}
+            height={svgHeight}
             className={containerClassName}
-            style={{ fontFamily, fontSize, fontWeight, color: fontColor, ...containerSx }}
+            style={{
+                display: 'block',
+                ...containerSx,
+            }}
         >
-            <svg width={svgWidth} height={svgHeight} style={{ border: '1px solid white' }}>
+            {/* SVG defs for gradient */}
+            {colorType === 'scaleLinear' && (
+                <defs>
+                    <linearGradient
+                        id="legend-gradient"
+                        x1={isHorizontal ? '0%' : '100%'}
+                        y1={isHorizontal ? '100%' : '0%'}
+                        x2={isHorizontal ? '100%' : '100%'}
+                        y2={isHorizontal ? '100%' : '100%'}
+                        gradientUnits="userSpaceOnUse"
+                    >
+                        {fillLegendScale.domain().map((d, i) => (
+                            <stop
+                                key={i}
+                                offset={`${(fillLegendScale(d) / barLength) * 100}%`}
+                                stopColor={colorScale(d)}
+                            />
+                        ))}
+                    </linearGradient>
+                </defs>
+            )}
+
+            {/* adjust position of entire legend based on extra spacing necessary for start/end labels  */}
+            <g
+                transform={`translate(${isHorizontal ? labelSizeStart : 0}, ${isHorizontal ? 0 : labelSizeEnd})`}
+            >
                 {/* title */}
                 <text
-                    // need to adjust rotation so it isn't around the origin
+                    // need to adjust rotation by setting the origin to the center of the text
+                    // keep in mind that the titleDimensions include the rotation already
                     transform={
                         isHorizontal
-                            ? null
-                            : `translate(${titleDimensions.width}, ${svgHeight / 2}) rotate(${titleRotate})`
+                            ? undefined
+                            : `rotate(${titleRotate}, ${titleDimensions.width / 2}, ${svgHeight / 2})`
                     }
-                    x={isHorizontal ? svgWidth / 2 : 0}
-                    y={isHorizontal ? titleDimensions.height / 2 : 0}
+                    x={isHorizontal ? svgWidth / 2 : titleDimensions.width / 2}
+                    y={isHorizontal ? titleDimensions.height / 2 : svgHeight / 2}
                     textAnchor="middle"
                     dominantBaseline="central"
                     className={titleClassName}
-                    style={{ fill: fontColor, ...titleSx }}
+                    style={{
+                        fill: titleFontColor,
+                        fontFamily: titleFontFamily,
+                        fontSize: titleFontSize,
+                        fontWeight: titleFontWeight,
+                        color: titleFontColor,
+                        ...titleSx,
+                    }}
                 >
                     {titleText}
                 </text>
                 {/* legend bar */}
-                {console.log('titleDimensions.height:', titleDimensions.height)}
                 <g
-                    // todo: need to come back and fix the 5px hardcoding here
                     transform={
-                        isHorizontal
-                            ? `translate(5, ${titleDimensions.height})`
-                            : `translate(${titleDimensions.width * 1.25}, 5)`
+                        isHorizontal ? `translate(0, ${titleSize})` : `translate(${titleSize}, 0)`
                     }
                 >
-                    {segments.map((seg, i) => (
+                    {/* if scaleLinear, we use a single rect with the gradient */}
+                    {colorType === 'scaleLinear' ? (
                         <rect
-                            key={i}
-                            x={isHorizontal ? seg.start : 0}
-                            y={isHorizontal ? 0 : seg.start}
-                            width={isHorizontal ? seg.end - seg.start : thickness}
-                            height={isHorizontal ? thickness : seg.end - seg.start}
-                            fill={seg.color}
+                            x={0}
+                            y={0}
+                            width={isHorizontal ? barLength : thickness}
+                            height={isHorizontal ? thickness : barLength}
+                            fill="url(#legend-gradient)"
                         />
-                    ))}
+                    ) : (
+                        // if scaleThreshold, we use multiple rects for each color segment
+                        segments.map((seg, i) => (
+                            <rect
+                                key={i}
+                                x={isHorizontal ? seg.start : 0}
+                                y={isHorizontal ? 0 : seg.end}
+                                width={isHorizontal ? seg.end - seg.start : thickness}
+                                height={isHorizontal ? thickness : seg.start - seg.end}
+                                fill={seg.color}
+                            />
+                        ))
+                    )}
                 </g>
-            </svg>
-        </div>
+                {/* legend ticks */}
+                <g
+                    transform={
+                        isHorizontal ? `translate(0, ${titleSize})` : `translate(${titleSize}, 0)`
+                    }
+                >
+                    {/* axis line */}
+                    <line
+                        x1={isHorizontal ? 0 : thickness}
+                        y1={isHorizontal ? thickness : 0}
+                        x2={isHorizontal ? barLength : thickness}
+                        y2={isHorizontal ? thickness : barLength}
+                        stroke={tickFontColor}
+                    />
+                    {finalTickValues.map((tickValue, i) => {
+                        const pos = fillLegendScale(tickValue);
+                        return (
+                            <g
+                                key={tickValue}
+                                // The offset of 1 is for the axis line of 1px thickness
+                                transform={
+                                    isHorizontal ? `translate(${pos},1)` : `translate(1,${pos})`
+                                }
+                            >
+                                <line
+                                    x1={isHorizontal ? 0 : thickness}
+                                    y1={isHorizontal ? thickness : 0}
+                                    x2={isHorizontal ? 0 : thickness + tickLength}
+                                    y2={isHorizontal ? thickness + tickLength : 0}
+                                    stroke={tickFontColor}
+                                />
+                                <text
+                                    x={isHorizontal ? 0 : thickness + tickLength + tickPadding}
+                                    y={isHorizontal ? thickness + tickLength + tickPadding : 0}
+                                    transform={
+                                        isHorizontal
+                                            ? `rotate(${tickAngle}, 0, ${thickness + tickLength + tickSize})`
+                                            : `rotate(${tickAngle}, ${thickness + tickLength + tickSize}, 0)`
+                                    }
+                                    textAnchor={isHorizontal ? 'middle' : 'start'}
+                                    dominantBaseline={isHorizontal ? 'hanging' : 'central'}
+                                    className={tickClassName}
+                                    style={{
+                                        fill: tickFontColor,
+                                        fontFamily: tickFontFamily,
+                                        fontSize: `${tickFontSize}px`,
+                                        fontWeight: tickFontWeight,
+                                        color: tickFontColor,
+                                        ...tickSx,
+                                    }}
+                                >
+                                    {finalTickLabels[i]}
+                                </text>
+                            </g>
+                        );
+                    })}
+                </g>
+            </g>
+        </svg>
     );
 }
