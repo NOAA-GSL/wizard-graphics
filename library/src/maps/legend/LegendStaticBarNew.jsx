@@ -34,6 +34,7 @@ export default function LegendStaticBar({ options }) {
         tickLength = 5, // length of the tick lines
         tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
         tickValues = null, // specific tick values for the colorbar
+        tickPadding = 2, // extra padding between ticks and labels
         // hide the first and last ticks, will not affect end caps ticks since those are already hidden
         hideOuterTicks = false,
         // font props
@@ -158,10 +159,13 @@ export default function LegendStaticBar({ options }) {
         tickAngle,
     );
 
-    const tickPadding = 2; // extra padding between ticks and labels
-    const tickSize = isHorizontal
-        ? tickDimensions.height + tickLength + tickPadding
-        : tickDimensions.width + tickLength + tickPadding;
+    // we have to adjust the tickPadding based on a negative tickLength
+    const adjustedTickPadding = tickLength < 0 ? tickPadding * -1 : tickPadding;
+    let tickSize = isHorizontal
+        ? tickDimensions.height + tickLength + adjustedTickPadding
+        : tickDimensions.width + tickLength + adjustedTickPadding;
+    // if ticks are inside the bar, don't add to size (the 1 px is for the axis line)
+    if (tickLength < 0) tickSize = 1;
 
     // The logic below is used to add space for the first and last tick labels.
     // Without this, it's possible for the first and last labels to be cut off
@@ -328,10 +332,11 @@ export default function LegendStaticBar({ options }) {
                     />
                     {finalTickValues.map((tickValue, i) => {
                         const pos = fillLegendScale(tickValue);
-                        const anchorPoint = thickness + tickLength + tickPadding;
+                        const anchorPoint = thickness + tickLength + adjustedTickPadding;
                         const transformProps = getTransformProps(
                             isHorizontal,
                             anchorPoint,
+                            tickLength,
                             tickAngle,
                         );
                         return (

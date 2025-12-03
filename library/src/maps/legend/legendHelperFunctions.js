@@ -53,44 +53,48 @@ export function getMaxTextDimensions(textArray, font, rotate = 0) {
     return { width: maxLabelWidth, height: maxLabelHeight };
 }
 
-export function getTransformProps(isHorizontal, anchorPoint, tickAngle = 0) {
+export function getTransformProps(isHorizontal, anchorPoint, tickLength, tickAngle = 0) {
+    console.log('tickLength:', tickLength);
+    console.log('anchorPoint:', anchorPoint);
     // guard against string input
     const tickAngleNumber = Number(tickAngle);
+    const isNegativeTick = tickLength < 0;
+    console.log('isNegativeTick:', isNegativeTick);
 
     let transform = '';
     let textAnchor = '';
     let dominantBaseline = '';
 
-    if (tickAngleNumber > 90 || tickAngleNumber < -90) {
-        console.warn('tickAngle should be between -90 and 90 degrees');
-    } else if (isHorizontal) {
+    if (isHorizontal) {
         if (tickAngleNumber > 0) {
-            textAnchor = 'start';
+            textAnchor = isNegativeTick ? 'end' : 'start';
             dominantBaseline = 'central';
             transform = `rotate(${tickAngleNumber}, 0, ${anchorPoint})`;
         } else if (tickAngleNumber < 0) {
-            textAnchor = 'end';
+            textAnchor = isNegativeTick ? 'start' : 'end';
             dominantBaseline = 'central';
             transform = `rotate(${tickAngleNumber}, 0, ${anchorPoint})`;
         } else {
+            // tickAngleNumber === 0
             textAnchor = 'middle';
-            dominantBaseline = 'hanging';
+            dominantBaseline = isNegativeTick ? 'alphabetic' : 'hanging';
         }
     } else if (!isHorizontal) {
         if (tickAngleNumber === 90) {
             textAnchor = 'middle';
-            dominantBaseline = 'alphabetic';
+            dominantBaseline = isNegativeTick ? 'hanging' : 'alphabetic';
             transform = `rotate(90, ${anchorPoint}, 0)`;
         } else if (tickAngleNumber === -90) {
             textAnchor = 'middle';
-            dominantBaseline = 'hanging';
+            dominantBaseline = isNegativeTick ? 'alphabetic' : 'hanging';
             transform = `rotate(-90, ${anchorPoint}, 0)`;
         } else if (tickAngleNumber !== 0) {
-            textAnchor = 'start';
+            textAnchor = isNegativeTick ? 'end' : 'start';
             dominantBaseline = 'central';
             transform = `rotate(${tickAngleNumber}, ${anchorPoint}, 0)`;
         } else {
-            textAnchor = 'start';
+            // tickAngleNumber === 0
+            textAnchor = isNegativeTick ? 'end' : 'start';
             dominantBaseline = 'central';
         }
     }
