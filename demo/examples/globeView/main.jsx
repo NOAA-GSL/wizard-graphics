@@ -442,80 +442,90 @@ function MapContainer() {
                     </label>
                 ))}
             </div>
-            <LegendStaticBarNew
-                options={{
-                    colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                    colorLevels: [1, 2, 3],
-                    colorType: 'scaleLinear',
-                    title: 'scaleThreshold no caps',
-                    units: '°F',
-                    orient: 'horizontal',
-                    barLength: 600,
-                    thickness: 40,
-                    ticks: 'linear',
-                    tickAngle: 45,
-                    isLeftCap: false,
-                    isRightCap: false,
-                    titleFontFamily: 'monospace',
-                    titleFontSize: 24,
-                    titleFontColor: '#aefd2a',
-                    containerSx: { border: '2px solid blue', padding: '10px' },
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '40px',
+                    margin: '40px',
                 }}
-            />
-            <LegendStaticBar
-                options={{
-                    colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                    colorLevels: [1, 2, 3],
-                    colorType: 'scaleLinear',
-                    title: 'scaleThreshold no caps',
-                    units: '°F',
-                    orient: 'horizontal',
-                    barLength: 600,
-                    thickness: 40,
-                    ticks: 'linear',
-                    isLeftCap: false,
-                    isRightCap: false,
-                }}
-            />
-            <LegendStaticBarNew
-                options={{
-                    colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                    colorLevels: [1, 2],
-                    colorType: 'scaleThreshold',
-                    title: 'scaleThreshold With tickValues',
-                    units: '°F',
-                    orient: 'horizontal',
-                    barLength: 600,
-                    thickness: 40,
-                    ticks: 'byColorLevels',
-                    // tickAngle: 45,
-                    tickValues: ['hello', 'world'],
-                    isLeftCap: true,
-                    isRightCap: true,
-                    titleFontFamily: 'Georgia, serif',
-                    titleFontSize: 24,
-                    titleFontColor: '#aefd2a',
-                    // tickLength: 30,
-                    // tickFontSize: 18,
-                    containerSx: { border: '2px solid blue', padding: '10px' },
-                }}
-            />
-            <LegendStaticBarNew
-                options={{
-                    colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                    colorLevels: [1, 2],
-                    colorType: 'scaleThreshold',
-                    title: 'scaleThreshold vertical with 1st caps',
-                    units: '°F',
-                    orient: 'vertical',
-                    barLength: 600,
-                    thickness: 40,
-                    ticks: 'byColorLevels',
-                    tickAngle: 0,
-                    isLeftCap: true,
-                    isRightCap: false,
-                }}
-            />
+            >
+                <LegendStaticBarNew
+                    options={{
+                        colors: ['#34a3aa', '#eaaaba', '#af3013'],
+                        colorLevels: [1, 2, 3],
+                        colorType: 'scaleLinear',
+                        title: 'HORIZONTAL Temperature',
+                        units: '°F',
+                        orient: 'horizontal',
+                        barLength: 600,
+                        thickness: 140,
+                        ticks: 'linear',
+                        tickAngle: 0,
+                        tickLength: -30,
+                        tickFontSize: 16,
+                        isLeftCap: false,
+                        isRightCap: false,
+                        hideOuterTicks: true,
+                        titleFontFamily: 'Times New Roman',
+                        titleFontSize: 24,
+                        titleFontColor: '#aefd2a',
+                        titleJustify: 'right',
+                        containerSx: {
+                            border: '2px solid skyblue',
+                            padding: '40px',
+                            borderRadius: '10px',
+                        },
+                    }}
+                />
+                <LegendStaticBarNew
+                    options={{
+                        colors: ['#34a3aa', '#eaaaba', '#af3013'],
+                        colorLevels: [1, 2, 3],
+                        colorType: 'scaleLinear',
+                        title: 'VERTICAL Temperature',
+                        units: '°F',
+                        orient: 'vertical',
+                        barLength: 600,
+                        thickness: 40,
+                        ticks: 'linear',
+                        tickAngle: 0,
+                        isLeftCap: false,
+                        isRightCap: false,
+                        titleFontFamily: 'Verdana',
+                        titleFontSize: 24,
+                        titleFontWeight: 700,
+                        titleFontColor: '#fefefe',
+                        titleJustify: 'center',
+                        containerSx: { background: '#9651e4ff', padding: '20px' },
+                    }}
+                />
+                <LegendStaticBarNew
+                    options={{
+                        colors: ['#34a3aa', '#eaaaba', '#af3013'],
+                        colorLevels: [1, 2],
+                        colorType: 'scaleThreshold',
+                        title: 'Tick Values',
+                        units: '°F',
+                        orient: 'horizontal',
+                        barLength: 400,
+                        thickness: 90,
+                        ticks: 'byColorLevels',
+                        tickAngle: 45,
+                        tickValues: ['hello', 'world'],
+                        isLeftCap: true,
+                        isRightCap: true,
+                        titleFontFamily: 'Arial',
+                        titleFontSize: 30,
+                        titleFontColor: '#3ae4e4ff',
+                        tickFontColor: '#f38a72ff',
+                        tickLength: 20,
+                        tickFontSize: 24,
+                        // containerSx: { marginTop: '20px', marginBottom: '20px' },
+                    }}
+                />
+            </div>
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
                 {currentController === 'MapLibre-GL' && (
                     <Map

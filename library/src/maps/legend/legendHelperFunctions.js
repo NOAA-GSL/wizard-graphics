@@ -53,6 +53,89 @@ export function getMaxTextDimensions(textArray, font, rotate = 0) {
     return { width: maxLabelWidth, height: maxLabelHeight };
 }
 
+export function getTransformProps(isHorizontal, anchorPoint, tickAngle = 0) {
+    // guard against string input
+    const tickAngleNumber = Number(tickAngle);
+
+    let transform = '';
+    let textAnchor = '';
+    let dominantBaseline = '';
+
+    if (tickAngleNumber > 90 || tickAngleNumber < -90) {
+        console.warn('tickAngle should be between -90 and 90 degrees');
+    } else if (isHorizontal) {
+        if (tickAngleNumber > 0) {
+            textAnchor = 'start';
+            dominantBaseline = 'central';
+            transform = `rotate(${tickAngleNumber}, 0, ${anchorPoint})`;
+        } else if (tickAngleNumber < 0) {
+            textAnchor = 'end';
+            dominantBaseline = 'central';
+            transform = `rotate(${tickAngleNumber}, 0, ${anchorPoint})`;
+        } else {
+            textAnchor = 'middle';
+            dominantBaseline = 'hanging';
+        }
+    } else if (!isHorizontal) {
+        if (tickAngleNumber === 90) {
+            textAnchor = 'middle';
+            dominantBaseline = 'alphabetic';
+            transform = `rotate(90, ${anchorPoint}, 0)`;
+        } else if (tickAngleNumber === -90) {
+            textAnchor = 'middle';
+            dominantBaseline = 'hanging';
+            transform = `rotate(-90, ${anchorPoint}, 0)`;
+        } else if (tickAngleNumber !== 0) {
+            textAnchor = 'start';
+            dominantBaseline = 'central';
+            transform = `rotate(${tickAngleNumber}, ${anchorPoint}, 0)`;
+        } else {
+            textAnchor = 'start';
+            dominantBaseline = 'central';
+        }
+    }
+    return { transform, textAnchor, dominantBaseline };
+}
+
+export function getTitleProps({ isHorizontal, titleJustify, titleDimensions, barLength }) {
+    let transform = '';
+    let textAnchor = '';
+    let dominantBaseline = '';
+    let x = 0;
+    let y = 0;
+
+    if (isHorizontal) {
+        if (titleJustify === 'left') {
+            x = 0;
+            textAnchor = 'start';
+        } else if (titleJustify === 'center') {
+            x = barLength / 2;
+            textAnchor = 'middle';
+        } else if (titleJustify === 'right') {
+            x = barLength;
+            textAnchor = 'end';
+        }
+        y = titleDimensions.height / 2;
+        dominantBaseline = 'central';
+    } else if (!isHorizontal) {
+        if (titleJustify === 'left') {
+            y = barLength;
+            textAnchor = 'start';
+        } else if (titleJustify === 'center') {
+            y = barLength / 2;
+            textAnchor = 'middle';
+        } else if (titleJustify === 'right') {
+            y = 0;
+            textAnchor = 'end';
+        }
+        x = titleDimensions.width / 2;
+        dominantBaseline = 'central';
+        transform = `rotate(-90, ${x}, ${y})`;
+    }
+
+    return { transform, textAnchor, dominantBaseline, x, y };
+}
+
 export function getColors(colorLevels, colors, colorType) {
     const clen = colors.length;
     const llen = colorLevels.length;
