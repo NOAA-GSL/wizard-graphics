@@ -54,12 +54,9 @@ export function getMaxTextDimensions(textArray, font, rotate = 0) {
 }
 
 export function getTransformProps(isHorizontal, anchorPoint, tickLength, tickAngle = 0) {
-    console.log('tickLength:', tickLength);
-    console.log('anchorPoint:', anchorPoint);
     // guard against string input
     const tickAngleNumber = Number(tickAngle);
     const isNegativeTick = tickLength < 0;
-    console.log('isNegativeTick:', isNegativeTick);
 
     let transform = '';
     let textAnchor = '';
@@ -68,11 +65,11 @@ export function getTransformProps(isHorizontal, anchorPoint, tickLength, tickAng
     if (isHorizontal) {
         if (tickAngleNumber > 0) {
             textAnchor = isNegativeTick ? 'end' : 'start';
-            dominantBaseline = 'central';
+            dominantBaseline = 'middle';
             transform = `rotate(${tickAngleNumber}, 0, ${anchorPoint})`;
         } else if (tickAngleNumber < 0) {
             textAnchor = isNegativeTick ? 'start' : 'end';
-            dominantBaseline = 'central';
+            dominantBaseline = 'middle';
             transform = `rotate(${tickAngleNumber}, 0, ${anchorPoint})`;
         } else {
             // tickAngleNumber === 0
@@ -90,12 +87,12 @@ export function getTransformProps(isHorizontal, anchorPoint, tickLength, tickAng
             transform = `rotate(-90, ${anchorPoint}, 0)`;
         } else if (tickAngleNumber !== 0) {
             textAnchor = isNegativeTick ? 'end' : 'start';
-            dominantBaseline = 'central';
+            dominantBaseline = 'middle';
             transform = `rotate(${tickAngleNumber}, ${anchorPoint}, 0)`;
         } else {
             // tickAngleNumber === 0
             textAnchor = isNegativeTick ? 'end' : 'start';
-            dominantBaseline = 'central';
+            dominantBaseline = 'middle';
         }
     }
     return { transform, textAnchor, dominantBaseline };

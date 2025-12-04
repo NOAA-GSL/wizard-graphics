@@ -2,7 +2,6 @@ import { some } from 'lodash';
 import LegendDynamicItems from './LegendDynamicItems';
 import LegendStaticItems from './LegendStaticItems';
 import LegendStaticBar from './LegendStaticBar';
-import LegendStaticBarNew from './LegendStaticBarNew';
 import './Legend.css';
 
 /**
@@ -45,7 +44,7 @@ export default function Legend({ mapRef, viewState, overlayRef }) {
             <div id="legendContainer">
                 {/* Add static bar legends */}
                 {staticBars.map((item, index) => (
-                    <LegendStaticBarNew key={index} options={item} />
+                    <LegendStaticBar key={index} options={item} />
                 ))}
             </div>
             {/* Only render dynamic or static legends if they contain items */}

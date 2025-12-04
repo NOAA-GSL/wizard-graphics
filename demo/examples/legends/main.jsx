@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { LegendStaticBarNew } from 'desi-graphics';
+import { LegendStaticBar } from 'desi-graphics';
 
 import './style.css';
 import 'desi-graphics/desi-graphics.css';
@@ -18,7 +18,7 @@ function LegendContainer() {
             }}
         >
             <div className="legend-row">
-                <LegendStaticBarNew
+                <LegendStaticBar
                     options={{
                         colors: ['#34a3aa00', '#eaaaba', '#af3013'],
                         colorLevels: [1, 2, 3],
@@ -52,6 +52,7 @@ function LegendContainer() {
                 />
                 <ul>
                     <li>Left justified title (`titleJustify: 'left'`)</li>
+                    <li>Remove outer ticks (`hideOuterTicks: true`)</li>
                     <li>
                         Add negative ticks (`tickLength: -20`) to create ticks <br /> inside the bar
                     </li>
@@ -61,7 +62,7 @@ function LegendContainer() {
                 </ul>
             </div>
             <div className="legend-row">
-                <LegendStaticBarNew
+                <LegendStaticBar
                     options={{
                         colors: ['#34a3aa', '#eaaaba', '#af3013'],
                         colorLevels: [1, 2, 3],
@@ -90,7 +91,7 @@ function LegendContainer() {
                 </ul>
             </div>
             <div className="legend-row">
-                <LegendStaticBarNew
+                <LegendStaticBar
                     options={{
                         colors: ['#d5d5d5ff', '#a090bbff', '#ab5eb0ff'],
                         colorLevels: [1, 2],
