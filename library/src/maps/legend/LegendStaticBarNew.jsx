@@ -29,14 +29,18 @@ export default function LegendStaticBar({ options }) {
         titleClassName = 'desi-default-legend-title',
         titleSx = {},
         titleJustify = 'center', // left, center, right
+        // space between the title and the bar, this is a multiplier of the title height/width
+        titlePaddingMultiplier = 1.2,
         tickClassName = 'desi-default-legend-tick',
-        tickSx = {},
         tickLength = 5, // length of the tick lines
         tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
         tickValues = null, // specific tick values for the colorbar
         tickPadding = 2, // extra padding between ticks and labels
+        tickStrokeWidth = 1, // stroke width of the tick lines
         // hide the first and last ticks, will not affect end caps ticks since those are already hidden
         hideOuterTicks = false,
+        // set the axis line stroke width
+        axisStrokeWidth = 1,
         // font props
         titleFontFamily = 'sans-serif',
         titleFontSize = 12,
@@ -76,7 +80,6 @@ export default function LegendStaticBar({ options }) {
     // If left or right cap, just add another value to the array
     if (isRightCap) domain.push(domain[domain.length - 1] + 1);
     if (isLeftCap) domain.unshift(domain[0] - 1);
-    console.log('domain:', domain);
     const fillLegendScale = scaleLinear().domain(domain);
 
     // the legendRange determines where the colors are placed along the bar
@@ -88,7 +91,6 @@ export default function LegendStaticBar({ options }) {
     if (orient === 'vertical') {
         legendRange.reverse();
     }
-    console.log('legendRange:', legendRange);
     fillLegendScale.range(legendRange);
 
     // Compute tick values and labels
@@ -134,26 +136,25 @@ export default function LegendStaticBar({ options }) {
         }
     }
 
-    console.log('finalTickValues:', finalTickValues);
-    console.log('finalTickLabels:', finalTickLabels);
-
     // don't include the () when no units are provided
     // using .trim() because sometimes we get a space in the empty string
-    const titleText = `${title} ${units.trim() ? `(${units})` : ''}`;
-    console.log('titleText:', titleText);
+    const titleText = `${title} ${units.trim() ? `(${units})` : ''}`.trim();
 
     const titleDimensions = getTextDimensions(
         titleText,
         `${titleFontWeight} ${titleFontSize}px ${titleFontFamily}`,
         titleRotate,
     );
+    console.log('titleDimensions:', titleDimensions);
 
-    const textPaddingMultiplier = 1.2;
-    const titleSize = isHorizontal
-        ? titleDimensions.height * textPaddingMultiplier
-        : titleDimensions.width * textPaddingMultiplier;
+    let titleSize = 0;
+    if (titleText.length > 0) {
+        titleSize = isHorizontal
+            ? titleDimensions.height * titlePaddingMultiplier
+            : titleDimensions.width * titlePaddingMultiplier;
+    }
 
-    const tickDimensions = getMaxTextDimensions(
+    const maxTickDimensions = getMaxTextDimensions(
         finalTickLabels,
         `${tickFontWeight} ${tickFontSize}px ${tickFontFamily}`,
         tickAngle,
@@ -162,10 +163,10 @@ export default function LegendStaticBar({ options }) {
     // we have to adjust the tickPadding based on a negative tickLength
     const adjustedTickPadding = tickLength < 0 ? tickPadding * -1 : tickPadding;
     let tickSize = isHorizontal
-        ? tickDimensions.height + tickLength + adjustedTickPadding
-        : tickDimensions.width + tickLength + adjustedTickPadding;
-    // if ticks are inside the bar, don't add to size (the 1 px is for the axis line)
-    if (tickLength < 0) tickSize = 1;
+        ? maxTickDimensions.height + tickLength + adjustedTickPadding + axisStrokeWidth / 2
+        : maxTickDimensions.width + tickLength + adjustedTickPadding + axisStrokeWidth / 2;
+    // if ticks are inside the bar, don't add to size (just the axis line)
+    if (tickLength < 0) tickSize = axisStrokeWidth / 2;
 
     // The logic below is used to add space for the first and last tick labels.
     // Without this, it's possible for the first and last labels to be cut off
@@ -192,9 +193,6 @@ export default function LegendStaticBar({ options }) {
         labelSizeStart /= 2;
         labelSizeEnd /= 2;
     }
-    console.log('labelSizeStart:', labelSizeStart);
-    console.log('labelSizeEnd:', labelSizeEnd);
-
     const svgWidth = isHorizontal
         ? barLength + labelSizeStart + labelSizeEnd
         : thickness + titleSize + tickSize;
@@ -222,13 +220,6 @@ export default function LegendStaticBar({ options }) {
         });
     }
 
-    console.log(
-        'rect width',
-        isHorizontal ? barLength : thickness,
-        'rect height',
-        isHorizontal ? thickness : barLength,
-    );
-
     return (
         <svg
             width={svgWidth}
@@ -240,7 +231,6 @@ export default function LegendStaticBar({ options }) {
             }}
         >
             {/* SVG defs for gradient */}
-            {console.log('isHorizontal:', isHorizontal)}
             {colorType === 'scaleLinear' && (
                 <defs>
                     <linearGradient
@@ -329,10 +319,12 @@ export default function LegendStaticBar({ options }) {
                         x2={isHorizontal ? barLength : thickness}
                         y2={isHorizontal ? thickness : barLength}
                         stroke={tickFontColor}
+                        strokeWidth={axisStrokeWidth}
                     />
                     {finalTickValues.map((tickValue, i) => {
                         const pos = fillLegendScale(tickValue);
-                        const anchorPoint = thickness + tickLength + adjustedTickPadding;
+                        const anchorPoint =
+                            thickness + tickLength + adjustedTickPadding + axisStrokeWidth / 2;
                         const transformProps = getTransformProps(
                             isHorizontal,
                             anchorPoint,
@@ -342,9 +334,11 @@ export default function LegendStaticBar({ options }) {
                         return (
                             <g
                                 key={tickValue}
-                                // The offset of 1 is for the axis line of 1px thickness
+                                // The offset of axisStrokeWidth is for the axis line of 1px thickness
                                 transform={
-                                    isHorizontal ? `translate(${pos},1)` : `translate(1,${pos})`
+                                    isHorizontal
+                                        ? `translate(${pos},${(axisStrokeWidth / 2) * (tickLength < 0 ? -1 : 1)})`
+                                        : `translate(${(axisStrokeWidth / 2) * (tickLength < 0 ? -1 : 1)},${pos})`
                                 }
                             >
                                 <line
@@ -353,6 +347,7 @@ export default function LegendStaticBar({ options }) {
                                     x2={isHorizontal ? 0 : thickness + tickLength}
                                     y2={isHorizontal ? thickness + tickLength : 0}
                                     stroke={tickFontColor}
+                                    strokeWidth={tickStrokeWidth}
                                 />
                                 <text
                                     x={isHorizontal ? 0 : anchorPoint}
@@ -367,7 +362,6 @@ export default function LegendStaticBar({ options }) {
                                         fontSize: `${tickFontSize}px`,
                                         fontWeight: tickFontWeight,
                                         color: tickFontColor,
-                                        ...tickSx,
                                     }}
                                 >
                                     {finalTickLabels[i]}

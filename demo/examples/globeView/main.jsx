@@ -15,7 +15,6 @@ import {
     ParticleLayer,
     configFields,
     GeoJsonLayer,
-    LegendStaticBarNew,
 } from 'desi-graphics';
 import { DeckGL } from '@deck.gl/react';
 
@@ -40,7 +39,6 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import 'desi-graphics/desi-graphics.css';
 import coastLines from './ne_10m_coastline.json';
-import LegendStaticBar from '../../../library/src/maps/legend/LegendStaticBar';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
@@ -441,93 +439,6 @@ function MapContainer() {
                         {option}
                     </label>
                 ))}
-            </div>
-            <div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '40px',
-                    margin: '40px',
-                }}
-            >
-                <LegendStaticBarNew
-                    options={{
-                        colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                        colorLevels: [1, 2, 3],
-                        colorType: 'scaleLinear',
-                        title: 'HORIZONTAL Temperature',
-                        units: '°F',
-                        orient: 'horizontal',
-                        barLength: 600,
-                        thickness: 140,
-                        ticks: 'linear',
-                        tickAngle: -45,
-                        tickLength: -40,
-                        tickFontSize: 16,
-                        tickPadding: 5,
-                        isLeftCap: false,
-                        isRightCap: false,
-                        hideOuterTicks: true,
-                        titleFontFamily: 'Times New Roman',
-                        titleFontSize: 24,
-                        titleFontColor: '#aefd2a',
-                        titleJustify: 'right',
-                        containerSx: {
-                            border: '2px solid skyblue',
-                            padding: '40px',
-                            borderRadius: '10px',
-                        },
-                    }}
-                />
-                <LegendStaticBarNew
-                    options={{
-                        colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                        colorLevels: [1, 2, 3],
-                        colorType: 'scaleLinear',
-                        title: 'VERTICAL Temperature',
-                        units: '°F',
-                        orient: 'vertical',
-                        barLength: 600,
-                        thickness: 40,
-                        ticks: 'linear',
-                        tickAngle: 0,
-                        tickLength: 10,
-                        tickPadding: 10,
-                        isLeftCap: false,
-                        isRightCap: false,
-                        titleFontFamily: 'Verdana',
-                        titleFontSize: 24,
-                        titleFontWeight: 700,
-                        titleFontColor: '#fefefe',
-                        titleJustify: 'center',
-                        containerSx: { background: '#9651e4ff', padding: '20px' },
-                    }}
-                />
-                <LegendStaticBarNew
-                    options={{
-                        colors: ['#34a3aa', '#eaaaba', '#af3013'],
-                        colorLevels: [1, 2],
-                        colorType: 'scaleThreshold',
-                        title: 'Tick Values',
-                        units: '°F',
-                        orient: 'horizontal',
-                        barLength: 400,
-                        thickness: 90,
-                        ticks: 'byColorLevels',
-                        tickAngle: 45,
-                        tickValues: ['hello', 'world'],
-                        isLeftCap: true,
-                        isRightCap: true,
-                        titleFontFamily: 'Arial',
-                        titleFontSize: 30,
-                        titleFontColor: '#3ae4e4ff',
-                        tickFontColor: '#f38a72ff',
-                        tickLength: 20,
-                        tickFontSize: 24,
-                        // containerSx: { marginTop: '20px', marginBottom: '20px' },
-                    }}
-                />
             </div>
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
                 {currentController === 'MapLibre-GL' && (
