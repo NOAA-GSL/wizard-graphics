@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import { some } from 'lodash';
 import LegendDynamicItems from './LegendDynamicItems';
 import LegendStaticItems from './LegendStaticItems';
@@ -12,8 +13,7 @@ import './Legend.css';
  * @param {import('react').Ref} overlayRef - Reference to the Deck.gl overlay layer
  * @returns The requested legend components ('staticBar', 'staticItems', 'dynamicItems')
  */
-export default function Legend({ mapRef, viewState, overlayRef }) {
-    // eslint-disable-next-line no-underscore-dangle
+function Legend({ mapRef, viewState, overlayRef }) {
     const layers = overlayRef?.current?._props?.layers;
 
     const dynamicItems = [];
@@ -79,3 +79,5 @@ export default function Legend({ mapRef, viewState, overlayRef }) {
         </>
     );
 }
+
+export default Legend;

@@ -1,0 +1,29 @@
+body {
+    background: rgb(20, 20, 20);
+    color: rgb(230, 230, 230);
+    font-family: monospace;
+    font-size: 1.2rem;
+}
+
+.legend-row {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.legend-class {
+    background: #334;
+    padding: 20px;
+    border-radius: 8px;
+    transition:
+        background 0.5s ease,
+        transform 0.3s ease;
+    &:hover {
+        background: #446;
+        cursor: pointer;
+    }
+    &:active {
+        transform: scale(1.05);
+    }
+}

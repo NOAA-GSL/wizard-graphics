@@ -17,6 +17,7 @@ import {
     GeoJsonLayer,
 } from 'desi-graphics';
 import { DeckGL } from '@deck.gl/react';
+
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
 import hrefWmag from 'demo-data/HREF/wmag';
@@ -282,7 +283,11 @@ function MapContainer() {
                             interpolate: true,
                         },
                     ],
-                    legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
+                    legend: {
+                        type: 'staticBar',
+                        title: 'Temperature',
+                        units: '°F',
+                    },
                 }),
             );
         if (state.contourCheckbox)

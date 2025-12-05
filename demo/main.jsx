@@ -36,6 +36,9 @@ function App() {
                 <li>
                     <a href="examples/otherLayers/index.html">Other Layers Examples</a>
                 </li>
+                <li>
+                    <a href="examples/legends/index.html">Legend Examples</a>
+                </li>
             </ul>
         </div>
     );
