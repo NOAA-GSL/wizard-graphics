@@ -45,11 +45,11 @@ export default function LegendStaticBar({ options }) {
         titleFontFamily = 'sans-serif',
         titleFontSize = 12,
         titleFontWeight = 400,
-        titleFontColor = '#fff',
+        titleFontColor = 'currentColor',
         tickFontFamily = 'sans-serif',
         tickFontSize = 10,
         tickFontWeight = 400,
-        tickFontColor = '#fff',
+        tickFontColor = 'currentColor',
     } = options;
 
     // scaleLinear should always have isLeftCap and isRightCap set to false
@@ -145,7 +145,6 @@ export default function LegendStaticBar({ options }) {
         `${titleFontWeight} ${titleFontSize}px ${titleFontFamily}`,
         titleRotate,
     );
-    console.log('titleDimensions:', titleDimensions);
 
     let titleSize = 0;
     if (titleText.length > 0) {
