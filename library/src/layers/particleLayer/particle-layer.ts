@@ -22,10 +22,13 @@ export type UniformProps = {
     viewportZoomChangeFactor: number;
     bounds: number[];
     bitmapTexture: Texture;
+    noiseTexture: Texture;
     isGlobe: number;
     viewportCenter: number[];
     cullBackside: number;
     viewportGlobeRadius: number;
+    minWindSpeed: number;
+    ringBufferIndex: number;
 };
 
 const uniformBlock = `\
@@ -42,6 +45,8 @@ uniform bitmapUniforms {
   int cullBackside;
   int isGlobe;
   float viewportGlobeRadius;
+  float minWindSpeed;
+  int ringBufferIndex;
 } bitmap;
 `;
 
@@ -61,6 +66,8 @@ export const bitmapUniforms = {
         cullBackside: 'i32',
         isGlobe: 'i32',
         viewportGlobeRadius: 'f32',
+        minWindSpeed: 'f32',
+        ringBufferIndex: 'i32',
     },
 } as const satisfies ShaderModule<UniformProps>;
 
@@ -209,7 +216,7 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
     image: { type: 'image', value: null, async: true },
 
     numParticles: { type: 'number', min: 1, max: 1000000, value: 10000 },
-    maxAge: { type: 'number', min: 1, max: 255, value: 82 },
+    maxAge: { type: 'number', min: 1, max: 255, value: 28 },
     speedFactor: { type: 'number', min: 0, max: 255, value: 3 },
 
     color: { type: 'color', value: DEFAULT_COLOR },
@@ -243,18 +250,20 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         initialized: boolean;
         numInstances: number;
         numAgedInstances: number;
+        numTrailSegments: number;
 
         sourcePositions: Buffer;
         targetPositions: Buffer;
 
         sourcePositions64Low: Float32Array;
         targetPositions64Low: Float32Array;
-        widths: Float32Array;
+        widths: Buffer;
 
         colors: Buffer;
 
         transform: BufferTransform;
         texture: Texture;
+        noiseTexture: Texture; // Pre-computed noise for hash lookups
 
         previousViewportZoom: number;
         previousTime: number;
@@ -267,6 +276,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         needsAttributeBind: boolean;
         uniformHolder: { bitmap?: any } | null;
         zeroPositions?: Float32Array;
+        ringBufferIndex: number; // Current write slot for ring buffer
     };
 
     getShaders() {
@@ -299,17 +309,16 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         `,
                 'fs:#main-start': `
           if (drop > 0.5) discard;
-          ${
-              this.props.fadeTrails
-                  ? `
+          ${this.props.fadeTrails
+                        ? `
           float fadeVariation = 0.8 + particleVariation * 0.4;
           float trailFade = 1.0 - smoothstep(0.0, fadeVariation, trailAge);
           fragColor.a *= trailFade * trailFade;
 
           fragColor.rgb *= 0.9 + particleVariation * 0.2;
           `
-                  : ''
-          }
+                        : ''
+                    }
         `,
             },
         };
@@ -338,7 +347,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             instanceTargetPositions: { size: 3, type: 'float32', noAlloc: true },
             instanceColors: {
                 size: 4,
-                type: 'float32',
+                type: 'uint8',
+                // @ts-ignore
+                normalized: true,
                 noAlloc: true,
                 defaultValue: [...this.props.color.map((c) => c / 255)],
             },
@@ -512,23 +523,61 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         super.updateState(params);
         const { props, oldProps } = params;
 
-        const shouldUpdate =
-            props.image !== oldProps.image ||
+        // Structure changes require full buffer recreation
+        const structureChanged =
             props.numParticles !== oldProps.numParticles ||
             props.maxAge !== oldProps.maxAge ||
             props.width !== oldProps.width ||
-            props.dataDir !== oldProps.dataDir ||
-            props.dataMag !== oldProps.dataMag ||
             props.trailLength !== oldProps.trailLength;
 
-        if (shouldUpdate) {
+        // Data changes only need texture update - preserve particle positions!
+        const dataChanged =
+            props.image !== oldProps.image ||
+            props.dataDir !== oldProps.dataDir ||
+            props.dataMag !== oldProps.dataMag;
+
+        if (structureChanged) {
             this._setupState();
+        } else if (dataChanged && this.state.initialized) {
+            this._updateWindTexture();
         }
     }
 
     finalizeState(context: LayerContext) {
         this._deleteTransformFeedback();
         super.finalizeState(context);
+    }
+
+    _updateWindTexture() {
+        const { projection } = this.props;
+
+        const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
+        let calculatedBounds = [minLng, minLat, maxLng, maxLat];
+        if (isNaN(minLng) || isNaN(maxLng) || isNaN(minLat) || isNaN(maxLat)) {
+            calculatedBounds = [-180, -90, 180, 90];
+        }
+        const globalData = isGlobalData(calculatedBounds);
+
+        const oldTexture = this.state.texture;
+        if (oldTexture && oldTexture !== this.props.image) {
+            for (const [key, value] of positionsCache.entries()) {
+                if (value.texture === oldTexture) {
+                    positionsCache.delete(key);
+                    break;
+                }
+            }
+            oldTexture.destroy();
+        }
+
+        // Create new wind texture from updated data
+        const newTexture = this.props.image || this._createWindTexture();
+        if (newTexture && typeof newTexture !== 'string') {
+            this.setState({
+                texture: newTexture,
+                bounds: calculatedBounds,
+                isGlobalData: globalData,
+            });
+        }
     }
 
     _getEffectiveBounds() {
@@ -557,18 +606,24 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             this.step();
         }
 
-        const { model, sourcePositions, targetPositions, colors, widths, needsAttributeBind } =
+        const { model, sourcePositions, colors, widths, needsAttributeBind, numTrailSegments } =
             this.state;
+        const { numParticles } = this.props;
 
-        if (model && needsAttributeBind) {
+        if (model && needsAttributeBind && numParticles) {
             model.setAttributes?.({
                 instanceSourcePositions: sourcePositions,
-                instanceTargetPositions: targetPositions,
+                instanceTargetPositions: {
+                    buffer: sourcePositions,
+                    offset: numParticles * 12, // Points to Age 1
+                    stride: 12,
+                    divisor: 1,
+                } as any, // Cast to any to avoid potential strict type check issues with inline object
                 instanceColors: colors,
-            });
-            model.setConstantAttributes?.({
                 instanceWidths: widths,
             });
+            model.setConstantAttributes?.({});
+            model.setInstanceCount(numTrailSegments);
             this.state.needsAttributeBind = false;
         }
 
@@ -580,7 +635,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             this._deleteTransformFeedback();
         }
 
-        const { numParticles, color, maxAge, width, trailLength, fadeTrails } = this.props;
+        const { numParticles, color, maxAge, width, trailLength = 22, fadeTrails } = this.props;
 
         const texture = this.props.image || this._createWindTexture();
         if (!texture || typeof texture === 'string') {
@@ -589,6 +644,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         const numInstances = numParticles * maxAge;
         const numAgedInstances = numParticles * (maxAge - 1);
+        const effectiveTrailLength = Math.min(trailLength, maxAge);
+        const numTrailSegments = numParticles * (effectiveTrailLength - 1);
 
         const sourcePositions = this.context.device.createBuffer(
             new Float32Array(numInstances * 3),
@@ -597,9 +654,42 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             new Float32Array(numInstances * 3),
         );
 
-        const effectiveTrailLength = Math.min(trailLength, maxAge);
-        const alphasByAge = new Float32Array(maxAge);
-        const baseAlpha = ((color[3] ?? 255) as number) / 255;
+        // Create offset buffer for target positions - starts at age 1 (one row offset)
+        // This allows trail segments to connect age N to age N+1 from the same buffer
+        const targetPositionsOffset = this.context.device.createBuffer({
+            byteLength: (numInstances - numParticles) * 3 * 4,
+        });
+
+        // Create pre-computed noise texture (256x256 RGBA)
+        // This replaces expensive per-particle hash calculations with texture lookups
+        const noiseSize = 256;
+        const noiseData = new Float32Array(noiseSize * noiseSize * 4);
+        for (let i = 0; i < noiseSize * noiseSize; i++) {
+            const o = i * 4;
+            // High-quality random values using multiple sine waves
+            const x = i % noiseSize;
+            const y = Math.floor(i / noiseSize);
+            noiseData[o] = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+            noiseData[o + 1] = Math.abs(Math.sin(x * 93.9898 + y * 67.345) * 24634.6345) % 1;
+            noiseData[o + 2] = Math.abs(Math.sin(x * 45.164 + y * 23.789) * 65432.1234) % 1;
+            noiseData[o + 3] = Math.abs(Math.sin(x * 78.456 + y * 12.567) * 87654.3456) % 1;
+        }
+        const noiseTexture = this.context.device.createTexture({
+            width: noiseSize,
+            height: noiseSize,
+            data: noiseData,
+            format: 'rgba32float',
+            mipmaps: false,
+            sampler: {
+                minFilter: 'linear',
+                magFilter: 'linear',
+                addressModeU: 'repeat',
+                addressModeV: 'repeat',
+            },
+        });
+
+        const alphasByAge = new Uint8Array(maxAge);
+        const baseAlpha = (color[3] ?? 255) as number;
         for (let age = 0; age < maxAge; age++) {
             let a = 0;
             if (fadeTrails && age < effectiveTrailLength) {
@@ -610,10 +700,10 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             alphasByAge[age] = a;
         }
 
-        const colorsArr = new Float32Array(numInstances * 4);
-        const r = (color[0] as number) / 255;
-        const g = (color[1] as number) / 255;
-        const b = (color[2] as number) / 255;
+        const colorsArr = new Uint8Array(numInstances * 4);
+        const r = (color[0] as number);
+        const g = (color[1] as number);
+        const b = (color[2] as number);
         for (let i = 0; i < numInstances; i++) {
             const age = (i / numParticles) | 0;
             const o = i * 4;
@@ -626,7 +716,13 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         const sourcePositions64Low = new Float32Array([0, 0, 0]);
         const targetPositions64Low = new Float32Array([0, 0, 0]);
-        const widths = new Float32Array([width]);
+        const widthsArr = new Float32Array(numInstances);
+        for (let i = 0; i < numInstances; i++) {
+            const age = (i / numParticles) | 0;
+            const t = 1.0 - age / maxAge;
+            widthsArr[i] = width * (0.3 + 0.7 * t * t); // Quadratic taper, min width 30%
+        }
+        const widthsBuffer = this.context.device.createBuffer({ data: widthsArr });
 
         const transform = new BufferTransform(this.context.device, {
             attributes: { sourcePosition: sourcePositions },
@@ -644,19 +740,22 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             initialized: true,
             numInstances,
             numAgedInstances,
+            numTrailSegments,
             sourcePositions,
             targetPositions,
             sourcePositions64Low,
             targetPositions64Low,
             colors: colorBuffer,
-            widths,
+            widths: widthsBuffer,
             transform,
             texture,
+            noiseTexture,
             previousViewportZoom: 0,
             previousTime: 0,
             needsAttributeBind: true,
             uniformHolder: { bitmap: {} },
             zeroPositions,
+            ringBufferIndex: 0,
         });
     }
 
@@ -673,10 +772,14 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             targetPositions,
             numAgedInstances,
             texture,
+            noiseTexture,
+            ringBufferIndex,
         } = this.state;
 
-        const time = timeline.getTime();
-        if (time === previousTime) return;
+        const wallTime = performance.now();
+        const dataTime = timeline.getTime();
+
+        if (wallTime === previousTime) return;
 
         const isGlobe = viewport?.projection?.mode === 'globe' ? 1 : 0;
         const bounds = this._getEffectiveBounds();
@@ -701,7 +804,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         cullBackside = isGlobe > 0 ? 1 : 0;
 
-        const speedVariation = 0.95 + 0.1 * Math.sin(time * 0.001);
+        const speedVariation = 0.95 + 0.1 * Math.sin(wallTime * 0.001);
 
         let currentSpeedFactor: number;
         if (isGlobe > 0) {
@@ -710,10 +813,11 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             currentSpeedFactor = (speedFactor * speedVariation) / Math.pow(2, viewport.zoom + 7);
         }
 
-        const seed = Math.sin(time * 0.0001) * 999 + Math.cos(time * 0.00013) * 777;
+        const seed = Math.sin(wallTime * 0.0001) * 999 + Math.cos(wallTime * 0.00013) * 777;
 
         const u = (this.state.uniformHolder!.bitmap ||= {});
         u.bitmapTexture = texture;
+        u.noiseTexture = noiseTexture;
         u.viewportBounds = viewportBounds;
         u.viewportZoomChangeFactor = viewportZoomChangeFactor;
         u.bounds = bounds;
@@ -722,10 +826,13 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         u.numParticles = numParticles;
         u.maxAge = maxAge;
         u.speedFactor = currentSpeedFactor;
-        u.time = time;
+        u.time = wallTime;
         u.seed = Math.abs(seed);
         u.isGlobe = isGlobe;
         u.viewportGlobeRadius = viewportGlobeRadius;
+        u.minWindSpeed = 1.5; // 3 knots ≈ 1.54 m/s, drop particles in calm areas
+        u.ringBufferIndex = ringBufferIndex;
+
 
         if (!transform?.model) return;
 
@@ -761,7 +868,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         this.state.needsAttributeBind = true;
 
         this.state.previousViewportZoom = viewport.zoom;
-        this.state.previousTime = time;
+        this.state.previousTime = wallTime;
     }
 
     _resetTransformFeedback() {
@@ -777,11 +884,13 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     _deleteTransformFeedback() {
         if (!this.state.initialized) return;
 
-        const { sourcePositions, targetPositions, colors, transform, texture } = this.state;
+        const { sourcePositions, targetPositions, colors, widths, transform, texture, noiseTexture } = this.state;
         sourcePositions?.destroy();
         targetPositions?.destroy();
         colors?.destroy();
+        widths?.destroy();
         transform?.destroy();
+        noiseTexture?.destroy();
 
         if (texture && texture !== this.props.image) {
             for (const [key, value] of positionsCache.entries()) {
