@@ -215,8 +215,8 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
 
     image: { type: 'image', value: null, async: true },
 
-    numParticles: { type: 'number', min: 1, max: 1000000, value: 10000 },
-    maxAge: { type: 'number', min: 1, max: 255, value: 28 },
+    numParticles: { type: 'number', min: 1, max: 100000, value: 10000 },
+    maxAge: { type: 'number', min: 1, max: 255, value: 50 },
     speedFactor: { type: 'number', min: 0, max: 255, value: 3 },
 
     color: { type: 'color', value: DEFAULT_COLOR },
@@ -255,10 +255,6 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         sourcePositions: Buffer;
         targetPositions: Buffer;
 
-        sourcePositions64Low: Float32Array;
-        targetPositions64Low: Float32Array;
-        widths: Buffer;
-
         colors: Buffer;
 
         transform: BufferTransform;
@@ -279,6 +275,11 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         ringBufferIndex: number; // Current write slot for ring buffer
     };
 
+    private _sourcePositions64Low = new Float32Array([0, 0, 0]);
+    private _targetPositions64Low = new Float32Array([0, 0, 0]);
+    private _pickingColors = new Float32Array([0, 0, 0]);
+    private _widths = new Float32Array([1]);
+
     getShaders() {
         const oldShaders = super.getShaders();
         return {
@@ -288,6 +289,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
           out float drop;
           out float trailAge;
           out float particleVariation;
+          out float particleSpeed;
           const vec2 DROP_POSITION = vec2(0);
 
           float hash(float n) {
@@ -301,14 +303,21 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
           trailAge = ageIndex / ${this.props.maxAge}.0;
 
           particleVariation = hash(particleIndex);
+          particleSpeed = length(instanceTargetPositions - instanceSourcePositions);
         `,
                 'fs:#decl': `
           in float drop;
           in float trailAge;
           in float particleVariation;
+          in float particleSpeed;
         `,
                 'fs:#main-start': `
           if (drop > 0.5) discard;
+          
+          // Fade out stationary/slow particles
+          float speedFade = smoothstep(0.0, 0.1, particleSpeed * 10.0); // Adjust threshold as needed
+          fragColor.a *= speedFade;
+
           ${this.props.fadeTrails
                         ? `
           float fadeVariation = 0.8 + particleVariation * 0.4;
@@ -606,24 +615,25 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             this.step();
         }
 
-        const { model, sourcePositions, colors, widths, needsAttributeBind, numTrailSegments } =
+        const { model, sourcePositions, targetPositions, colors, needsAttributeBind } =
             this.state;
-        const { numParticles } = this.props;
 
-        if (model && needsAttributeBind && numParticles) {
+        if (model && needsAttributeBind) {
+            if (this._widths[0] !== this.props.width) {
+                this._widths[0] = this.props.width;
+            }
+
             model.setAttributes?.({
                 instanceSourcePositions: sourcePositions,
-                instanceTargetPositions: {
-                    buffer: sourcePositions,
-                    offset: numParticles * 12, // Points to Age 1
-                    stride: 12,
-                    divisor: 1,
-                } as any, // Cast to any to avoid potential strict type check issues with inline object
+                instanceTargetPositions: targetPositions,
                 instanceColors: colors,
-                instanceWidths: widths,
             });
-            model.setConstantAttributes?.({});
-            model.setInstanceCount(numTrailSegments);
+            model.setConstantAttributes?.({
+                instanceSourcePositions64Low: this._sourcePositions64Low,
+                instanceTargetPositions64Low: this._targetPositions64Low,
+                instancePickingColors: this._pickingColors,
+                instanceWidths: this._widths,
+            });
             this.state.needsAttributeBind = false;
         }
 
@@ -714,15 +724,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         }
         const colorBuffer = this.context.device.createBuffer({ data: colorsArr });
 
-        const sourcePositions64Low = new Float32Array([0, 0, 0]);
-        const targetPositions64Low = new Float32Array([0, 0, 0]);
-        const widthsArr = new Float32Array(numInstances);
-        for (let i = 0; i < numInstances; i++) {
-            const age = (i / numParticles) | 0;
-            const t = 1.0 - age / maxAge;
-            widthsArr[i] = width * (0.3 + 0.7 * t * t); // Quadratic taper, min width 30%
-        }
-        const widthsBuffer = this.context.device.createBuffer({ data: widthsArr });
+
 
         const transform = new BufferTransform(this.context.device, {
             attributes: { sourcePosition: sourcePositions },
@@ -743,10 +745,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             numTrailSegments,
             sourcePositions,
             targetPositions,
-            sourcePositions64Low,
-            targetPositions64Low,
             colors: colorBuffer,
-            widths: widthsBuffer,
             transform,
             texture,
             noiseTexture,
@@ -776,10 +775,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             ringBufferIndex,
         } = this.state;
 
-        const wallTime = performance.now();
-        const dataTime = timeline.getTime();
+        const currentTime = timeline.getTime();
 
-        if (wallTime === previousTime) return;
+        if (currentTime === previousTime) return;
 
         const isGlobe = viewport?.projection?.mode === 'globe' ? 1 : 0;
         const bounds = this._getEffectiveBounds();
@@ -804,7 +802,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         cullBackside = isGlobe > 0 ? 1 : 0;
 
-        const speedVariation = 0.95 + 0.1 * Math.sin(wallTime * 0.001);
+        const speedVariation = 0.95 + 0.1 * Math.sin(currentTime * 0.001);
 
         let currentSpeedFactor: number;
         if (isGlobe > 0) {
@@ -813,7 +811,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             currentSpeedFactor = (speedFactor * speedVariation) / Math.pow(2, viewport.zoom + 7);
         }
 
-        const seed = Math.sin(wallTime * 0.0001) * 999 + Math.cos(wallTime * 0.00013) * 777;
+        const seed = Math.sin(currentTime * 0.0001) * 999 + Math.cos(currentTime * 0.00013) * 777;
 
         const u = (this.state.uniformHolder!.bitmap ||= {});
         u.bitmapTexture = texture;
@@ -826,7 +824,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         u.numParticles = numParticles;
         u.maxAge = maxAge;
         u.speedFactor = currentSpeedFactor;
-        u.time = wallTime;
+        u.time = currentTime;
         u.seed = Math.abs(seed);
         u.isGlobe = isGlobe;
         u.viewportGlobeRadius = viewportGlobeRadius;
@@ -868,7 +866,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         this.state.needsAttributeBind = true;
 
         this.state.previousViewportZoom = viewport.zoom;
-        this.state.previousTime = wallTime;
+        this.state.previousTime = currentTime;
     }
 
     _resetTransformFeedback() {
@@ -884,11 +882,10 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     _deleteTransformFeedback() {
         if (!this.state.initialized) return;
 
-        const { sourcePositions, targetPositions, colors, widths, transform, texture, noiseTexture } = this.state;
+        const { sourcePositions, targetPositions, colors, transform, texture, noiseTexture } = this.state;
         sourcePositions?.destroy();
         targetPositions?.destroy();
         colors?.destroy();
-        widths?.destroy();
         transform?.destroy();
         noiseTexture?.destroy();
 

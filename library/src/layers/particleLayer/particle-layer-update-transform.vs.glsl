@@ -259,9 +259,9 @@ void main() {
   vec2 uv = getUV(uvPos, bitmap.bounds);
   vec4 wind = texture(bitmapTexture, uv);
 
-  // Drop particles with no data or in calm areas (< 3 knots threshold)
+  // Drop particles with no data
   float windSpeed = length(wind.xy);
-  if (wind.a < 0.1 || windSpeed < bitmap.minWindSpeed) {
+  if (wind.a < 0.1) {
     targetPosition = vec3(DROP_POSITION, 0.0);
     return;
   }
