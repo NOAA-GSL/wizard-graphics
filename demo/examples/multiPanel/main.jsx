@@ -17,7 +17,7 @@ import {
     configFields,
     GeoJsonLayer,
 } from 'desi-graphics';
-
+import { DeckGL } from '@deck.gl/react';
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
 import hrefWmag from 'demo-data/HREF/wmag';
@@ -72,12 +72,16 @@ function MapContainer() {
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
     const [currentDataset, setCurrentDataset] = React.useState(radioOptions[0]);
 
+    const controllerOptions = ['MapLibre-GL', 'DeckGL'];
+    const [currentController, setCurrentController] = React.useState(controllerOptions[0]);
+
     const toggle = useCallback((key) => (e) => dispatch({ key, value: e.target.checked }), []);
 
     const overlayRef = useRef();
     const mapContainer = useRef();
     const mapRef = useRef();
     const statsRef = useRef();
+    const deckRef = useRef();
 
     // multi-view stuff -----------------------------------//
     const displayNum = 4; // Change this to test different layouts
@@ -107,7 +111,12 @@ function MapContainer() {
 
         const [xpos, ypos, width, height] = getViewOffset(num);
         // If 'mapbox' is not used, interleaved does not working
-        const id = displayNum > 1 ? `mapbox-${num}` : `mapbox`;
+        const id =
+            currentController !== 'MapLibre-GL'
+                ? `${currentController}-${num}`
+                : displayNum > 1
+                  ? `mapbox-${num}`
+                  : 'mapbox';
         const obj = {
             id,
             x: `${xpos}%`,
@@ -297,7 +306,7 @@ function MapContainer() {
                 },
             ],
         });
-    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag]);
+    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag, currentController]);
 
     const layers = useMemo(() => {
         const result = [];
@@ -422,6 +431,7 @@ function MapContainer() {
         state.geojsonLayer,
         state.vectorCheckbox,
         state.particleCheckbox,
+        currentController,
         data,
         colors,
         colorLevels,
@@ -491,32 +501,75 @@ function MapContainer() {
                     </label>
                 ))}
             </div>
+            <div>
+                {controllerOptions.map((option) => (
+                    <label
+                        key={option}
+                        htmlFor={`controller-${option}`}
+                        style={{ marginLeft: option === controllerOptions[0] ? 0 : '1em' }}
+                    >
+                        <input
+                            id={`controller-${option}`}
+                            type="radio"
+                            name="controller"
+                            value={option}
+                            checked={currentController === option}
+                            onChange={() => setCurrentController(option)}
+                        />
+                        {option}
+                    </label>
+                ))}
+            </div>
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
-                <Map
-                    initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
-                    maxPitch={0}
-                    ref={mapRef}
-                    antialias
-                    // mapStyle={mapStyle}
-                    projection={state.isGlobeView ? 'globe' : 'mercator'}
-                >
-                    <DeckGLOverlay
-                        views={state.views}
-                        overlayRef={overlayRef}
+                {currentController === 'MapLibre-GL' && (
+                    <Map
+                        initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
+                        maxPitch={0}
+                        ref={mapRef}
+                        antialias
+                        // mapStyle={mapStyle}
+                        projection={state.isGlobeView ? 'globe' : 'mercator'}
+                    >
+                        <DeckGLOverlay
+                            views={state.views}
+                            overlayRef={overlayRef}
+                            layers={layers}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            layerFilter={layerFilter}
+                            interleaved
+                        />
+                        {/* Render a Readout for each panel */}
+                        <Readout
+                            mapContainer={mapContainer}
+                            overlayRef={overlayRef}
+                            title="Multi-Panel Display"
+                            views={state.views}
+                        />
+                        <Legend overlayRef={overlayRef} />
+                    </Map>
+                )}
+                {currentController === 'DeckGL' && (
+                    <DeckGL
+                        ref={deckRef}
+                        initialViewState={{
+                            longitude: -100.4,
+                            latitude: 37.8,
+                            zoom: 3,
+                            maxPitch: 0,
+                        }}
                         layers={layers}
-                        // eslint-disable-next-line react/jsx-no-bind
-                        layerFilter={layerFilter}
-                        interleaved
-                    />
-                    {/* Render a Readout for each panel */}
-                    <Readout
-                        mapContainer={mapContainer}
-                        overlayRef={overlayRef}
-                        title="Multi-Panel Display"
+                        controller
                         views={state.views}
-                    />
-                    <Legend overlayRef={overlayRef} />
-                </Map>
+                        layerFilter={layerFilter}
+                    >
+                        <Readout
+                            mapContainer={mapContainer}
+                            overlayRef={deckRef}
+                            title="Multi-Panel Display"
+                            views={state.views}
+                        />
+                    </DeckGL>
+                )}
             </div>
         </>
     );

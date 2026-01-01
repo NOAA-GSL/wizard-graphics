@@ -89,7 +89,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
 
                 const overlay = overlayRef?.current;
                 const deck =
-                    overlay?._deck || overlay?._deckInstance || overlay?._deckGL || overlay?._deck;
+                    overlay?._deck || overlay?._deckInstance || overlay?._deckGL || overlay?.deck;
                 if (!deck) return;
 
                 // canvas rect and mouse in CSS pixels
@@ -331,7 +331,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
     // Render the readout. For offsets, match viewport by view.id to views array
     // get latest deck for offsets when rendering
     const overlay = overlayRef?.current;
-    const deck = overlay?._deck;
+    const deck = overlay?._deck || overlay?.deck;
     const viewports = deck?.viewManager?.getViewports?.() || deck?.getViewports?.() || [];
     // build mapping from view id -> viewport
     const vpById = new Map(viewports.map((v) => [v.id, v]));
@@ -341,7 +341,8 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
         if (lon == null || lat == null) return null;
 
         // build gridded readout using current layers from overlay props
-        const layers = overlayRef?.current?._props?.layers || [];
+        const layers =
+            overlayRef?.current?._props?.layers || overlayRef?.current?.deck?.props?.layers || [];
         const gridded = buildGriddedReadout(lon, lat, displayNum, layers);
 
         return (

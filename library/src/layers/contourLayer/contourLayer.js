@@ -3,7 +3,7 @@ import { CompositeLayer } from '@deck.gl/core';
 import gUtilities from '../../utilities/graphicsUtilities';
 import { ContourLabels } from './contourLabels';
 import { isolines } from './raster-marching-squares';
-import { getcolors } from '../../maps/legend/LegendStaticBar';
+import { getColors } from '../../maps/legend/legendHelperFunctions';
 import PathLayer from '../pathLayer/DESIPathLayer';
 
 const defaultProps = {
@@ -33,7 +33,7 @@ export default class ContourLayer extends CompositeLayer {
     updateState({ props }) {
         // Get colors, set contour Levels
         const isoLines = [];
-        const colorscale = getcolors(props.colorLevels, props.colors, props.colorType);
+        const colorscale = getColors(props.colorLevels, props.colors, props.colorType);
         const contourLevels = props.contourLevels || props.colorLevels;
 
         // Get isolines

@@ -16,6 +16,7 @@ import {
     configFields,
     GeoJsonLayer,
 } from 'desi-graphics';
+import { DeckGL } from '@deck.gl/react';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
@@ -32,7 +33,7 @@ import eagleWdir from 'demo-data/EAGLE/wdir';
 import eagleWmag from 'demo-data/EAGLE/wmag';
 import eagleProjDict from 'demo-data/EAGLE/projection';
 
-import { TerrainLayer } from 'deck.gl';
+import { _GlobeView, MapView, TerrainLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -72,12 +73,16 @@ function MapContainer() {
     const radioOptions = ['HREF', 'RRFS', 'EAGLE'];
     const [currentDataset, setCurrentDataset] = React.useState(radioOptions[0]);
 
+    const controllerOptions = ['MapLibre-GL', 'DeckGL'];
+    const [currentController, setCurrentController] = React.useState(controllerOptions[0]);
+
     const toggle = useCallback((key) => (e) => dispatch({ key, value: e.target.checked }), []);
 
     const overlayRef = useRef();
     const mapContainer = useRef();
     const mapRef = useRef();
     const statsRef = useRef();
+    const deckRef = useRef();
 
     let temperatures;
     let wdir;
@@ -242,7 +247,15 @@ function MapContainer() {
                 },
             ],
         });
-    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag, style]);
+    }, [
+        state.particleCheckbox,
+        state.isGlobeView,
+        projection,
+        wdir,
+        wmag,
+        style,
+        currentController,
+    ]);
 
     const layers = useMemo(() => {
         const result = [];
@@ -270,7 +283,11 @@ function MapContainer() {
                             interpolate: true,
                         },
                     ],
-                    legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
+                    legend: {
+                        type: 'staticBar',
+                        title: 'Temperature',
+                        units: '°F',
+                    },
                 }),
             );
         if (state.contourCheckbox)
@@ -357,6 +374,8 @@ function MapContainer() {
         state.vectorCheckbox,
         state.particleCheckbox,
         state.geojsonLayer,
+        state.isGlobeView,
+        currentController,
         terrainLayer,
         particleLayer,
         data,
@@ -402,23 +421,68 @@ function MapContainer() {
                     </label>
                 ))}
             </div>
+            <div>
+                {controllerOptions.map((option) => (
+                    <label
+                        key={option}
+                        htmlFor={`controller-${option}`}
+                        style={{ marginLeft: option === controllerOptions[0] ? 0 : '1em' }}
+                    >
+                        <input
+                            id={`controller-${option}`}
+                            type="radio"
+                            name="controller"
+                            value={option}
+                            checked={currentController === option}
+                            onChange={() => setCurrentController(option)}
+                        />
+                        {option}
+                    </label>
+                ))}
+            </div>
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
-                <Map
-                    initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
-                    maxPitch={0}
-                    ref={mapRef}
-                    antialias
-                    mapStyle={mapStyle}
-                    projection={state.isGlobeView ? 'globe' : 'mercator'}
-                >
-                    <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
-                    <Readout
-                        mapContainer={mapContainer}
-                        overlayRef={overlayRef}
-                        title="Wed 06:00 am PST, Oct 21"
-                    />
-                    <Legend overlayRef={overlayRef} />
-                </Map>
+                {currentController === 'MapLibre-GL' && (
+                    <Map
+                        initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
+                        maxPitch={0}
+                        ref={mapRef}
+                        antialias
+                        mapStyle={mapStyle}
+                        projection={state.isGlobeView ? 'globe' : 'mercator'}
+                    >
+                        <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                        <Readout
+                            mapContainer={mapContainer}
+                            overlayRef={overlayRef}
+                            title="Wed 06:00 am PST, Oct 21"
+                        />
+                        <Legend overlayRef={overlayRef} />
+                    </Map>
+                )}
+                {currentController === 'DeckGL' && (
+                    <DeckGL
+                        ref={deckRef}
+                        initialViewState={{
+                            longitude: -100.4,
+                            latitude: 37.8,
+                            zoom: 3,
+                            maxPitch: 0,
+                        }}
+                        layers={layers}
+                        controller
+                        views={
+                            state.isGlobeView
+                                ? new _GlobeView({ id: 'globe', controller: true })
+                                : new MapView()
+                        }
+                    >
+                        <Readout
+                            mapContainer={mapContainer}
+                            overlayRef={deckRef}
+                            title="Wed 06:00 am PST, Oct 21"
+                        />
+                    </DeckGL>
+                )}
             </div>
         </>
     );
