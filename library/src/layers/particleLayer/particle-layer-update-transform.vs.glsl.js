@@ -1,5 +1,4 @@
-const shader = `\
-#version 300 es
+export default `#version 300 es
 #define SHADER_NAME particle_layer_update_transform_vertex_shader
 
 precision highp float;
@@ -8,20 +7,32 @@ in vec3 sourcePosition;
 out vec3 targetPosition;
 
 uniform sampler2D bitmapTexture;
+uniform sampler2D noiseTexture;
 
 const vec2  DROP_POSITION = vec2(0.0);
 const float PI            = 3.141592653589793;
 const float DEG2RAD       = 0.017453292519943295;
 const float RAD2DEG       = 57.29577951308232;
 const float R_EARTH       = 6370972.0;
+const float NOISE_TEX_SIZE = 256.0;
+
+// Optimized hash functions using pre-computed noise texture
+// Much faster than computing sin() per particle
+float hash1D(float n) { 
+  vec2 uv = vec2(fract(n * 0.00390625), fract(n * 0.015625));
+  return texture(noiseTexture, uv).r;
+}
 
 float hash(vec2 p) {
-  vec3 p3 = fract(vec3(p.xyx) * vec3(443.897, 441.423, 437.195));
-  p3 += dot(p3, p3.yzx + 19.19);
-  return fract((p3.x + p3.y) * p3.z);
+  vec2 uv = fract(p * 0.00390625);
+  return texture(noiseTexture, uv).g;
 }
-float hash1D(float n) { return fract(sin(n) * 43758.5453123); }
-vec2 noise2D(vec2 p) { return vec2(hash(p), hash(p + vec2(5.123, 7.456))) * 2.0 - 1.0; }
+
+vec2 noise2D(vec2 p) { 
+  vec2 uv = fract(p * 0.00390625);
+  vec4 n = texture(noiseTexture, uv);
+  return n.rg * 2.0 - 1.0;
+}
 
 float rad(float d) { return d * DEG2RAD; }
 float deg(float r) { return r * RAD2DEG; }
@@ -57,10 +68,24 @@ bool isGlobalData(vec4 b) {
   return lonSpan >= 350.0 && latSpan >= 170.0;
 }
 
+float wrapLongitude(float lng) {
+  return mod(lng + 180.0, 360.0) - 180.0;
+}
+
+// Adapts longitude to the bounds domain (handles 0-360 vs -180/180)
+float adjustLon(float lon, vec4 b) {
+  if (b.z > 180.0 && lon < 0.0) {
+    return lon + 360.0;
+  }
+  return lon;
+}
+
 bool isInDataBounds(vec2 pos, vec4 b) {
   if (pos.y < b.y || pos.y > b.w) return false;
   if (isGlobalData(b)) return true;
-  return pos.x >= b.x && pos.x <= b.z;
+  
+  float px = adjustLon(pos.x, b);
+  return px >= b.x && px <= b.z;
 }
 
 bool isInViewportBounds(vec2 pos, vec4 vb) {
@@ -82,14 +107,11 @@ vec2 getUV(vec2 pos, vec4 b) {
     if (lon360 < 0.0) lon360 += 360.0;
     u = clamp(lon360 / 360.0, 0.0, 1.0);
   } else {
+    float px = adjustLon(pos.x, b);
     float lonSpan = max(1e-6, b.z - b.x);
-    u = clamp((pos.x - b.x) / lonSpan, 0.0, 1.0);
+    u = clamp((px - b.x) / lonSpan, 0.0, 1.0);
   }
   return vec2(u, v);
-}
-
-float wrapLongitude(float lng) {
-  return mod(lng + 180.0, 360.0) - 180.0;
 }
 
 vec2 destinationPoint(vec2 fromLL, float distMeters, float bearingDegrees) {
@@ -237,6 +259,8 @@ void main() {
   vec2 uv = getUV(uvPos, bitmap.bounds);
   vec4 wind = texture(bitmapTexture, uv);
 
+  // Drop particles with no data
+  float windSpeed = length(wind.xy);
   if (wind.a < 0.1) {
     targetPosition = vec3(DROP_POSITION, 0.0);
     return;
@@ -281,5 +305,3 @@ void main() {
   targetPosition = vec3(newPos, 0.0);
 }
 `;
-
-export default shader;
