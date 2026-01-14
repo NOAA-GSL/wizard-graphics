@@ -157,7 +157,7 @@ function MapContainer() {
             views.push(makeView(i));
         }
         dispatch({ key: 'views', value: views });
-    }, [displayNum, state.isGlobeView]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [displayNum, state.isGlobeView, currentController]); // eslint-disable-line react-hooks/exhaustive-deps
     // ---------------------------------------------------//
 
     let temperatures;
@@ -280,15 +280,14 @@ function MapContainer() {
     const particleLayer = useMemo(() => {
         if (!state.particleCheckbox) return null;
         return new ParticleLayer({
-            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
             dataDir: wdir,
             dataMag: wmag,
-            displaynum: [3], // important for multi-panel!
+            displaynum: [0, 1, 2, 3], // Show particles in all 4 panels
             color: [255, 255, 255, 255],
             width: 1.5,
-            numParticles: 10000,
+            numParticles: 5000, // Reduced for multi-panel performance
             projection,
-            parameters: { depthCompare: 'always', cullMode: 'front' },
             readout: [
                 {
                     data: wmag,
@@ -306,7 +305,7 @@ function MapContainer() {
                 },
             ],
         });
-    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag, currentController]);
+    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag, currentDataset, currentController]);
 
     const layers = useMemo(() => {
         const result = [];
@@ -323,7 +322,7 @@ function MapContainer() {
                     elevation: 0,
                     displaynum: [0], // important for multi-panel!
                     interpolateData: state.shadedInterpolateCheckbox,
-                    parameters: { depthCompare: 'always', cullMode: 'back' },
+                    parameters: { depthCompare: 'always', cullMode: 'none' },
                     readout: [
                         {
                             data,
@@ -351,7 +350,7 @@ function MapContainer() {
                     displaynum: [1], // important for multi-panel!
                     parameters: {
                         depthCompare: 'always',
-                        cullMode: 'back',
+                        cullMode: 'none',
                     },
                     labels: { enabled: state.contourLabels, getSize: 14 },
                     readout: [
@@ -381,8 +380,7 @@ function MapContainer() {
                     getLineColor: [255, 0, 0],
                     parameters: {
                         depthCompare: 'always',
-                        frontFace: 'ccw',
-                        cullMode: 'back',
+                        cullMode: 'none',
                     },
                     getPointRadius: 4,
                     getTextSize: 12,
@@ -400,7 +398,7 @@ function MapContainer() {
                     projection,
                     displaynum: [2], // important for multi-panel!
                     angleOffset: state.isGlobeView ? 180 : 0,
-                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
+                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'none' },
                     readout: [
                         {
                             data: wmag,

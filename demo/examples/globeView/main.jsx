@@ -213,7 +213,7 @@ function MapContainer() {
                 strategy: 'no-overlap',
                 color: [255, 255, 255, 170],
                 operation: 'terrain+draw',
-                parameters: { depthTest: true },
+                parameters: { depthTest: true, cullMode: 'none' },
                 //onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
                 //onTileError: (err) => console.error('Terrain tile error:', err),
             }),
@@ -223,7 +223,7 @@ function MapContainer() {
     const particleLayer = useMemo(() => {
         if (!state.particleCheckbox) return null;
         return new ParticleLayer({
-            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
             dataDir: wdir,
             dataMag: wmag,
             color: [0, 0, 0, 255],
@@ -254,6 +254,7 @@ function MapContainer() {
         wdir,
         wmag,
         style,
+        currentDataset,
         currentController,
     ]);
 
