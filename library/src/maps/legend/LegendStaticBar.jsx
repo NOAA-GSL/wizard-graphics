@@ -138,7 +138,8 @@ export default function LegendStaticBar({ options }) {
 
     // don't include the () when no units are provided
     // using .trim() because sometimes we get a space in the empty string
-    const titleText = `${title} ${units.trim() ? `(${units})` : ''}`.trim();
+    const trimmedUnits = units.trim();
+    const titleText = `${title} ${trimmedUnits ? `(${trimmedUnits})` : ''}`.trim();
 
     const titleDimensions = getTextDimensions(
         titleText,
