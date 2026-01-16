@@ -112,3 +112,23 @@ Example of the properties contained in a weather field configuration:
     # run from /library
     npm publish
     ```
+
+## Testing locally
+
+1. Using `npm link` in the library and consuming projects as discussed above
+    - This can be a pain in the butt because of dependency conflicts. Since `desi-graphics` installs it's own packages for the demo examples, this can conflict with the consuming repo
+2. Using `npm yalc` or `Verdaccio` which serve as local npm deployments
+    - The `yalc` approach:
+        1. `npm install -g yalc`
+        2. `npm run build` in the the library project
+        3. `yalc publish` in the library, which creates a tarball of the project in the yalc store
+        4. `yalc add desi-graphics` in the consuming project and then run `npm install`
+        5. To update,
+            - option 1 `npm run build`, `yalc publish`, `yalc update desi-graphics`
+            - option 2: `yalc publish --push` will publish the package to the store and propagate all changes to existing `yalc` package installations.
+            - Then restart `npm run dev` on DESI and reload the webpage with 'empty cache and hard reload'
+        6. To remove:
+            ```bash
+            yalc remove desi-graphics
+            npm install
+            ```
