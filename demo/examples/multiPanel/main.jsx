@@ -286,7 +286,8 @@ function MapContainer() {
             displaynum: [0, 1, 2, 3], // Show particles in all 4 panels
             color: [255, 255, 255, 255],
             width: 1.5,
-            numParticles: 5000, // Reduced for multi-panel performance
+            widthMinPixels: 1.5,
+            numParticles: 10000,
             projection,
             readout: [
                 {
@@ -322,7 +323,7 @@ function MapContainer() {
                     elevation: 0,
                     displaynum: [0], // important for multi-panel!
                     interpolateData: state.shadedInterpolateCheckbox,
-                    parameters: { depthCompare: 'always', cullMode: 'none' },
+                    parameters: { depthCompare: 'always', cullMode: 'back' },
                     readout: [
                         {
                             data,
@@ -350,7 +351,7 @@ function MapContainer() {
                     displaynum: [1], // important for multi-panel!
                     parameters: {
                         depthCompare: 'always',
-                        cullMode: 'none',
+                        cullMode: 'back',
                     },
                     labels: { enabled: state.contourLabels, getSize: 14 },
                     readout: [
@@ -380,7 +381,8 @@ function MapContainer() {
                     getLineColor: [255, 0, 0],
                     parameters: {
                         depthCompare: 'always',
-                        cullMode: 'none',
+                        frontFace: 'ccw',
+                        cullMode: 'back',
                     },
                     getPointRadius: 4,
                     getTextSize: 12,
@@ -398,7 +400,7 @@ function MapContainer() {
                     projection,
                     displaynum: [2], // important for multi-panel!
                     angleOffset: state.isGlobeView ? 180 : 0,
-                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'none' },
+                    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
                     readout: [
                         {
                             data: wmag,

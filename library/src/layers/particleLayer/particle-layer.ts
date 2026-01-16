@@ -257,7 +257,7 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
     speedVariation: { type: 'number', min: 0, max: 1, value: 0.1 },
     turbulenceStrength: { type: 'number', min: 0, max: 1, value: 0.1 },
 
-    parameters: { depthCompare: 'always', cullMode: 'none' },
+    parameters: { depthCompare: 'always', depthWriteEnabled: true, cullMode: 'none' },
 };
 
 export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>> extends LineLayer<
@@ -666,6 +666,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         return bounds;
     }
 
+    private _lastStepFrame = -1;
+
     draw({ uniforms }: { uniforms: any }) {
         if (!this.state.initialized) return;
 
@@ -675,7 +677,10 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         // Verify buffers exist before drawing (prevents errors during layer transitions)
         if (!sourcePositions || !targetPositions || !colors) return;
 
-        if (this.props.animate) {
+        // Only step once per frame (prevents multiple updates in multi-panel setups)
+        const currentFrame = Math.floor(performance.now());
+        if (this.props.animate && currentFrame !== this._lastStepFrame) {
+            this._lastStepFrame = currentFrame;
             this.step();
         }
 

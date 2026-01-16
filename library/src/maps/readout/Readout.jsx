@@ -332,7 +332,14 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
     // get latest deck for offsets when rendering
     const overlay = overlayRef?.current;
     const deck = overlay?._deck || overlay?.deck;
-    const viewports = deck?.viewManager?.getViewports?.() || deck?.getViewports?.() || [];
+    // Without the try catch the readout was causing DESI to crash when switch from simple to mapbox
+    // while scrubbing the mouse over the display (to activate the readout)
+    let viewports;
+    try {
+        viewports = deck?.viewManager?.getViewports?.() || deck?.getViewports?.() || [];
+    } catch (e) {
+        viewports = [];
+    }
     // build mapping from view id -> viewport
     const vpById = new Map(viewports.map((v) => [v.id, v]));
 

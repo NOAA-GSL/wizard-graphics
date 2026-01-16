@@ -15,6 +15,7 @@ const float DEG2RAD       = 0.017453292519943295;
 const float RAD2DEG       = 57.29577951308232;
 const float R_EARTH       = 6370972.0;
 const float NOISE_TEX_SIZE = 256.0;
+const float PARTICLE_ELEVATION = 100.0; // meters 
 
 // Optimized hash functions using pre-computed noise texture
 // Much faster than computing sin() per particle
@@ -103,7 +104,9 @@ vec2 getUV(vec2 pos, vec4 b) {
   float v = clamp((pos.y - b.w) / (b.y - b.w), 0.0, 1.0);
   float u;
   if (isGlobalData(b)) {
-    float lon360 = mod(pos.x, 360.0);
+    float minLon = b.x;
+    float offsetLon = pos.x - minLon;
+    float lon360 = mod(offsetLon, 360.0);
     if (lon360 < 0.0) lon360 += 360.0;
     u = clamp(lon360 / 360.0, 0.0, 1.0);
   } else {
@@ -238,12 +241,12 @@ void main() {
       );
       position = mix(bitmap.viewportBounds.xy, bitmap.viewportBounds.zw, rnd);
     }
-    targetPosition = vec3(position, 0.0);
+    targetPosition = vec3(position, PARTICLE_ELEVATION);
     return;
   }
 
   if (shouldDropParticle(particleIndex, particleAge, sourcePosition.xy, bitmap.viewportCenter)) {
-    targetPosition = vec3(DROP_POSITION, 0.0);
+    targetPosition = vec3(DROP_POSITION, 0.0); // Keep dropped particles at z=0 for detection
     return;
   }
 
@@ -302,6 +305,6 @@ void main() {
     else if (newPos.x > bitmap.bounds.z) newPos.x = bitmap.bounds.x + (newPos.x - bitmap.bounds.z);
   }
 
-  targetPosition = vec3(newPos, 0.0);
+  targetPosition = vec3(newPos, PARTICLE_ELEVATION);
 }
 `;
