@@ -10,16 +10,23 @@ import {
     Projection,
     ShadedLayer,
     ContourLayer,
+    ParticleLayer,
     configFields,
 } from 'desi-graphics';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
+import hrefWdir from 'demo-data/HREF/wdir';
+import hrefWmag from 'demo-data/HREF/wmag';
 import hrefProjDict from 'demo-data/HREF/projection';
 
 import rrfsTemperatures from 'demo-data/RRFS/temp';
+import rrfsWdir from 'demo-data/RRFS/wdir';
+import rrfsWmag from 'demo-data/RRFS/wmag';
 import rrfsProjDict from 'demo-data/RRFS/projection';
 
 import eagleTemperatures from 'demo-data/EAGLE/temp';
+import eagleWdir from 'demo-data/EAGLE/wdir';
+import eagleWmag from 'demo-data/EAGLE/wmag';
 import eagleProjDict from 'demo-data/EAGLE/projection';
 
 import { TerrainLayer, SolidPolygonLayer } from 'deck.gl';
@@ -33,6 +40,7 @@ const checkboxConfig = [
     { key: 'contourLabels', label: 'Contour Labels', parent: 'contourCheckbox' },
     { key: 'shadedCheckbox', label: 'Shaded Layer' },
     { key: 'shadedInterpolateCheckbox', label: 'Interpolate Data', parent: 'shadedCheckbox' },
+    { key: 'particleCheckbox', label: 'Particle Layer' },
     { key: 'terrainCheckbox', label: 'Terrain Layer' },
     { key: 'solidPolygonLayer', label: 'Solid Polygon Layer' },
 ];
@@ -47,6 +55,7 @@ function MapContainer() {
         contourLabels: true,
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
+        particleCheckbox: true,
         terrainCheckbox: true,
         solidPolygonLayer: true,
     });
@@ -60,21 +69,29 @@ function MapContainer() {
     const mapRef = useRef();
 
     let temperatures;
+    let wdir;
+    let wmag;
     let projDict;
     let resLevel;
     switch (currentDataset) {
         case 'HREF':
             temperatures = hrefTemperatures;
+            wdir = hrefWdir;
+            wmag = hrefWmag;
             projDict = hrefProjDict;
             resLevel = 4; // sample data is every 4th point
             break;
         case 'RRFS':
             temperatures = rrfsTemperatures;
+            wdir = rrfsWdir;
+            wmag = rrfsWmag;
             projDict = rrfsProjDict;
             resLevel = 8; // sample data is every 8th point
             break;
         case 'EAGLE':
             temperatures = eagleTemperatures;
+            wdir = eagleWdir;
+            wmag = eagleWmag;
             projDict = eagleProjDict;
             resLevel = 8; // sample data is every 8th point
             break;
@@ -87,6 +104,16 @@ function MapContainer() {
                 temperatures.flat().map((v) => (v == null ? NaN : ((v - 273.15) * 9) / 5 + 32)),
             ),
         [temperatures],
+    );
+
+    const dataDir = useMemo(
+        () => new Float32Array(wdir.flat().map((v) => (v == null ? NaN : v))),
+        [wdir],
+    );
+
+    const dataMag = useMemo(
+        () => new Float32Array(wmag.flat().map((v) => (v == null ? NaN : v))),
+        [wmag],
     );
 
     const projection = useMemo(() => {
@@ -200,6 +227,28 @@ function MapContainer() {
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
                 }),
             );
+        if (state.particleCheckbox)
+            result.push(
+                new ParticleLayer({
+                    id: `particleLayer-${currentDataset}`,
+                    dataDir,
+                    dataMag,
+                    color: [255, 255, 255, 255],
+                    width: 1.5,
+                    numParticles: 10000,
+                    projection,
+                    widthMinPixels:1.5,
+                    readout: [
+                        {
+                            data: dataMag,
+                            prependText: 'Wind Speed',
+                            units: 'mph',
+                            interpolate: true,
+                            decimals: 0,
+                        },
+                    ],
+                }),
+            );
         return result;
     }, [
         state.terrainCheckbox,
@@ -207,11 +256,15 @@ function MapContainer() {
         state.shadedCheckbox,
         state.shadedInterpolateCheckbox,
         state.contourCheckbox,
+        state.particleCheckbox,
         state.isGlobeView,
         state.contourLabels,
         terrainLayer,
         style,
         data,
+        dataDir,
+        dataMag,
+        currentDataset,
         colors,
         colorLevels,
         colorType,
