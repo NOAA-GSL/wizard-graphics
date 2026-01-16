@@ -63,7 +63,7 @@ function MapContainer() {
         shadedCheckbox: true,
         shadedInterpolateCheckbox: true,
         vectorCheckbox: true,
-        particleCheckbox: false,
+        particleCheckbox: true,
         isGlobeView: true,
         geojsonLayer: true,
         showStats: false, // Enable stats by default
@@ -191,6 +191,8 @@ function MapContainer() {
             console.error('ERROR', `Unknown dataset: ${currentDataset}`);
     }
     wdir = useMemo(() => wdir.flat(), [wdir]);
+    // wdir2: wdir but values capped at 180
+    const wdir2 = useMemo(() => wdir.map((v) => Math.min(v, 180)), [wdir]);
     wmag = useMemo(() => wmag.flat().map((v) => v * 2.23694), [wmag]);
     const data = useMemo(
         () =>
@@ -276,37 +278,6 @@ function MapContainer() {
 
     const field = 't2';
     const { colors, colorLevels, contourLevels, colorType } = configFields[field].colorBars.default;
-
-    const particleLayer = useMemo(() => {
-        if (!state.particleCheckbox) return null;
-        return new ParticleLayer({
-            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
-            dataDir: wdir,
-            dataMag: wmag,
-            displaynum: [0, 1, 2, 3], // Show particles in all 4 panels
-            color: [255, 255, 255, 255],
-            width: 1.5,
-            widthMinPixels: 1.5,
-            numParticles: 10000,
-            projection,
-            readout: [
-                {
-                    data: wmag,
-                    prependText: 'Wind Speed',
-                    units: 'mph',
-                    interpolate: true,
-                    decimals: 0,
-                },
-                {
-                    data: wdir,
-                    prependText: 'Wind Direction',
-                    units: '°',
-                    interpolate: true,
-                    decimals: 0,
-                },
-            ],
-        });
-    }, [state.particleCheckbox, state.isGlobeView, projection, wdir, wmag, currentDataset, currentController]);
 
     const layers = useMemo(() => {
         const result = [];
@@ -419,7 +390,64 @@ function MapContainer() {
                     ],
                 }),
             );
-        if (state.particleCheckbox) result.push(particleLayer);
+        if (state.particleCheckbox) {
+            result.push(
+                new ParticleLayer({
+                    id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
+                    dataDir: wdir,
+                    dataMag: wmag,
+                    displaynum: [2],
+                    color: [255, 255, 255, 255],
+                    width: 1.5,
+                    widthMinPixels: 1.5,
+                    numParticles: 10000,
+                    projection,
+                    readout: [
+                        {
+                            data: wmag,
+                            prependText: 'Wind Speed',
+                            units: 'mph',
+                            interpolate: true,
+                            decimals: 0,
+                        },
+                        {
+                            data: wdir,
+                            prependText: 'Wind Direction',
+                            units: '°',
+                            interpolate: true,
+                            decimals: 0,
+                        },
+                    ],
+                }),
+                new ParticleLayer({
+                    id: `particleLayer2-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
+                    dataDir: wdir2,
+                    dataMag: wmag,
+                    displaynum: [3],
+                    color: [255, 0, 255, 255],
+                    width: 1.5,
+                    widthMinPixels: 1.5,
+                    numParticles: 10000,
+                    projection,
+                    readout: [
+                        {
+                            data: wmag,
+                            prependText: 'Wind Speed',
+                            units: 'mph',
+                            interpolate: true,
+                            decimals: 0,
+                        },
+                        {
+                            data: wdir,
+                            prependText: 'Wind Direction',
+                            units: '°',
+                            interpolate: true,
+                            decimals: 0,
+                        },
+                    ],
+                }),
+            );
+        }
 
         return result;
     }, [
@@ -440,7 +468,6 @@ function MapContainer() {
         contourLevels,
         wdir,
         wmag,
-        particleLayer,
     ]);
 
     const layerFilter = useCallback(
