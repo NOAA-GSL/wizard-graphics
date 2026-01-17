@@ -452,13 +452,31 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         return trailLines;
     }
 
+    _getDataFingerprint(dataDir: any, dataMag: any): string {
+        // Create a fingerprint by hashing sampled values from both arrays
+        // Samples start, middle, end to detect changes without expensive full-array hashing
+        const sampleArray = (arr: any) => {
+            if (!arr?.length) return '0';
+            const len = arr.length;
+            return `${len}-${arr[0]}-${arr[Math.floor(len / 2)]}-${arr[len - 1]}`;
+        };
+
+        const sample = `${sampleArray(dataDir)}|${sampleArray(dataMag)}`;
+        let hash = 0;
+        for (let i = 0; i < sample.length; i++) {
+            hash = (hash << 5) - hash + sample.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash.toString();
+    }
+
     _createWindTexture() {
         const { projection, dataDir, dataMag } = this.props;
         const { lonlatGrid } = projection;
 
-        const dataDirKey = simpleHash(dataDir);
-        const dataMagKey = simpleHash(dataMag);
-        const key = `${dataDirKey}-${dataMagKey}`;
+        // Include data fingerprint in cache key to distinguish different datasets with same grid
+        const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
+        const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dataFingerprint}`;
         const textureKey = `${key}-texture`;
         const cachedTexture = positionsCache.get(textureKey);
 
@@ -642,10 +660,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         }
         const globalData = isGlobalData(calculatedBounds);
 
-        // Use dataDir and dataMag identity in the cache key
-        const dataDirKey = simpleHash(dataDir);
-        const dataMagKey = simpleHash(dataMag);
-        const cacheKey = `${dataDirKey}-${dataMagKey}`;
+        // Clear the cached texture so _createWindTexture builds a fresh one with new data
+        const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
+        const cacheKey = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dataFingerprint}`;
         const textureKey = `${cacheKey}-texture`;
         const cachedEntry = positionsCache.get(textureKey);
         if (cachedEntry?.texture) {
