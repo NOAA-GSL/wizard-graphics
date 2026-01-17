@@ -94,6 +94,21 @@ function getSharedNoiseData(): Float32Array {
     return sharedNoiseData;
 }
 
+// Simple hash function for objects/strings
+function simpleHash(obj: any): string {
+    let str = typeof obj === 'string' ? obj : JSON.stringify(obj);
+    let hash = 0,
+        i,
+        chr;
+    if (str.length === 0) return hash.toString();
+    for (i = 0; i < str.length; i++) {
+        chr = str.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash.toString();
+}
+
 function addToCache(key: string, value: any) {
     if (positionsCache.size >= MAX_CACHE_SIZE) {
         const firstKey = positionsCache.keys().next().value;
@@ -353,15 +368,16 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
                 'fs:#main-end': `
           if (drop > 0.5) discard;
 
-          ${this.props.fadeTrails
-                        ? `
+          ${
+              this.props.fadeTrails
+                  ? `
           // Age-based fade: head (trailAge=0) is opaque, tail (trailAge=1) fades out
           float fadeVariation = 0.8 + particleVariation * 0.4;
           float trailFade = 1.0 - smoothstep(0.0, fadeVariation, trailAge);
           fragColor.a = trailFade * trailFade;
           `
-                        : ''
-                    }
+                  : ''
+          }
         `,
             },
         };
@@ -436,11 +452,31 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         return trailLines;
     }
 
+    _getDataFingerprint(dataDir: any, dataMag: any): string {
+        // Create a fingerprint by hashing sampled values from both arrays
+        // Samples start, middle, end to detect changes without expensive full-array hashing
+        const sampleArray = (arr: any) => {
+            if (!arr?.length) return '0';
+            const len = arr.length;
+            return `${len}-${arr[0]}-${arr[Math.floor(len / 2)]}-${arr[len - 1]}`;
+        };
+
+        const sample = `${sampleArray(dataDir)}|${sampleArray(dataMag)}`;
+        let hash = 0;
+        for (let i = 0; i < sample.length; i++) {
+            hash = (hash << 5) - hash + sample.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash.toString();
+    }
+
     _createWindTexture() {
         const { projection, dataDir, dataMag } = this.props;
         const { lonlatGrid } = projection;
 
-        const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
+        // Include data fingerprint in cache key to distinguish different datasets with same grid
+        const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
+        const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dataFingerprint}`;
         const textureKey = `${key}-texture`;
         const cachedTexture = positionsCache.get(textureKey);
 
@@ -528,6 +564,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     }
 
     _getBoundsFromGrid(lonlatGrid: any) {
+        // Only cache bounds by grid, not by dataDir/dataMag
         const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
         const cached = positionsCache.get(key);
         if (cached?.bounds) return cached.bounds;
@@ -578,12 +615,13 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         const { props, oldProps } = params;
 
         // Check if color changed (only after initialization to avoid spurious rebuilds)
-        const colorChanged = this.state.initialized && oldProps.color && (
-            props.color[0] !== oldProps.color[0] ||
-            props.color[1] !== oldProps.color[1] ||
-            props.color[2] !== oldProps.color[2] ||
-            props.color[3] !== oldProps.color[3]
-        );
+        const colorChanged =
+            this.state.initialized &&
+            oldProps.color &&
+            (props.color[0] !== oldProps.color[0] ||
+                props.color[1] !== oldProps.color[1] ||
+                props.color[2] !== oldProps.color[2] ||
+                props.color[3] !== oldProps.color[3]);
 
         // Structure changes require full buffer recreation
         const structureChanged =
@@ -612,7 +650,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     }
 
     _updateWindTexture() {
-        const { projection } = this.props;
+        const { projection, dataDir, dataMag } = this.props;
         const { lonlatGrid } = projection;
 
         const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
@@ -623,7 +661,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         const globalData = isGlobalData(calculatedBounds);
 
         // Clear the cached texture so _createWindTexture builds a fresh one with new data
-        const cacheKey = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
+        const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
+        const cacheKey = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dataFingerprint}`;
         const textureKey = `${cacheKey}-texture`;
         const cachedEntry = positionsCache.get(textureKey);
         if (cachedEntry?.texture) {
@@ -671,8 +710,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     draw({ uniforms }: { uniforms: any }) {
         if (!this.state.initialized) return;
 
-        const { model, sourcePositions, targetPositions, colors, needsAttributeBind } =
-            this.state;
+        const { model, sourcePositions, targetPositions, colors, needsAttributeBind } = this.state;
 
         // Verify buffers exist before drawing (prevents errors during layer transitions)
         if (!sourcePositions || !targetPositions || !colors) return;
@@ -759,9 +797,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         // Create color buffer with uniform alpha - the shader handles age-based fading
         const colorsArr = new Uint8Array(numInstances * 4);
-        const r = (color[0] as number);
-        const g = (color[1] as number);
-        const b = (color[2] as number);
+        const r = color[0] as number;
+        const g = color[1] as number;
+        const b = color[2] as number;
         const baseAlpha = (color[3] ?? 255) as number;
         for (let i = 0; i < numInstances; i++) {
             const o = i * 4;
@@ -771,8 +809,6 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             colorsArr[o + 3] = baseAlpha; // Uniform alpha, shader applies age fade
         }
         const colorBuffer = this.context.device.createBuffer({ data: colorsArr });
-
-
 
         const transform = new BufferTransform(this.context.device, {
             attributes: { sourcePosition: sourcePositions },
@@ -831,12 +867,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         const { viewport, timeline } = this.context as any;
         const { numParticles, speedFactor, maxAge } = this.props;
-        const {
-            previousTime,
-            previousViewportZoom,
-            numAgedInstances,
-            ringBufferIndex,
-        } = this.state;
+        const { previousTime, previousViewportZoom, numAgedInstances, ringBufferIndex } =
+            this.state;
 
         // Use performance.now() instead of timeline.getTime() for continuous animation
         // timeline.getTime() only advances when deck.gl animations are active
@@ -896,7 +928,6 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         u.viewportGlobeRadius = viewportGlobeRadius;
         u.minWindSpeed = 1.5; // 3 knots ≈ 1.54 m/s, drop particles in calm areas
         u.ringBufferIndex = ringBufferIndex;
-
 
         if (!transform?.model) return;
 
@@ -976,7 +1007,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         // Clear initialized first to prevent draw() from using deleted resources
         this.setState({ initialized: false });
 
-        const { sourcePositions, targetPositions, colors, transform, texture, noiseTexture } = this.state;
+        const { sourcePositions, targetPositions, colors, transform, texture, noiseTexture } =
+            this.state;
         sourcePositions?.destroy();
         targetPositions?.destroy();
         colors?.destroy();
