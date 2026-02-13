@@ -314,7 +314,8 @@ export default class Projection {
 
         // Make sure the lon is within the bounds of the data
         if (!commonCoordinates) {
-            if (lon < this.firstLon) lon += 360;
+            const diff = lon - this.firstLon;
+            lon = this.firstLon + (((diff % 360) + 360) % 360);
         }
 
         let i;
