@@ -96,7 +96,7 @@ export default class deckUtilities {
         return { yMin, yMax, xMin, xMax };
     }
 
-    static getCities(viewport, tree, dys, cityBaseScale = 14) {
+    static getCities(viewport, tree, dys, cityBaseScale, cityPadding) {
         const FontsizeInPixels = 16;
         const { unproject } = viewport;
         if (!unproject) return undefined;
@@ -105,7 +105,7 @@ export default class deckUtilities {
 
         const { latPerPixel } = deckUtilities.getLatLonPerPixel(viewport);
         // Adjust this value to make the city density larger or smaller
-        const padding = cityBaseScale * 0.3 || 4;
+        const padding = cityPadding * cityBaseScale * 0.3;
         const dyRaw = ((latPerPixel * FontsizeInPixels) / 2) * padding;
         const dysCopy = [...dys];
         dysCopy.sort();
