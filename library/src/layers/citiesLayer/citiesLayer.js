@@ -8,6 +8,7 @@ import { computeProgressiveDisclosure, dys } from './computeProgressiveDisclosur
 const defaultProps = {
     elevation: 0,
     cityBaseScale: 14,
+    cityPadding: 1,
     fontFamily: 'Open Sans, sans-serif',
     billboard: true,
     backgroundPadding: [4, 1],
@@ -96,6 +97,7 @@ export default class CitiesLayer extends CompositeLayer {
                 tree,
                 dys,
                 props.cityBaseScale,
+                props.cityPadding,
             );
 
             const cityData = [];

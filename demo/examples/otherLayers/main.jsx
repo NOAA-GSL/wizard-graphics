@@ -59,6 +59,7 @@ function MapContainer() {
         spcLayerCheckbox: false,
         wpcLayerCheckbox: false,
         wwaLayerCheckbox: false,
+        cityPadding: 1,
         isGlobeView: true,
     });
 
@@ -269,6 +270,8 @@ function MapContainer() {
         const citiesLayer = new CitiesLayer({
             id: 'citiesLayer',
             cityList: demoCities,
+            cityBaseScale: 14,
+            cityPadding: state.cityPadding,
             ...(state.citiesDataLabelsCheckbox && {
                 dataLabels: {
                     data,
@@ -437,15 +440,29 @@ function MapContainer() {
     }
 
     const checkboxes = [
-        { key: 'citiesLayerCheckbox', label: 'Cities Layer', break: false },
-        { key: 'citiesDataLabelsCheckbox', label: 'Cities Data Labels', break: true },
-        { key: 'iconLayerCheckbox', label: 'Icon Cluster Layer', break: true },
-        { key: 'spotLayerCheckbox', label: 'Spot Layer', break: true },
-        { key: 'nifcLayerCheckbox', label: 'NIFC Layer', break: true },
-        { key: 'cpcLayerCheckbox', label: 'CPC Layer', break: true },
-        { key: 'spcLayerCheckbox', label: 'SPC Layer', break: true },
-        { key: 'wpcLayerCheckbox', label: 'WPC Layer', break: true },
-        { key: 'wwaLayerCheckbox', label: 'WWA Layer', break: true },
+        { key: 'citiesLayerCheckbox', label: 'Cities Layer', type: 'checkbox', break: false },
+        {
+            key: 'cityPadding',
+            label: 'City Padding',
+            type: 'range',
+            min: 0,
+            max: 1,
+            step: 0.01,
+            break: true,
+        },
+        {
+            key: 'citiesDataLabelsCheckbox',
+            label: 'Cities Data Labels',
+            type: 'checkbox',
+            break: true,
+        },
+        { key: 'iconLayerCheckbox', label: 'Icon Cluster Layer', type: 'checkbox', break: true },
+        { key: 'spotLayerCheckbox', label: 'Spot Layer', type: 'checkbox', break: true },
+        { key: 'nifcLayerCheckbox', label: 'NIFC Layer', type: 'checkbox', break: true },
+        { key: 'cpcLayerCheckbox', label: 'CPC Layer', type: 'checkbox', break: true },
+        { key: 'spcLayerCheckbox', label: 'SPC Layer', type: 'checkbox', break: true },
+        { key: 'wpcLayerCheckbox', label: 'WPC Layer', type: 'checkbox', break: true },
+        { key: 'wwaLayerCheckbox', label: 'WWA Layer', type: 'checkbox', break: true },
     ];
 
     function onViewStateChange(props) {
@@ -462,13 +479,27 @@ function MapContainer() {
                     <label htmlFor={checkbox.key}>
                         <input
                             id={checkbox.key}
-                            type="checkbox"
-                            checked={state[checkbox.key]}
-                            onChange={(e) => {
-                                setState({ ...state, [checkbox.key]: e.target.checked });
-                            }}
+                            type={checkbox.type}
+                            {...(checkbox.type === 'checkbox'
+                                ? {
+                                      checked: state[checkbox.key],
+                                      onChange: (e) =>
+                                          setState({ ...state, [checkbox.key]: e.target.checked }),
+                                  }
+                                : {
+                                      min: checkbox.min ?? 0,
+                                      max: checkbox.max ?? 100,
+                                      step: checkbox.step ?? 1,
+                                      value: state[checkbox.key],
+                                      onChange: (e) =>
+                                          setState({
+                                              ...state,
+                                              [checkbox.key]: Number(e.target.value),
+                                          }),
+                                  })}
                         />
                         {checkbox.label}
+                        {checkbox.type === 'range' && ` (${state[checkbox.key]})`}
                     </label>
                     {checkbox.break && <br />}
                 </span>
