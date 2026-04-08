@@ -1,19 +1,31 @@
 import { StrictMode, useMemo, useRef, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, DeckGLOverlay, Readout, mapStyles, Legend } from 'desi-graphics';
+import {
+    Maps,
+    DeckGLOverlay,
+    Readout,
+    mapStyles,
+    Legend,
+    IconClusterLayer,
+    CitiesLayer,
+    Projection,
+    SpotLayer,
+    NIFCLayer,
+    CPCLayer,
+    SPCLayer,
+    WPCLayer,
+    WWALayer,
+} from '@noaa-gsl/wizard-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
-import { IconClusterLayer, CitiesLayer } from 'desi-graphics';
 import temperatures from 'demo-data/HREF/temp';
 import projDict from 'demo-data/HREF/projection';
-import { Projection } from 'desi-graphics';
-import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from 'desi-graphics';
 import URLdata from './URLdata';
 import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/styles.css';
 
 // Custom persistent tooltip component
 function PersistentTooltip({ tooltip, onClose }) {

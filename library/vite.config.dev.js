@@ -8,7 +8,7 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
         alias: {
-            'desi-graphics': path.resolve('./src'),
+            '@noaa-gsl/wizard-graphics': path.resolve('./src'),
         },
     },
     build: {
@@ -21,10 +21,11 @@ export default defineConfig({
             // Defines the entry point for the library build. It resolves
             // to src/index.ts,indicating that the library starts from this file.
             entry: path.resolve(__dirname, 'src/index.js'),
-            name: 'desi-graphics',
+            name: 'wizardGraphics',
             // A function that generates the output file
             // name for different formats during the build
-            fileName: (format) => `desi-graphics.${format}.js`,
+            fileName: (format) => `wizard-graphics.${format}.js`,
+            cssFileName: 'styles',
         },
         rollupOptions: {
             // put all peer dependencies here

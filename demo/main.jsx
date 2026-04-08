@@ -5,7 +5,7 @@ function App() {
     const { mapToken } = process.env;
     return (
         <div>
-            <h1> Welcome to DESI Graphics!</h1>
+            <h1> Welcome to Wizard Graphics!</h1>
             {!mapToken && (
                 <div>
                     <p>

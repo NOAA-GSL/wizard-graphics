@@ -1,22 +1,22 @@
 {
-    "name": "desi-graphics",
+    "name": "@noaa-gsl/wizard-graphics",
     "version": "1.2.6",
     "description": "An extension of deck.gl for producing weather graphics",
     "type": "module",
     "license": "MIT",
-    "main": "./dist/desi-graphics.umd.cjs",
-    "module": "./dist/desi-graphics.es.js",
+    "main": "./dist/wizard-graphics.umd.cjs",
+    "module": "./dist/wizard-graphics.es.js",
     "exports": {
         ".": {
-            "import": "./dist/desi-graphics.es.js",
-            "require": "./dist/desi-graphics.umd.cjs"
+            "import": "./dist/wizard-graphics.es.js",
+            "require": "./dist/wizard-graphics.umd.cjs"
         },
-        "./desi-graphics.css": "./dist/desi-graphics.css"
+        "./styles.css": "./dist/styles.css"
     },
     "files": [
         "dist"
     ],
-    "homepage": "https://vlab.noaa.gov/gitlab-community/OAR/GSL/DESI/desi-graphics",
+    "homepage": "https://github.com/NOAA-GSL/wizard-graphics",
     "scripts": {
         "dev": "vite",
         "build:dev": "vite build --config vite.config.dev.js",

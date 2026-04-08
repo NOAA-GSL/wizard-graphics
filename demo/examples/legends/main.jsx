@@ -1,10 +1,10 @@
 /* eslint-disable react/no-unescaped-entities */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { LegendStaticBar } from 'desi-graphics';
+import { LegendStaticBar } from '@noaa-gsl/wizard-graphics';
 
 import './style.css';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/styles.css';
 
 function LegendContainer() {
     return (

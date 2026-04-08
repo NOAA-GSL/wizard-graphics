@@ -16,7 +16,7 @@ import {
     ParticleLayer,
     configFields,
     GeoJsonLayer,
-} from 'desi-graphics';
+} from '@noaa-gsl/wizard-graphics';
 import { DeckGL } from '@deck.gl/react';
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
@@ -36,7 +36,7 @@ import eagleProjDict from 'demo-data/EAGLE/projection';
 import { MapView, _GlobeView as GlobeView } from 'deck.gl';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/styles.css';
 import coastLines from './ne_10m_coastline.json';
 import displayLayout from './displayLayout';
 

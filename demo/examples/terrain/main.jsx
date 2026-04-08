@@ -1,4 +1,4 @@
-import React, { StrictMode, useMemo, useRef, useCallback, useReducer, useEffect } from 'react';
+import React, { StrictMode, useMemo, useRef, useCallback, useReducer } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
 import {
@@ -12,7 +12,7 @@ import {
     ContourLayer,
     ParticleLayer,
     configFields,
-} from 'desi-graphics';
+} from '@noaa-gsl/wizard-graphics';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
@@ -33,7 +33,7 @@ import { TerrainLayer, SolidPolygonLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/styles.css';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
@@ -237,7 +237,7 @@ function MapContainer() {
                     width: 1.5,
                     numParticles: 10000,
                     projection,
-                    widthMinPixels:1.5,
+                    widthMinPixels: 1.5,
                     readout: [
                         {
                             data: dataMag,

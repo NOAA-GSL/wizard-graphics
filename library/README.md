@@ -1,4 +1,4 @@
-# DESI Graphics
+# Wizard Graphics
 
 An extension of of deck.gl along with other mapping tools.
 
@@ -7,7 +7,7 @@ An extension of of deck.gl along with other mapping tools.
 ### To install:
 
 ```bash
-npm install desi-graphics
+npm install @noaa-gsl/wizard-graphics
 ```
 
 ## Library

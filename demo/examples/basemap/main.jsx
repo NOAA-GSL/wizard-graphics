@@ -1,10 +1,10 @@
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, mapStyles } from 'desi-graphics';
+import { Maps, mapStyles } from '@noaa-gsl/wizard-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/styles.css';
 
 function MapContainer() {
     const [state, setState] = useState(Object.keys(mapStyles)[0]);
