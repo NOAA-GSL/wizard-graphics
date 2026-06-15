@@ -283,7 +283,7 @@ export default class VectorLayer extends CompositeLayer {
             // true makes the wind barbs follow you, making them change directions
             iconAtlas: barbsPNG,
             iconMapping: ICON_MAPPING,
-            extensions: [new CollisionFilterExtension()],
+            // extensions: [new CollisionFilterExtension()],
             collisionEnabled: false,
             // alphaCutoff: -100,
             // getCollisionPriority: () => 0,
