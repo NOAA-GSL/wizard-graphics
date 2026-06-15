@@ -1,6 +1,6 @@
 {
     "private": true,
-    "name": "desi-graphics-workspace",
+    "name": "wizard-graphics-workspace",
     "version": "1.0.0",
     "description": "",
     "license": "ISC",
@@ -12,6 +12,9 @@
         "build": "npm run build --workspace=library",
         "build:dev": "npm run build:dev --workspace=library",
         "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "delaunator": "^5.1.0"
     },
     "workspaces": [
         "library",

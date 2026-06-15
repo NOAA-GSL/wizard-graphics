@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type { ShaderModule } from '@luma.gl/shadertools';
 
 // Order matters here, keep everything in order for all variables
 // - If not in same order, variables will not work correctly
@@ -13,27 +13,24 @@ uniform solidPolygonUniforms {
   bool isWireframe;
   float elevationScale;
   bool hasTexture;
-  bool interpolateData;
 } solidPolygon;
 `;
 
 export type SolidPolygonProps = {
-  extruded: boolean;
-  isWireframe: boolean;
-  elevationScale: number;
-  hasTexture: boolean;
-  interpolateData: boolean;
+    extruded: boolean;
+    isWireframe: boolean;
+    elevationScale: number;
+    hasTexture: boolean;
 };
 
 export const solidPolygonUniforms = {
-  name: 'solidPolygon',
-  vs: uniformBlock,
-  fs: uniformBlock,
-  uniformTypes: {
-    extruded: 'f32',
-    isWireframe: 'f32',
-    elevationScale: 'f32',
-    hasTexture: 'f32',
-    interpolateData: 'f32'
-  }
+    name: 'solidPolygon',
+    vs: uniformBlock,
+    fs: uniformBlock,
+    uniformTypes: {
+        extruded: 'f32',
+        isWireframe: 'f32',
+        elevationScale: 'f32',
+        hasTexture: 'f32',
+    },
 } as const satisfies ShaderModule<SolidPolygonProps>;

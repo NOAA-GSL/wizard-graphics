@@ -114,10 +114,13 @@ type _ShadedLayerProps<DataT> = {
      */
     getOpacity?: Accessor<DataT, number>;
     texture?: string | TextureSource | Promise<TextureSource>;
-    /** Whether to fill the polygons
-     * @default true
-     */
-    interpolateData?: boolean;
+    triangulationMode?:
+        | 'unstructured'
+        | 'quadkey'
+        | 'quadkey-cells'
+        | 'spherical'
+        | 'spherical-cells';
+    shape?: [number, number];
     /**
      * Material settings for lighting effect. Applies if `extruded: true`
      *
@@ -139,6 +142,7 @@ const defaultProps: DefaultProps<SolidPolygonLayerProps> = {
     _normalize: false,
     _windingOrder: 'CW',
     _full3d: false,
+    triangulationMode: 'unstructured',
 
     parameters: { depthCompare: 'always', cullMode: 'back' },
 
@@ -159,7 +163,6 @@ const defaultProps: DefaultProps<SolidPolygonLayerProps> = {
     },
     // Optional opacity layer
     getOpacity: { type: 'accessor', value: -1 },
-    interpolateData: true,
     // THW Done
 
     // Accessor for colors
@@ -390,6 +393,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             extruded: Boolean(extruded),
             elevationScale,
             isWireframe: false,
+            hasTexture: true,
         };
 
         // Note - the order is important
@@ -421,15 +425,14 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         const colorsChanged =
             props.colors !== oldProps.colors ||
             props.colorLevels !== oldProps.colorLevels ||
-            props.colorType !== oldProps.colorType ||
-            props.interpolateData !== oldProps.interpolateData;
+            props.colorType !== oldProps.colorType;
 
         if (props.data !== oldProps.data || colorsChanged) {
             console.log('Updating Buffers!');
             this.setBuffers();
         }
 
-        if (props.projection.lonlatGrid !== oldProps.projection?.lonlatGrid) {
+        if (props.lonlatGrid !== oldProps.lonlatGrid) {
             console.log('Updating geometry!');
             this.updateGeometry(updateParams);
         }
@@ -457,13 +460,14 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
     private setBuffers() {
         // THW ADD
 
-        // Get dimensions
-        const { lonlatGrid } = this.props.projection;
-        const dims = [lonlatGrid.length, lonlatGrid[0].length];
+        const { lonlatGrid } = this.props;
+        const triDims = this.props.shape;
+        const effectiveTriangulationMode = this.props.triangulationMode;
 
         // Get cashing key for grid, 4 points is all that is needed to figure out
         // if this is a new grid or not
-        const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dims}-${this.props.interpolateData}`;
+        const flatLonlatGrid = lonlatGrid.flat();
+        const key = `${flatLonlatGrid[0]}-${flatLonlatGrid[1]}-${flatLonlatGrid[2]}-${flatLonlatGrid[flatLonlatGrid.length - 1]}-${lonlatGrid.length}-${effectiveTriangulationMode}`;
 
         // Make normalized data if it doesn't exist
         const ndata =
@@ -473,86 +477,58 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         //
         // Typical shaded layer where data is interpolated between point
         //
-        let data;
-        if (this.props.interpolateData) {
-            const dataValues = TriangulateGrid.triangulate(ndata, 'data', dims);
-            if (!positions?.[key]?.vertices) {
-                const t0 = performance.now();
-                positions[key] = {};
-                [positions[key].vertices, positions[key].triangleIndices] =
-                    TriangulateGrid.triangulate(
-                        lonlatGrid,
-                        'positions',
-                        dims,
-                        3,
-                        this.props.elevation,
-                    );
-                console.log('Triangulate Time:', performance.now() - t0);
-                positions[key].startIndices = new Uint32Array([0]);
-            }
-            data = {
-                length: positions[key].startIndices.length,
-                // startIndices should be [0] for a triangle and an array of start positions for a polygon
-                startIndices: positions[key].startIndices,
-                attributes: {
-                    getPolygon: { value: positions[key].vertices, size: 3 },
-                    // When supplying Triangle Indicies, the polygon is assumed to be a triangle
-                    getTriangleIndices: {
-                        value: positions[key].triangleIndices,
-                        size: 1,
-                    },
-                    getPolygonData: { value: dataValues, size: 1 },
-                },
-            };
-
-            // If opacity data (or normalized opacity data) is supplied, add it
-            if (this.props.odata || this.props.nodata) {
-                const nodata =
-                    this.props.nodata || gUtilities.normalize(this.props.odata, [0, 100], 'linear');
-                data.attributes.getOpacity = TriangulateGrid.triangulate(
-                    nodata,
-                    'data',
-                    dims,
-                    1,
-                    1,
-                    0.01,
-                );
-            }
+        const dataValues = TriangulateGrid.triangulate(
+            ndata,
+            'data',
+            triDims,
+            1,
+            0,
+            1,
+            effectiveTriangulationMode,
+        );
+        if (!positions?.[key]?.vertices) {
+            const t0 = performance.now();
+            positions[key] = {};
+            [positions[key].vertices, positions[key].triangleIndices] = TriangulateGrid.triangulate(
+                lonlatGrid,
+                'positions',
+                triDims,
+                3,
+                this.props.elevation,
+                1,
+                effectiveTriangulationMode,
+            );
+            console.log('Triangulate Time:', performance.now() - t0);
+            positions[key].startIndices = new Uint32Array([0]);
         }
-        //
-        // Non-typical, data is not interpolated between points (paintballs)
-        //
-        else {
-            if (!positions?.[key]?.vertices) {
-                positions[key] = {};
-                [positions[key].vertices, positions[key].triangleIndices, positions[key].rgb] =
-                    TriangulateGrid.triangulate(
-                        lonlatGrid,
-                        'positions-redundant',
-                        dims,
-                        3,
-                        this.props.elevation,
-                    );
-                positions[key].startIndices = new Uint32Array([0]);
-            }
 
-            const [v1, v2, v3] = TriangulateGrid.triangulate(ndata, 'data-redundant', dims);
-            data = {
-                length: positions[key].startIndices.length,
-                startIndices: positions[key].startIndices,
-                attributes: {
-                    getPolygon: { value: positions[key].vertices, size: 3 },
-                    getTriangleIndices: {
-                        value: positions[key].triangleIndices,
-                        size: 1,
-                    },
-
-                    getVertex1: { value: v1, size: 1 },
-                    getVertex2: { value: v2, size: 1 },
-                    getVertex3: { value: v3, size: 1 },
-                    getFillColor: { value: positions[key].rgb, size: 3 },
+        const data = {
+            length: positions[key].startIndices.length,
+            // startIndices should be [0] for a triangle and an array of start positions for a polygon
+            startIndices: positions[key].startIndices,
+            attributes: {
+                getPolygon: { value: positions[key].vertices, size: 3 },
+                // When supplying Triangle Indicies, the polygon is assumed to be a triangle
+                getTriangleIndices: {
+                    value: positions[key].triangleIndices,
+                    size: 1,
                 },
-            };
+                getPolygonData: { value: dataValues, size: 1 },
+            },
+        };
+
+        // If opacity data (or normalized opacity data) is supplied, add it
+        if (this.props.odata || this.props.nodata) {
+            const nodata = this.props.nodata || gUtilities.normalize(this.props.odata, [0, 100], 'linear');
+            data.attributes.getOpacity = TriangulateGrid.triangulate(
+                nodata,
+                'data',
+                triDims,
+                1,
+                1,
+                0.01,
+                effectiveTriangulationMode,
+            );
         }
 
         // Assign new props
@@ -598,7 +574,6 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 // TypeScript error? Maybe revisit this later
                 // https://luma.gl/docs/api-reference/engine/shader-inputs/#shadermoduleinputs
                 solidPolygon: {
-                    interpolateData: Boolean(this.props.interpolateData),
                     hasTexture: Boolean(texture),
                 },
             });

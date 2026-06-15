@@ -24,14 +24,14 @@ export default function LegendStaticBar({ options }) {
         title = '', // title on legend
         units = '', // units on legend
         // styling options and additions
-        containerClassName = 'desi-default-legend-container',
+        containerClassName = 'wizard-default-legend-container',
         containerSx = {},
-        titleClassName = 'desi-default-legend-title',
+        titleClassName = 'wizard-default-legend-title',
         titleSx = {},
         titleJustify = 'center', // left, center, right
         // space between the title and the bar, this is a multiplier of the title height/width
         titlePaddingMultiplier = 1.2,
-        tickClassName = 'desi-default-legend-tick',
+        tickClassName = 'wizard-default-legend-tick',
         tickLength = 5, // length of the tick lines
         tickAngle = 0, // angle of the tick-text values. ticks must be 'byColorLevels' or tickValues must be defined
         tickValues = null, // specific tick values for the colorbar

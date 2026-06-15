@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import { CompositeLayer } from '@deck.gl/core';
-import PathLayer from '../pathLayer/DESIPathLayer.js';
+import PathLayer from '../pathLayer/WizardPathLayer.js';
 
 export const LINE_LAYER = {
     type: PathLayer,

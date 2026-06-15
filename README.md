@@ -1,10 +1,10 @@
-# DESI Graphics
+# Wizard Graphics
 
-An extension of of deck.gl along with other mapping tools.
+An extension of of deck.gl along with other mapping tools for numerical weather data.
 
 ## Getting Started
 
-This is a monorepo setup using NPM Workspaces. The `/library` directory contains the `desi-graphics` package and the `/demo` directory contains the examples, which can be run with [Vite](https://vitejs.dev/).
+This is a monorepo setup using NPM Workspaces. The `/library` directory contains the `wizard-graphics` package and the `/demo` directory contains the examples, which can be run with [Vite](https://vitejs.dev/).
 
 In order for the basemaps to load in the examples, you need an [ESRI API key](https://developers.arcgis.com/documentation/security-and-authentication/api-key-authentication/tutorials/migrate-to-api-key-credentials/). You can either set an environment variable:
 
@@ -24,7 +24,7 @@ _**Note:** Following commands are all from the root directory_
     npm install
     ```
 
-2. Build the `desi-graphics` package
+2. Build the `wizard-graphics` package
 
     ```bash
     npm run build
@@ -43,92 +43,33 @@ _**Note:** Following commands are all from the root directory_
 npm run dev
 ```
 
-## Library
+## Layer Documentation
 
-### Maps
+- [ShadedLayer](docs/shaded-layer.md)
 
-Maps.getStyles()
-Maps.loadStyle()
+    <img src="docs/images/shadedLayer.png" alt="ShadedLayer" style="max-width: 300px;" />
 
-## Usage
 
-## `configFields`
+- [ParticleLayer](docs/particle-layer.md)
 
-Example of the properties contained in a weather field configuration:
+    <img src="docs/images/particleLayer.png" alt="ParticleLayer" style="max-width: 300px;" />
 
-```json
-"dustFineSfc": {
-  "defaults": "default", // could be a field like "t2"
-  "colorBars": {
-    "default": { // could also be `difference`, `spread`, `timing`, `percentage`, `paintball`
-      "colorLevels": [0, 1, 25, ...],
-      "colors": [
-        "rgba(0,0,0,0)",
-        "rgba(0,0,0,0)",
-        "rgb(255, 240, 204)",
-        ...
-      ],
-      "colorType": "scaleLinear", // scaleLinear, scaleThreshold
-      "contourLevels": [5, 25, 50, ...],
-      "isLeftCap": false,
-      "ticks": "linear"
-    },
-    "difference": {
-      "colorLevels": [-2, -1, -0.75, -0.5, ...],
-    },
-    "spread": {
-      "colorLevels": [0, 0.1, 0.25, 0.5, 0.75, 1],
-    },
-  },
-  "colorPrimary": "rgb(200,153,100)", // for 1D chart
-  "nameLegend": "Near Surface Fine Dust",
-  "namePublic": "Near Surface Fine Dust",
-  "nameShort": "Fine Dust",
-  "roundto": 1,
-  "roundtoReadout": 0,
-  "units": "µg/m^3"
-}
-```
+- [ContourLayer](docs/contour-layer.md)
 
-# NPM Notes for Creating and Managing Packages
+    <img src="docs/images/contourLayer.png" alt="ContourLayer" style="max-width: 300px;" />
 
-- Here are the steps needed to create an NPM package and push from the console. This is the manual process, but it can be automated from GitHub or wherever the repo is managed. This assumes using Vite in [Library Mode](https://vite.dev/guide/build#library-mode)
+- [VectorLayer](docs/vector-layer.md)
 
-1. Build the `/dist` folder with Vite using `npm run build`
-2. Login to account with `npm login`
-    - Can also use `npm adduser` and login with browser
-3. Can double-check with `npm whoami`
-4. Make sure the version number is changing from the previously published version
-    - Instead of doing a manual version update to the patch number:
+    <img src="docs/images/vectorLayer.png" alt="VectorLayer" style="max-width: 300px;" />
 
-    ```bash
-    # this will bump the patch version by 1 in the package.json and package-lock.json
-    # run from /library
-    npm version patch
-    ```
+- [CitiesLayer](docs/cities-layer.md)
 
-5. Run
-    ```bash
-    # run from /library
-    npm publish
-    ```
+    <img src="docs/images/cityLayer.png" alt="CitiesLayer" style="max-width: 300px;" />
 
-## Testing locally
+- [Readout](docs/readout.md)
 
-1. Using `npm link` in the library and consuming projects as discussed above
-    - This can be a pain in the butt because of dependency conflicts. Since `desi-graphics` installs it's own packages for the demo examples, this can conflict with the consuming repo
-2. Using `npm yalc` or `Verdaccio` which serve as local npm deployments
-    - The `yalc` approach:
-        1. `npm install -g yalc`
-        2. `npm run build` in the the library project
-        3. `yalc publish` in the library, which creates a tarball of the project in the yalc store
-        4. `yalc add desi-graphics` in the consuming project and then run `npm install`
-        5. To update,
-            - option 1 `npm run build`, `yalc publish`, `yalc update desi-graphics`
-            - option 2: `yalc publish --push` will publish the package to the store and propagate all changes to existing `yalc` package installations.
-            - Then restart `npm run dev` on DESI and reload the webpage with 'empty cache and hard reload'
-        6. To remove:
-            ```bash
-            yalc remove desi-graphics
-            npm install
-            ```
+    <img src="docs/images/readout.png" alt="Readout" style="max-width: 300px;" />
+
+
+
+

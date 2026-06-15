@@ -1,7 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { some } from 'lodash';
-import gUtilities from '../../utilities/graphicsUtilities';
 import './Readout.css';
 
 const MOUSE_OFFSET = { x: 10, y: 10 };
@@ -30,45 +29,37 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
     const buildGriddedReadout = (lon, lat, displayNum, layers) => {
         if (lon == null || lat == null || !layers) return [];
         const readoutArray = [];
-        const uniqueArray = [];
         for (const layer of layers) {
-            const { projection, readout, displaynum } = layer.props || {};
+            const { readout, displaynum } = layer.props || {};
             if (
-                projection &&
                 readout &&
                 // if displaynum is empty array or undefined, show on all displays
                 (!displaynum || displaynum.includes(displayNum))
             ) {
                 for (const i in readout) {
                     // added value formatter to allow custom formatting (ie timing/paintball)
-                    const { data, prependText, decimals, units, interpolate, valueFormatter } =
-                        readout[i];
-                    let value = gUtilities.getreadoutvalue(
-                        lat,
-                        lon,
-                        projection,
+                    const {
                         data,
-                        units,
-                        interpolate,
-                    );
-                    // needed to add logic because values of 0 were being displayed as NaN
-                    if (valueFormatter) {
-                        value = valueFormatter(value);
-                    } else {
-                        value =
-                            value !== undefined && value !== null && !Number.isNaN(value)
-                                ? `${gUtilities.roundto(value, decimals)}${units}`
-                                : 'NaN';
+                        readoutFunction,
+                        readoutOptions,
+                    } = readout[i];
+
+                    let value;
+                    if (typeof readoutFunction === 'function') {
+                        value = readoutFunction(lat, lon, data, {
+                            ...readoutOptions,
+                        });
+                    }  else {
+                        continue;
                     }
-                    const key = `${prependText}-${value}-${interpolate}`;
-                    if (!uniqueArray.includes(key)) {
-                        uniqueArray.push(key);
-                        readoutArray.push({ prependText, value });
+
+                    if (!readoutArray.includes(value)) {
+                        readoutArray.push(value);
                     }
                 }
             }
         }
-        readoutArray.sort((a, b) => a.prependText.localeCompare(b.prependText));
+        readoutArray.sort();
         return readoutArray;
     };
 
@@ -145,7 +136,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
                 for (const object of picks) {
                     const pickingFunction = object?.sourceLayer?.props?.pickingFunction;
                     if (typeof pickingFunction === 'function') {
-                        const { readout } = pickingFunction(object) || {};
+                        const { readout } = pickingFunction(object, { lon, lat }) || {};
                         // Don't allow duplicates
                         if (readout && !some(pickingArr, readout)) {
                             pickingArr.push(readout);
@@ -371,8 +362,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
                     <tbody>
                         {gridded.map((d, i) => (
                             <tr key={i}>
-                                <td>{`${d.prependText}: `}</td>
-                                <td>{d.value}</td>
+                                <td>{d}</td>
                             </tr>
                         ))}
                     </tbody>

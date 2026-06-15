@@ -1,8 +1,8 @@
-# DESIPathLayer Upgrade Guide
+# WizardPathLayer Upgrade Guide
 
 Upgrades will likely works without problems. If not, follow the directions below
 
-If you want to update `DESIPathLayer`, copy the vertex shader from the `PathLayer` in the deck.gl version you are trying to target and replace the following line:
+If you want to update `WizardPathLayer`, copy the vertex shader from the `PathLayer` in the deck.gl version you are trying to target and replace the following line:
 
 ```glsl
 vec2 offsetVec = mix(miterVec * miterSize, perp, step(0.5, cornerPosition))
