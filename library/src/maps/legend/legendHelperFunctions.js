@@ -138,6 +138,22 @@ export function getTitleProps({ isHorizontal, titleJustify, titleDimensions, bar
 }
 
 export function getColors(colorLevels, colors, colorType) {
+    const singleColor =
+        typeof colors === 'string'
+            ? colors
+            : Array.isArray(colors) && colors.length === 1
+              ? colors[0]
+              : null;
+
+    if (singleColor) {
+        return () => singleColor;
+    }
+
+    if (!Array.isArray(colors) || !Array.isArray(colorLevels)) {
+        console.log('ERROR: colors and colorLevels must be arrays when using multi-color scales');
+        return () => 'rgba(0,0,0,0)';
+    }
+
     const clen = colors.length;
     const llen = colorLevels.length;
     if (colorType === 'scaleThreshold') {

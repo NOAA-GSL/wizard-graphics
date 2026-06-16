@@ -1,4 +1,4 @@
-import React, { StrictMode, useMemo, useRef, useCallback, useReducer, useEffect } from 'react';
+import React, { StrictMode, useMemo, useRef, useCallback, useReducer } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
 import {
@@ -6,13 +6,14 @@ import {
     Maps,
     DeckGLOverlay,
     Readout,
+    readoutFunction,
     Legend,
     Projection,
     ShadedLayer,
     ContourLayer,
     ParticleLayer,
     configFields,
-} from 'desi-graphics';
+} from '@noaa-gsl/wizard-graphics';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
@@ -33,7 +34,7 @@ import { TerrainLayer, SolidPolygonLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },
@@ -112,7 +113,7 @@ function MapContainer() {
     );
 
     const dataMag = useMemo(
-        () => new Float32Array(wmag.flat().map((v) => (v == null ? NaN : v))),
+        () => new Float32Array(wmag.flat().map((v) => (v == null ? NaN : v * 2.23694))),
         [wmag],
     );
 
@@ -122,6 +123,31 @@ function MapContainer() {
         return p;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDataset]);
+
+    const lonlatGrid = useMemo(() => projection?.lonlatGrid?.flat?.() || [], [projection]);
+    const shape = useMemo(() => {
+        const nx = projection?.nx;
+        const ny = projection?.ny;
+        if (Number.isFinite(nx) && Number.isFinite(ny) && nx > 0 && ny > 0) {
+            return [ny, nx];
+        }
+        return null;
+    }, [projection]);
+
+    const baseReadoutOptions = useMemo(
+        () => ({
+            projection,
+            lonlatGrid,
+            shape,
+            readoutType: 'gridded',
+            dataType: 'scalar',
+            interpolate: true,
+            decimals: 0,
+            units: '°F',
+            prependText: 'Mean Temperature',
+        }),
+        [projection, lonlatGrid, shape],
+    );
 
     const field = 't2';
     const { colors, colorLevels, contourLevels, colorType } = configFields[field].colorBars.default;
@@ -183,7 +209,9 @@ function MapContainer() {
                     colors,
                     colorLevels,
                     colorType,
-                    projection,
+                    lonlatGrid,
+                    shape,
+                    triangulationMode: 'quadkey',
                     elevation: 0,
                     extensions: [new TerrainExtension()],
                     terrainDrawMode: 'drape',
@@ -191,10 +219,8 @@ function MapContainer() {
                     readout: [
                         {
                             data,
-                            prependText: 'Mean Temperature',
-                            decimals: 0,
-                            units: '°F',
-                            interpolate: true,
+                            readoutFunction,
+                            readoutOptions: baseReadoutOptions,
                         },
                     ],
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
@@ -203,14 +229,15 @@ function MapContainer() {
         if (state.contourCheckbox)
             result.push(
                 new ContourLayer({
-                    id: `contourLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+                    id: 'contourLayer-mercator',
                     beforeId: mapStyles[style].beforeId,
                     data,
                     colors,
                     colorLevels,
                     colorType,
                     contourLevels,
-                    projection,
+                    lonlatGrid,
+                    shape,
                     elevation: 0,
                     extensions: [new TerrainExtension()],
                     terrainDrawMode: 'drape',
@@ -218,10 +245,8 @@ function MapContainer() {
                     readout: [
                         {
                             data,
-                            prependText: 'Mean Temperature',
-                            decimals: 0,
-                            units: '°F',
-                            interpolate: true,
+                            readoutFunction,
+                            readoutOptions: baseReadoutOptions,
                         },
                     ],
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
@@ -233,18 +258,23 @@ function MapContainer() {
                     id: `particleLayer-${currentDataset}`,
                     dataDir,
                     dataMag,
+                    lonlatGrid,
+                    shape,
                     color: [255, 255, 255, 255],
                     width: 1.5,
                     numParticles: 10000,
-                    projection,
                     widthMinPixels:1.5,
+                    extensions: [new TerrainExtension()],
+                    terrainDrawMode: 'offset',
                     readout: [
                         {
                             data: dataMag,
-                            prependText: 'Wind Speed',
-                            units: 'mph',
-                            interpolate: true,
-                            decimals: 0,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Speed',
+                                units: 'mph',
+                            },
                         },
                     ],
                 }),
@@ -257,7 +287,6 @@ function MapContainer() {
         state.shadedInterpolateCheckbox,
         state.contourCheckbox,
         state.particleCheckbox,
-        state.isGlobeView,
         state.contourLabels,
         terrainLayer,
         style,
@@ -268,7 +297,9 @@ function MapContainer() {
         colors,
         colorLevels,
         colorType,
-        projection,
+        lonlatGrid,
+        shape,
+        baseReadoutOptions,
         contourLevels,
     ]);
 

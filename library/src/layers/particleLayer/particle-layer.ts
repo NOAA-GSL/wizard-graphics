@@ -9,8 +9,28 @@ import { LineLayer, LineLayerProps } from '@deck.gl/layers';
 import { Buffer, Texture } from '@luma.gl/core';
 import { Model, BufferTransform } from '@luma.gl/engine';
 import { ShaderModule } from '@luma.gl/shadertools';
-import gUtilities from '../../utilities/graphicsUtilities';
+import earcut from 'earcut';
 import shader from './particle-layer-update-transform.vs.glsl.js';
+
+type LonLatPoint = [number, number];
+type GridShape = [number, number];
+
+type ResolvedGrid = {
+    points: LonLatPoint[];
+    rows: number;
+    cols: number;
+    gridKey: string;
+};
+
+type TriangleIndices = [number, number, number];
+
+type GlobeViewportLike = {
+    longitude: number;
+    latitude: number;
+    width: number;
+    height: number;
+    unproject: (coords: [number, number]) => GeoJSON.Position;
+};
 
 export type UniformProps = {
     numParticles: number;
@@ -18,13 +38,13 @@ export type UniformProps = {
     speedFactor: number;
     time: number;
     seed: number;
-    viewportBounds: number[];
+    viewportBounds: [number, number, number, number];
     viewportZoomChangeFactor: number;
-    bounds: number[];
+    bounds: [number, number, number, number];
     bitmapTexture: Texture;
     noiseTexture: Texture;
     isGlobe: number;
-    viewportCenter: number[];
+    viewportCenter: [number, number];
     cullBackside: number;
     viewportGlobeRadius: number;
     minWindSpeed: number;
@@ -112,7 +132,9 @@ function simpleHash(obj: any): string {
 function addToCache(key: string, value: any) {
     if (positionsCache.size >= MAX_CACHE_SIZE) {
         const firstKey = positionsCache.keys().next().value;
-        positionsCache.delete(firstKey);
+        if (firstKey) {
+            positionsCache.delete(firstKey);
+        }
     }
     positionsCache.set(key, value);
 }
@@ -127,6 +149,22 @@ function isGlobalData(bounds: number[]): boolean {
 
 function toRadians(value: number): number {
     return (value / 180) * Math.PI;
+}
+
+function directionToUV(direction: number, magnitude: number): [number, number] {
+    const rad = (direction * Math.PI) / 180;
+    return [-magnitude * Math.sin(rad), -magnitude * Math.cos(rad)];
+}
+
+function normalizeLonDelta(fromLon: number, toLon: number): number {
+    let delta = toLon - fromLon;
+    while (delta > 180) delta -= 360;
+    while (delta < -180) delta += 360;
+    return delta;
+}
+
+function clamp(value: number, minValue: number, maxValue: number): number {
+    return Math.min(maxValue, Math.max(minValue, value));
 }
 
 export function distance(
@@ -183,7 +221,7 @@ function getViewportBounds(viewport: any): number[] {
     return [adjustedWest, adjustedSouth, adjustedEast, adjustedNorth];
 }
 
-export function getViewportGlobeRadius(viewport: GlobeViewport): number {
+export function getViewportGlobeRadius(viewport: GlobeViewportLike): number {
     const viewportGlobeCenter = [viewport.longitude, viewport.latitude];
 
     const distances = [
@@ -232,7 +270,7 @@ export type Bbox = [number, number, number, number];
 
 export type ParticleLayerProps<D = unknown> = LineLayerProps<D> & {
     image: string | Texture | null;
-    bounds: number[];
+    bounds?: Bbox;
     numParticles: number;
     maxAge: number;
     speedFactor: number;
@@ -240,9 +278,10 @@ export type ParticleLayerProps<D = unknown> = LineLayerProps<D> & {
     width: number;
     animate?: boolean;
     wrapLongitude: boolean;
-    dataDir?: any;
-    dataMag?: any;
-    projection?: any;
+    dataDir?: ArrayLike<number>;
+    dataMag?: ArrayLike<number>;
+    lonlatGrid: LonLatPoint[] | LonLatPoint[][];
+    shape?: GridShape | null;
     trailLength?: number;
     fadeTrails?: boolean;
 };
@@ -260,17 +299,12 @@ const defaultProps: DefaultProps<ParticleLayerProps> = {
     width: { type: 'number', value: 1.2 },
     animate: { type: 'boolean', value: true },
 
-    bounds: { type: 'array', value: null, compare: true, optional: true },
+    bounds: undefined,
     coordinateSystem: COORDINATE_SYSTEM.LNGLAT,
-    fp64: false,
     wrapLongitude: true,
 
     trailLength: { type: 'number', min: 2, max: 100, value: 22 },
     fadeTrails: { type: 'boolean', value: true },
-
-    particleJitter: { type: 'number', min: 0, max: 1, value: 0.7 },
-    speedVariation: { type: 'number', min: 0, max: 1, value: 0.1 },
-    turbulenceStrength: { type: 'number', min: 0, max: 1, value: 0.1 },
 
     parameters: { depthCompare: 'always', depthWriteEnabled: true, cullMode: 'none' },
 };
@@ -281,7 +315,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 > {
     private boundsCache: { key: string; bounds: number[] } | null = null;
 
-    state!: {
+    declare state: {
         model?: Model;
 
         initialized: boolean;
@@ -347,7 +381,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             diff.x = diff.x > 0.0 ? diff.x - 360.0 : diff.x + 360.0;
           }
           float segmentLength = length(diff);
-          bool isTooLong = segmentLength > 5.0; // More than 5 degrees is invalid
+          bool isTooLong = segmentLength > 20.0; // Keep tails while filtering obvious artifacts
 
           drop = float(isDropped || isTooLong);
 
@@ -374,7 +408,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
           // Age-based fade: head (trailAge=0) is opaque, tail (trailAge=1) fades out
           float fadeVariation = 0.8 + particleVariation * 0.4;
           float trailFade = 1.0 - smoothstep(0.0, fadeVariation, trailAge);
-          fragColor.a = trailFade * trailFade;
+          fragColor.a = max(0.35, trailFade * trailFade);
           `
                   : ''
           }
@@ -383,7 +417,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         };
     }
 
-    shouldResetParticles(viewport, previousViewport) {
+    shouldResetParticles(viewport: any, previousViewport: any) {
         if (!previousViewport) return false;
         const zoomDiff = Math.abs(viewport.zoom - previousViewport.zoom);
         const isGlobe = viewport.projection?.mode === 'globe';
@@ -428,8 +462,189 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         this._setupState();
     }
 
+    _toLonLatPoint(value: any): LonLatPoint {
+        if (!Array.isArray(value) || value.length < 2) return [NaN, NaN];
+        return [Number(value[0]), Number(value[1])];
+    }
+
+    _getGridCacheKey(points: LonLatPoint[], rows: number, cols: number): string {
+        if (!points.length) return `${rows}x${cols}-empty`;
+        const first = points[0];
+        const mid = points[Math.floor(points.length / 2)] || first;
+        const last = points[points.length - 1] || first;
+        return simpleHash(`${rows}x${cols}-${first.join(',')}-${mid.join(',')}-${last.join(',')}`);
+    }
+
+    _resolveGrid(): ResolvedGrid | null {
+        const lonlatGrid = this.props.lonlatGrid;
+        if (!Array.isArray(lonlatGrid) || lonlatGrid.length === 0) {
+            return null;
+        }
+
+        const first = lonlatGrid[0] as any;
+        const hasNestedRows =
+            Array.isArray(first) && first.length > 0 && Array.isArray((first as any[])[0]);
+
+        let points: LonLatPoint[] = [];
+        let rows = 0;
+        let cols = 0;
+
+        if (hasNestedRows) {
+            rows = lonlatGrid.length;
+            cols = Array.isArray(lonlatGrid[0]) ? (lonlatGrid[0] as any[]).length : 0;
+            if (rows <= 0 || cols <= 0) return null;
+
+            points = new Array(rows * cols);
+            let ptr = 0;
+            for (let r = 0; r < rows; r++) {
+                const row = lonlatGrid[r] as any[];
+                if (!Array.isArray(row) || row.length < cols) return null;
+                for (let c = 0; c < cols; c++) {
+                    points[ptr++] = this._toLonLatPoint(row[c]);
+                }
+            }
+        } else {
+            points = (lonlatGrid as any[]).map((point) => this._toLonLatPoint(point));
+
+            if (
+                Array.isArray(this.props.shape) &&
+                Number.isFinite(this.props.shape[0]) &&
+                Number.isFinite(this.props.shape[1])
+            ) {
+                rows = Math.max(1, Math.floor(this.props.shape[0]));
+                cols = Math.max(1, Math.floor(this.props.shape[1]));
+            } else {
+                rows = 1;
+                cols = points.length;
+            }
+
+            const expectedLength = rows * cols;
+            if (expectedLength <= 0 || points.length < expectedLength) return null;
+            if (points.length !== expectedLength) {
+                points = points.slice(0, expectedLength);
+            }
+        }
+
+        return {
+            points,
+            rows,
+            cols,
+            gridKey: this._getGridCacheKey(points, rows, cols),
+        };
+    }
+
+    _isFinitePoint(point: LonLatPoint | undefined): boolean {
+        return (
+            Array.isArray(point) &&
+            point.length >= 2 &&
+            Number.isFinite(point[0]) &&
+            Number.isFinite(point[1])
+        );
+    }
+
+    _adjustLonForBounds(lon: number, minLng: number, maxLng: number): number {
+        if (!Number.isFinite(lon)) return lon;
+        if (maxLng > 180 && lon < 0) {
+            return lon + 360;
+        }
+        if (minLng < -180 && lon > 180) {
+            return lon - 360;
+        }
+        return lon;
+    }
+
+    _buildMeshTriangles(grid: ResolvedGrid): TriangleIndices[] {
+        const cacheKey = `${grid.gridKey}-triangles`;
+        const cached = positionsCache.get(cacheKey);
+        if (cached?.triangles) {
+            return cached.triangles as TriangleIndices[];
+        }
+
+        const { points, rows, cols } = grid;
+        const triangles: TriangleIndices[] = [];
+
+        if (rows > 1 && cols > 1) {
+            for (let r = 0; r < rows - 1; r++) {
+                for (let c = 0; c < cols - 1; c++) {
+                    const i00 = r * cols + c;
+                    const i10 = i00 + 1;
+                    const i01 = (r + 1) * cols + c;
+                    const i11 = i01 + 1;
+
+                    if (
+                        !this._isFinitePoint(points[i00]) ||
+                        !this._isFinitePoint(points[i10]) ||
+                        !this._isFinitePoint(points[i01]) ||
+                        !this._isFinitePoint(points[i11])
+                    ) {
+                        continue;
+                    }
+
+                    const p00 = points[i00];
+                    const p10 = points[i10];
+                    const p01 = points[i01];
+                    const p11 = points[i11];
+
+                    const topLonStep = Math.abs(normalizeLonDelta(p00[0], p10[0]));
+                    const bottomLonStep = Math.abs(normalizeLonDelta(p01[0], p11[0]));
+                    if (topLonStep > 120 || bottomLonStep > 120) {
+                        continue;
+                    }
+
+                    triangles.push([i00, i10, i01]);
+                    triangles.push([i10, i11, i01]);
+                }
+            }
+        } else if (points.length >= 3) {
+            const flatPolygon: number[] = [];
+            let hasInvalidPoint = false;
+            for (const point of points) {
+                if (!this._isFinitePoint(point)) {
+                    hasInvalidPoint = true;
+                    break;
+                }
+                flatPolygon.push(point[0], point[1]);
+            }
+
+            if (!hasInvalidPoint) {
+                const earcutIndices = earcut(flatPolygon);
+                for (let i = 0; i + 2 < earcutIndices.length; i += 3) {
+                    triangles.push([
+                        earcutIndices[i],
+                        earcutIndices[i + 1],
+                        earcutIndices[i + 2],
+                    ]);
+                }
+            }
+        }
+
+        addToCache(cacheKey, { triangles });
+        return triangles;
+    }
+
+    _getWindTextureSize(
+        rows: number,
+        cols: number,
+        pointCount: number,
+        lonSpan: number,
+        latSpan: number,
+    ): { width: number; height: number } {
+        if (rows > 1 && cols > 1) {
+            return {
+                width: clamp(Math.round(cols), 64, 2048),
+                height: clamp(Math.round(rows), 64, 2048),
+            };
+        }
+
+        const base = clamp(Math.round(Math.sqrt(Math.max(1, pointCount)) * 8), 64, 1024);
+        const aspect = lonSpan > 0 && latSpan > 0 ? lonSpan / latSpan : 1;
+        const width = clamp(Math.round(base * Math.sqrt(aspect)), 64, 2048);
+        const height = clamp(Math.round(base / Math.sqrt(aspect)), 64, 2048);
+        return { width, height };
+    }
+
     _createTrailLines() {
-        const { numParticles, maxAge, trailLength } = this.props;
+        const { numParticles, maxAge = 50, trailLength = 22 } = this.props;
         const effectiveTrailLength = Math.min(trailLength, maxAge);
         const trailLines = [];
 
@@ -471,26 +686,34 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     }
 
     _createWindTexture() {
-        const { projection, dataDir, dataMag } = this.props;
-        const { lonlatGrid } = projection;
+        const { dataDir, dataMag } = this.props;
+        const grid = this._resolveGrid();
+        if (!grid) {
+            return null;
+        }
+
+        const { points, rows, cols, gridKey } = grid;
 
         // Include data fingerprint in cache key to distinguish different datasets with same grid
         const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
-        const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dataFingerprint}`;
-        const textureKey = `${key}-texture`;
+        const textureKey = `${gridKey}-${dataFingerprint}-texture`;
         const cachedTexture = positionsCache.get(textureKey);
 
         if (cachedTexture?.texture) {
             return cachedTexture.texture as Texture;
         }
 
-        const bounds = this._getBoundsFromGrid(lonlatGrid);
+        const bounds = this._getBoundsFromGrid(points, gridKey);
         const { minLng, minLat, maxLng, maxLat } = bounds;
-        const width = lonlatGrid[0].length;
-        const height = lonlatGrid.length;
-
-        const dlon = (maxLng - minLng) / width;
-        const dlat = (maxLat - minLat) / height;
+        const lonSpan = Math.max(1e-6, maxLng - minLng);
+        const latSpan = Math.max(1e-6, maxLat - minLat);
+        const { width, height } = this._getWindTextureSize(
+            rows,
+            cols,
+            points.length,
+            lonSpan,
+            latSpan,
+        );
 
         const scratchKey = `scratch-${width}x${height}`;
         let uvData: Float32Array =
@@ -498,9 +721,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         if (!positionsCache.has(scratchKey)) {
             addToCache(scratchKey, { uvData });
         }
+        uvData.fill(0);
 
-        let ptr = 0;
-        const interpolate = false;
         const noiseScale = 0.02;
 
         const globalData = isGlobalData([minLng, minLat, maxLng, maxLat]);
@@ -508,40 +730,104 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         const texNoise = (x: number, y: number) =>
             (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
 
-        for (let j = 0; j < height; j++) {
-            const lat = maxLat - j * dlat;
-            for (let i = 0; i < width; i++) {
-                const lon = minLng + i * dlon;
+        const triangles = this._buildMeshTriangles(grid);
 
-                const wdirection = gUtilities.getreadoutvalue(
-                    lat,
-                    lon,
-                    projection,
-                    dataDir,
-                    '°',
-                    interpolate,
-                    dataMag,
-                );
-                const wmagnitude = gUtilities.getreadoutvalue(
-                    lat,
-                    lon,
-                    projection,
-                    dataMag,
-                    'mph',
-                    interpolate,
-                    dataDir,
-                );
+        // Project mesh vertices into texture pixel space and keep per-vertex wind vectors.
+        const pointX = new Float32Array(points.length);
+        const pointY = new Float32Array(points.length);
+        const windU = new Float32Array(points.length);
+        const windV = new Float32Array(points.length);
+        const pointValid = new Uint8Array(points.length);
 
-                let uv = gUtilities.DirectionToUV(wdirection, wmagnitude);
-                if (isNaN(wmagnitude)) uv = [0, 0];
+        for (let i = 0; i < points.length; i++) {
+            const point = points[i];
+            if (!this._isFinitePoint(point)) {
+                pointX[i] = NaN;
+                pointY[i] = NaN;
+                continue;
+            }
 
-                uv[0] += (texNoise(i * 0.1, j * 0.1) - 0.5) * noiseScale;
-                uv[1] += (texNoise(i * 0.1 + 100, j * 0.1 + 100) - 0.5) * noiseScale;
+            const lon = this._adjustLonForBounds(point[0], minLng, maxLng);
+            const lat = point[1];
+            pointX[i] = ((lon - minLng) / lonSpan) * (width - 1);
+            pointY[i] = ((maxLat - lat) / latSpan) * (height - 1);
 
-                uvData[ptr++] = uv[0];
-                uvData[ptr++] = uv[1];
-                uvData[ptr++] = 0;
-                uvData[ptr++] = wmagnitude >= 0 && !isNaN(wmagnitude) ? 1 : 0;
+            const wdirection = Number(dataDir?.[i]);
+            const wmagnitude = Number(dataMag?.[i]);
+            if (Number.isFinite(wdirection) && Number.isFinite(wmagnitude) && wmagnitude >= 0) {
+                const [u, v] = directionToUV(wdirection, wmagnitude);
+                windU[i] = u;
+                windV[i] = v;
+                pointValid[i] = 1;
+            }
+        }
+
+        const baryEpsilon = 1e-4;
+        for (let t = 0; t < triangles.length; t++) {
+            const [i0, i1, i2] = triangles[t];
+            if (!pointValid[i0] || !pointValid[i1] || !pointValid[i2]) {
+                continue;
+            }
+
+            const x0 = pointX[i0];
+            const y0 = pointY[i0];
+            const x1 = pointX[i1];
+            const y1 = pointY[i1];
+            const x2 = pointX[i2];
+            const y2 = pointY[i2];
+
+            if (
+                !Number.isFinite(x0) ||
+                !Number.isFinite(y0) ||
+                !Number.isFinite(x1) ||
+                !Number.isFinite(y1) ||
+                !Number.isFinite(x2) ||
+                !Number.isFinite(y2)
+            ) {
+                continue;
+            }
+
+            const denom = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+            if (!Number.isFinite(denom) || Math.abs(denom) < 1e-8) {
+                continue;
+            }
+
+            const minX = clamp(Math.floor(Math.min(x0, x1, x2)), 0, width - 1);
+            const maxX = clamp(Math.ceil(Math.max(x0, x1, x2)), 0, width - 1);
+            const minY = clamp(Math.floor(Math.min(y0, y1, y2)), 0, height - 1);
+            const maxY = clamp(Math.ceil(Math.max(y0, y1, y2)), 0, height - 1);
+
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const px = x + 0.5;
+                    const py = y + 0.5;
+
+                    const w0 = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / denom;
+                    const w1 = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / denom;
+                    const w2 = 1 - w0 - w1;
+
+                    if (w0 < -baryEpsilon || w1 < -baryEpsilon || w2 < -baryEpsilon) {
+                        continue;
+                    }
+
+                    const o = (y * width + x) * 4;
+                    uvData[o] = w0 * windU[i0] + w1 * windU[i1] + w2 * windU[i2];
+                    uvData[o + 1] = w0 * windV[i0] + w1 * windV[i1] + w2 * windV[i2];
+                    uvData[o + 2] = 0;
+                    uvData[o + 3] = 1;
+                }
+            }
+        }
+
+        // Add subtle deterministic turbulence only where the mesh has valid data coverage.
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const o = (y * width + x) * 4;
+                if (uvData[o + 3] < 0.5) {
+                    continue;
+                }
+                uvData[o] += (texNoise(x * 0.1, y * 0.1) - 0.5) * noiseScale;
+                uvData[o + 1] += (texNoise(x * 0.1 + 100, y * 0.1 + 100) - 0.5) * noiseScale;
             }
         }
 
@@ -550,7 +836,6 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             height,
             data: uvData,
             format: 'rgba32float',
-            mipmaps: false,
             sampler: {
                 minFilter: 'linear',
                 magFilter: 'linear',
@@ -563,10 +848,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         return texture;
     }
 
-    _getBoundsFromGrid(lonlatGrid: any) {
-        // Only cache bounds by grid, not by dataDir/dataMag
-        const key = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}`;
-        const cached = positionsCache.get(key);
+    _getBoundsFromGrid(points: LonLatPoint[], gridKey: string) {
+        const cacheKey = `${gridKey}-bounds`;
+        const cached = positionsCache.get(cacheKey);
         if (cached?.bounds) return cached.bounds;
 
         let maxLng = -Infinity,
@@ -574,24 +858,39 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             maxLat = -Infinity,
             minLat = Infinity;
 
-        for (const row of lonlatGrid) {
-            for (const pair of row) {
-                const [longitude, latitude] = pair;
-                if (longitude > maxLng) maxLng = longitude;
-                if (longitude < minLng) minLng = longitude;
-                if (latitude > maxLat) maxLat = latitude;
-                if (latitude < minLat) minLat = latitude;
+        for (const pair of points) {
+            const [longitude, latitude] = pair;
+            if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+                continue;
             }
+            if (longitude > maxLng) maxLng = longitude;
+            if (longitude < minLng) minLng = longitude;
+            if (latitude > maxLat) maxLat = latitude;
+            if (latitude < minLat) minLat = latitude;
+        }
+
+        if (
+            !Number.isFinite(minLng) ||
+            !Number.isFinite(maxLng) ||
+            !Number.isFinite(minLat) ||
+            !Number.isFinite(maxLat)
+        ) {
+            minLng = -180;
+            maxLng = 180;
+            minLat = -90;
+            maxLat = 90;
         }
 
         const bounds = { maxLng, minLng, maxLat, minLat };
-        addToCache(key, { bounds });
+        addToCache(cacheKey, { bounds });
         return bounds;
     }
 
     _setupState() {
-        const { projection } = this.props;
-        const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(projection.lonlatGrid);
+        const grid = this._resolveGrid();
+        const { minLng, minLat, maxLng, maxLat } = grid
+            ? this._getBoundsFromGrid(grid.points, grid.gridKey)
+            : { minLng: -180, minLat: -90, maxLng: 180, maxLat: 90 };
 
         let calculatedBounds = [minLng, minLat, maxLng, maxLat];
 
@@ -635,7 +934,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         const dataChanged =
             props.image !== oldProps.image ||
             props.dataDir !== oldProps.dataDir ||
-            props.dataMag !== oldProps.dataMag;
+            props.dataMag !== oldProps.dataMag ||
+            props.lonlatGrid !== oldProps.lonlatGrid ||
+            props.shape !== oldProps.shape;
 
         if (structureChanged) {
             this._setupState();
@@ -650,10 +951,15 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     }
 
     _updateWindTexture() {
-        const { projection, dataDir, dataMag } = this.props;
-        const { lonlatGrid } = projection;
+        const { dataDir, dataMag } = this.props;
+        const grid = this._resolveGrid();
+        if (!grid) {
+            return;
+        }
 
-        const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(lonlatGrid);
+        const { points, gridKey } = grid;
+
+        const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(points, gridKey);
         let calculatedBounds = [minLng, minLat, maxLng, maxLat];
         if (isNaN(minLng) || isNaN(maxLng) || isNaN(minLat) || isNaN(maxLat)) {
             calculatedBounds = [-180, -90, 180, 90];
@@ -662,8 +968,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         // Clear the cached texture so _createWindTexture builds a fresh one with new data
         const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
-        const cacheKey = `${lonlatGrid[0][0]}-${lonlatGrid[0][1]}-${lonlatGrid[1][0]}-${lonlatGrid[1][1]}-${dataFingerprint}`;
-        const textureKey = `${cacheKey}-texture`;
+        const textureKey = `${gridKey}-${dataFingerprint}-texture`;
         const cachedEntry = positionsCache.get(textureKey);
         if (cachedEntry?.texture) {
             cachedEntry.texture.destroy();
@@ -754,7 +1059,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             this._deleteTransformFeedback();
         }
 
-        const { numParticles, color, maxAge, width, trailLength = 22, fadeTrails } = this.props;
+        const { numParticles, color, maxAge, trailLength = 22 } = this.props;
 
         const texture = this.props.image || this._createWindTexture();
         if (!texture || typeof texture === 'string') {
@@ -786,7 +1091,6 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             height: noiseSize,
             data: getSharedNoiseData(),
             format: 'rgba32float',
-            mipmaps: false,
             sampler: {
                 minFilter: 'linear',
                 magFilter: 'linear',
@@ -865,7 +1169,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         // Verify resources exist before running transform
         if (!transform || !sourcePositions || !targetPositions || !texture || !noiseTexture) return;
 
-        const { viewport, timeline } = this.context as any;
+        const { viewport } = this.context as any;
         const { numParticles, speedFactor, maxAge } = this.props;
         const { previousTime, previousViewportZoom, numAgedInstances, ringBufferIndex } =
             this.state;
@@ -901,13 +1205,9 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         cullBackside = isGlobe > 0 ? 1 : 0;
 
         const speedVariation = 0.95 + 0.1 * Math.sin(currentTime * 0.001);
-
         let currentSpeedFactor: number;
-        if (isGlobe > 0) {
-            currentSpeedFactor = (speedFactor * speedVariation ** viewport.scale) / 90000;
-        } else {
-            currentSpeedFactor = (speedFactor * speedVariation) / Math.pow(2, viewport.zoom + 7);
-        }
+        currentSpeedFactor = (speedFactor * speedVariation) / (700 + Math.pow(1.9, viewport.zoom +6));
+        
 
         const seed = Math.sin(currentTime * 0.0001) * 999 + Math.cos(currentTime * 0.00013) * 777;
 
@@ -956,7 +1256,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
                 destinationOffset: numParticles * 4 * 3,
                 size: numAgedInstances * 4 * 3,
             });
-            encoder.finish();
+            const commandBuffer = encoder.finish();
+            this.context.device.submit(commandBuffer);
             encoder.destroy();
 
             // Swap
@@ -977,7 +1278,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
                 destinationOffset: 0,
                 size: numTrailSegments * 3 * 4, // Copy enough for trail segments
             });
-            encoder2.finish();
+            const commandBuffer2 = encoder2.finish();
+            this.context.device.submit(commandBuffer2);
             encoder2.destroy();
         } catch (e) {
             console.warn('ParticleLayer buffer copy error:', e);

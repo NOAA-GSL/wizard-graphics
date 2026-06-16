@@ -4,7 +4,7 @@ import { GeoJsonLayer, GeoJsonLayerProps } from 'deck.gl';
 import { LINE_LAYER, forwardProps } from './sub-layer-map';
 import { DefaultProps, Layer } from '@deck.gl/core';
 
-export default class DESIGeoJsonLayer extends GeoJsonLayer {
+export default class WizardGeoJsonLayer extends GeoJsonLayer {
     static defaultProps: any = {
         ...GeoJsonLayer.defaultProps,
         parameters: {
@@ -59,4 +59,4 @@ export default class DESIGeoJsonLayer extends GeoJsonLayer {
     }
 }
 
-DESIGeoJsonLayer.layerName = 'DESIGeoJsonLayer';
+WizardGeoJsonLayer.layerName = 'WizardGeoJsonLayer';

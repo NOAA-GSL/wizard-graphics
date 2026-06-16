@@ -1,11 +1,11 @@
 import { ContourLayer } from './contourLayer/contourLayer';
 import { ContourLabels } from './contourLayer/contourLabels';
 import ShadedLayer from './shadedLayer/solid-polygon-layer.ts';
-import { VectorLayer } from './vectorLayer/vectorLayer';
+import VectorLayer from './vectorLayer/vectorLayer';
 import ParticleLayer from './particleLayer/particle-layer';
 import IconClusterLayer from './iconClusterLayer/iconClusterLayer.ts';
 import CitiesLayer from './citiesLayer/citiesLayer';
-import PathLayer from './pathLayer/DESIPathLayer.js';
+import PathLayer from './pathLayer/WizardPathLayer.js';
 import GeoJsonLayer from './geojsonLayer/geojson-layer.ts';
 import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from './canned';
 

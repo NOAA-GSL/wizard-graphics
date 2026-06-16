@@ -8,6 +8,7 @@ import {
     // Maps,
     DeckGLOverlay,
     Readout,
+    readoutFunction,
     Legend,
     Projection,
     ContourLayer,
@@ -16,7 +17,7 @@ import {
     ParticleLayer,
     configFields,
     GeoJsonLayer,
-} from 'desi-graphics';
+} from '@noaa-gsl/wizard-graphics';
 import { DeckGL } from '@deck.gl/react';
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
@@ -36,7 +37,7 @@ import eagleProjDict from 'demo-data/EAGLE/projection';
 import { MapView, _GlobeView as GlobeView } from 'deck.gl';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
 import coastLines from './ne_10m_coastline.json';
 import displayLayout from './displayLayout';
 
@@ -111,12 +112,14 @@ function MapContainer() {
 
         const [xpos, ypos, width, height] = getViewOffset(num);
         // If 'mapbox' is not used, interleaved does not working
-        const id =
-            currentController !== 'MapLibre-GL'
-                ? `${currentController}-${num}`
-                : displayNum > 1
-                  ? `mapbox-${num}`
-                  : 'mapbox';
+        let id;
+        if (currentController !== 'MapLibre-GL') {
+            id = `${currentController}-${num}`;
+        } else if (displayNum > 1) {
+            id = `mapbox-${num}`;
+        } else {
+            id = 'mapbox';
+        }
         const obj = {
             id,
             x: `${xpos}%`,
@@ -276,6 +279,32 @@ function MapContainer() {
         return p;
     }, [projDict, resLevel, state.isGlobeView]);
 
+    const lonlatGrid = useMemo(() => projection?.lonlatGrid?.flat?.() || [], [projection]);
+    const shape = useMemo(() => {
+        const nx = projection?.nx;
+        const ny = projection?.ny;
+        if (Number.isFinite(nx) && Number.isFinite(ny) && nx > 0 && ny > 0) {
+            return [ny, nx];
+        }
+        return null;
+    }, [projection]);
+
+    const baseReadoutOptions = useMemo(
+        () => ({
+            projection,
+            lonlatGrid,
+            shape,
+            readoutType: 'gridded',
+            dataType: 'scalar',
+            triangulationMode: 'quadkey',
+            interpolate: true,
+            units: '°F',
+            prependText: 'Mean Temperature',
+            decimals: 0,
+        }),
+        [projection, lonlatGrid, shape],
+    );
+
     const field = 't2';
     const { colors, colorLevels, contourLevels, colorType } = configFields[field].colorBars.default;
 
@@ -290,7 +319,9 @@ function MapContainer() {
                     colors,
                     colorLevels,
                     colorType,
-                    projection,
+                    lonlatGrid,
+                    shape,
+                    triangulationMode: 'quadkey',
                     elevation: 0,
                     displaynum: [0], // important for multi-panel!
                     interpolateData: state.shadedInterpolateCheckbox,
@@ -298,10 +329,8 @@ function MapContainer() {
                     readout: [
                         {
                             data,
-                            prependText: 'Mean Temperature',
-                            decimals: 0,
-                            units: '°F',
-                            interpolate: true,
+                            readoutFunction,
+                            readoutOptions: baseReadoutOptions,
                         },
                     ],
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
@@ -317,7 +346,8 @@ function MapContainer() {
                     colorLevels,
                     colorType,
                     contourLevels,
-                    projection,
+                    lonlatGrid,
+                    shape,
                     elevation: 0,
                     displaynum: [1], // important for multi-panel!
                     parameters: {
@@ -328,10 +358,8 @@ function MapContainer() {
                     readout: [
                         {
                             data,
-                            prependText: 'Mean Temperature',
-                            decimals: 0,
-                            units: '°F',
-                            interpolate: true,
+                            readoutFunction,
+                            readoutOptions: baseReadoutOptions,
                         },
                     ],
                     legend: { type: 'staticBar', title: 'Temperature', units: '°F' },
@@ -368,24 +396,30 @@ function MapContainer() {
                     dataDir: wdir,
                     dataMag: wmag,
                     getColor: [255, 255, 255, 255],
-                    projection,
+                    lonlatGrid,
+                    shape,
+                    triangulationMode: 'quadkey',
                     displaynum: [2], // important for multi-panel!
                     angleOffset: state.isGlobeView ? 180 : 0,
                     parameters: { depthTest: false, depthCompare: 'always', cullMode: 'front' },
                     readout: [
                         {
                             data: wmag,
-                            prependText: 'Wind Speed',
-                            decimals: 0,
-                            units: 'mph',
-                            interpolate: true,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Speed',
+                                units: 'mph',
+                            },
                         },
                         {
                             data: wdir,
-                            prependText: 'Wind Direction',
-                            decimals: 0,
-                            units: '°',
-                            interpolate: true,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Direction',
+                                units: '°',
+                            },
                         },
                     ],
                 }),
@@ -396,26 +430,31 @@ function MapContainer() {
                     id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
                     dataDir: wdir,
                     dataMag: wmag,
+                    lonlatGrid,
+                    shape,
                     displaynum: [2],
                     color: [255, 255, 255, 255],
                     width: 1.5,
                     widthMinPixels: 1.5,
                     numParticles: 10000,
-                    projection,
                     readout: [
                         {
                             data: wmag,
-                            prependText: 'Wind Speed',
-                            units: 'mph',
-                            interpolate: true,
-                            decimals: 0,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Speed',
+                                units: 'mph',
+                            },
                         },
                         {
                             data: wdir,
-                            prependText: 'Wind Direction',
-                            units: '°',
-                            interpolate: true,
-                            decimals: 0,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Direction',
+                                units: '°',
+                            },
                         },
                     ],
                 }),
@@ -423,26 +462,31 @@ function MapContainer() {
                     id: `particleLayer2-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
                     dataDir: wdir2,
                     dataMag: wmag,
+                    lonlatGrid,
+                    shape,
                     displaynum: [3],
                     color: [255, 0, 255, 255],
                     width: 1.5,
                     widthMinPixels: 1.5,
                     numParticles: 10000,
-                    projection,
                     readout: [
                         {
                             data: wmag,
-                            prependText: 'Wind Speed',
-                            units: 'mph',
-                            interpolate: true,
-                            decimals: 0,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Speed',
+                                units: 'mph',
+                            },
                         },
                         {
                             data: wdir,
-                            prependText: 'Wind Direction',
-                            units: '°',
-                            interpolate: true,
-                            decimals: 0,
+                            readoutFunction,
+                            readoutOptions: {
+                                ...baseReadoutOptions,
+                                prependText: 'Wind Direction',
+                                units: '°',
+                            },
                         },
                     ],
                 }),
@@ -459,14 +503,18 @@ function MapContainer() {
         state.geojsonLayer,
         state.vectorCheckbox,
         state.particleCheckbox,
+        currentDataset,
         currentController,
         data,
         colors,
         colorLevels,
         colorType,
-        projection,
+        lonlatGrid,
+        shape,
+        baseReadoutOptions,
         contourLevels,
         wdir,
+        wdir2,
         wmag,
     ]);
 

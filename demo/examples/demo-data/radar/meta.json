@@ -1,0 +1,16 @@
+{
+  "source_file": "KTLX20130520_200356_V06",
+  "site": "KTLX",
+  "site_lat": 35.33305740356445,
+  "site_lon": -97.27748107910156,
+  "variable": "reflectivity_dbz",
+  "sweep_index": 0,
+  "sweep_mean_elevation_deg": 0.5116119384765625,
+  "azimuth_stride": 2,
+  "gate_stride": 3,
+  "max_range_km": 120.0,
+  "rows": 360,
+  "cols": 158,
+  "point_count": 56880,
+  "ray_count_used": 360
+}

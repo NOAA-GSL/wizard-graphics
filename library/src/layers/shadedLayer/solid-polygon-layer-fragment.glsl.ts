@@ -19,43 +19,13 @@ uniform sampler2D sampler;
 out vec4 fragColor;
 
 void main(void) {
+  fragColor = ( pdata >= 0.0 && pdata <= 1.0 ) ? texture(sampler, vec2(pdata, 0.5)) : vec4(0,0,0,0);
 
-  if ( solidPolygon.interpolateData ) {
-    fragColor = ( pdata >= 0.0 && pdata <= 1.0 ) ? texture(sampler, vec2(pdata, 0.5)) : vec4(0,0,0,0);
-    
-    // If we have normals, add lighting effects
-    // old code for lighting effects, used when normals are provided (i.e. hrrr smoke/marching cubes)
-    //if ( normalsIncluded ){
-    //  vec3 lightColor = lighting_getLightColor(fragColor.rgb, cameraPosition, position_commonspace.xyz, normalsProvided);
-    //  fragColor = vec4(lightColor,1);  
-    //}
-
-
-    if (odata >= 0.0 && odata <= 1.0) {
-      fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity * odata );
-    }
-    else {
-      fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity );
-    }
-
+  if (odata >= 0.0 && odata <= 1.0) {
+    fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity * odata );
   }
-  else {  
-
-    vec4 c = vColor;
-    if ( c.r > c.g && c.r > c.b ){
-      fragColor = (v1 <= 1.0 && v1 >= 0.0) ? texture(sampler, vec2(v1, 0.5)) : vec4(0,0,0,0);
-    }
-    else if ( c.g > c.r && c.g > c.b ){
-      fragColor = (v2 <= 1.0 && v2 >= 0.0) ? texture(sampler, vec2(v2, 0.5)) : vec4(0,0,0,0);
-    }
-    else if ( c.b > c.r && c.b > c.g ){
-      fragColor = (v3 <= 1.0 && v3 >= 0.0) ? texture(sampler, vec2(v3, 0.5)) : vec4(0,0,0,0);
-    }
-    else {
-      fragColor = vec4(0,0,0,1);
-    }
+  else {
     fragColor = vec4(fragColor.rgb, fragColor.a * layer.opacity );
-
   }
 
 

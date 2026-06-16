@@ -103,7 +103,9 @@ vec2 getUV(vec2 pos, vec4 b) {
   float v = clamp((pos.y - b.w) / (b.y - b.w), 0.0, 1.0);
   float u;
   if (isGlobalData(b)) {
-    float lon360 = mod(pos.x, 360.0);
+    float minLon = b.x;
+    float offsetLon = pos.x - minLon;
+    float lon360 = mod(offsetLon, 360.0);
     if (lon360 < 0.0) lon360 += 360.0;
     u = clamp(lon360 / 360.0, 0.0, 1.0);
   } else {
@@ -147,6 +149,11 @@ vec2 spawnOnGlobeRadius(float particleIndex) {
   pos.x = isGlobalData(bitmap.bounds) ? wrapLongitude(pos.x) : clamp(pos.x, bitmap.bounds.x, bitmap.bounds.z);
 
   return pos;
+}
+
+bool hasWindDataAt(vec2 pos) {
+  vec2 uv = getUV(pos, bitmap.bounds);
+  return texture(bitmapTexture, uv).a >= 0.5;
 }
 
 bool onFrontHemisphere(vec2 llDeg, vec2 centerLLDeg, float threshold) {
@@ -204,12 +211,9 @@ bool shouldDropParticle(float particleIndex, float particleAge, vec2 currentPos,
     if (!isInDataBounds(currentPos, bitmap.bounds)) drop = true;
     if (greatCircleDistance(currentPos, centerLL) > 90.0) drop = true;
   } else {
-    bool zoomCull = bitmap.viewportZoomChangeFactor > 1.5 &&
-                    mod(particleIndex + hash1D(particleIndex * 0.013 + 3.2) * 10.0,
-                        bitmap.viewportZoomChangeFactor * 0.5) >= 0.5;
     bool boundsCull = !isInViewportBounds(currentPos, bitmap.viewportBounds) ||
                       !isInDataBounds(currentPos, bitmap.bounds);
-    if (zoomCull || boundsCull) drop = true;
+    if (boundsCull) drop = true;
   }
   return drop;
 }
@@ -223,20 +227,61 @@ void main() {
   bool isNewParticle = (sourcePosition.xy == DROP_POSITION);
 
   if (isNewParticle) {
-    vec2 position;
+    vec2 position = DROP_POSITION;
     if (bitmap.isGlobe == 1) {
-      position = spawnOnGlobeRadius(particleIndex);
-      if (bitmap.cullBackside == 1 && !onFrontHemisphere(position, bitmap.viewportCenter, -0.1)) {
+      bool found = false;
+      for (int attempt = 0; attempt < 6; attempt++) {
+        float offset = float(attempt) * bitmap.numParticles;
+        vec2 candidate = spawnOnGlobeRadius(particleIndex + offset);
+        bool visible = bitmap.cullBackside == 0 ||
+          onFrontHemisphere(candidate, bitmap.viewportCenter, -0.1);
+        if (visible && hasWindDataAt(candidate)) {
+          position = candidate;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
         targetPosition.xy = DROP_POSITION;
         targetPosition.z = 0.0;
         return;
       }
     } else {
-      vec2 rnd = vec2(
-        hash1D(particleIndex * 0.041 + 0.73 + bitmap.time * 0.001),
-        hash1D(particleIndex * 0.053 + 1.91 + bitmap.time * 0.001)
-      );
-      position = mix(bitmap.viewportBounds.xy, bitmap.viewportBounds.zw, rnd);
+      bool found = false;
+      // Prefer keeping particles inside the current viewport to preserve on-screen density.
+      for (int attempt = 0; attempt < 10; attempt++) {
+        float a = float(attempt);
+        vec2 rnd = vec2(
+          hash1D(particleIndex * 0.041 + 0.73 + a * 13.17 + bitmap.time * 0.001),
+          hash1D(particleIndex * 0.053 + 1.91 + a * 17.39 + bitmap.time * 0.001)
+        );
+        vec2 candidate = mix(bitmap.bounds.xy, bitmap.bounds.zw, rnd);
+        if (isInViewportBounds(candidate, bitmap.viewportBounds) && hasWindDataAt(candidate)) {
+          position = candidate;
+          found = true;
+          break;
+        }
+      }
+      // Fallback: still spawn in data mesh even if viewport intersection is tiny.
+      if (!found) {
+        for (int attempt = 0; attempt < 6; attempt++) {
+          float a = float(attempt + 10);
+          vec2 rnd = vec2(
+            hash1D(particleIndex * 0.041 + 0.73 + a * 13.17 + bitmap.time * 0.001),
+            hash1D(particleIndex * 0.053 + 1.91 + a * 17.39 + bitmap.time * 0.001)
+          );
+          vec2 candidate = mix(bitmap.bounds.xy, bitmap.bounds.zw, rnd);
+          if (hasWindDataAt(candidate)) {
+            position = candidate;
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        targetPosition = vec3(DROP_POSITION, 0.0);
+        return;
+      }
     }
     targetPosition = vec3(position, 0.0);
     return;
@@ -260,8 +305,7 @@ void main() {
   vec4 wind = texture(bitmapTexture, uv);
 
   // Drop particles with no data
-  float windSpeed = length(wind.xy);
-  if (wind.a < 0.1) {
+  if (wind.a < 0.5) {
     targetPosition = vec3(DROP_POSITION, 0.0);
     return;
   }
@@ -297,9 +341,19 @@ void main() {
 
   if (isGlobalData(bitmap.bounds)) {
     newPos.x = wrapLongitude(newPos.x);
+    newPos.y = clamp(newPos.y, bitmap.bounds.y, bitmap.bounds.w);
   } else {
-    if (newPos.x < bitmap.bounds.x) newPos.x = bitmap.bounds.z - (bitmap.bounds.x - newPos.x);
-    else if (newPos.x > bitmap.bounds.z) newPos.x = bitmap.bounds.x + (newPos.x - bitmap.bounds.z);
+    if (!isInDataBounds(newPos, bitmap.bounds)) {
+      targetPosition = vec3(DROP_POSITION, 0.0);
+      return;
+    }
+    newPos.x = clamp(newPos.x, bitmap.bounds.x, bitmap.bounds.z);
+    newPos.y = clamp(newPos.y, bitmap.bounds.y, bitmap.bounds.w);
+  }
+
+  if (!hasWindDataAt(newPos)) {
+    targetPosition = vec3(DROP_POSITION, 0.0);
+    return;
   }
 
   targetPosition = vec3(newPos, 0.0);

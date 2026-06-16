@@ -1,19 +1,32 @@
 import { StrictMode, useMemo, useRef, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Map } from 'react-map-gl/maplibre';
-import { Maps, DeckGLOverlay, Readout, mapStyles, Legend } from 'desi-graphics';
+import {
+    Maps,
+    DeckGLOverlay,
+    Readout,
+    mapStyles,
+    Legend,
+    gUtilities,
+    IconClusterLayer,
+    CitiesLayer,
+    Projection,
+    SpotLayer,
+    NIFCLayer,
+    CPCLayer,
+    SPCLayer,
+    WPCLayer,
+    WWALayer,
+} from '@noaa-gsl/wizard-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
-import { IconClusterLayer, CitiesLayer } from 'desi-graphics';
 import temperatures from 'demo-data/HREF/temp';
 import projDict from 'demo-data/HREF/projection';
-import { Projection } from 'desi-graphics';
-import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from 'desi-graphics';
 import URLdata from './URLdata';
 import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
-import 'desi-graphics/desi-graphics.css';
+import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
 
 // Custom persistent tooltip component
 function PersistentTooltip({ tooltip, onClose }) {
@@ -87,8 +100,26 @@ function MapContainer() {
 
     // Format data (nulls to NaN)
     const data = new Float32Array(
-        Object.values(temperatures).map((value) => (value === null ? NaN : value)),
+           Object.values(temperatures)
+              .flat()
+              .map((value) => (value === null ? NaN : (value-273.15)*9/5+32)),
     );
+
+    const cityDataLabelReadout = useCallback((lat, lon, readoutData, options = {}) => {
+        const { projection: readoutProjection, units = '', interpolate = true, decimals = 0 } = options;
+        
+        if (!readoutProjection || !readoutData) return NaN;
+        let value = gUtilities.getreadoutvalue(
+            lat,
+            lon,
+            readoutProjection,
+            readoutData,
+            units,
+            interpolate,
+        )
+        value = gUtilities.roundto(value, decimals);
+        return value;
+    }, []);
 
     // Handle spot layer clicks
     const handleSpotClick = useCallback((info, event) => {
@@ -275,10 +306,14 @@ function MapContainer() {
             ...(state.citiesDataLabelsCheckbox && {
                 dataLabels: {
                     data,
-                    projection,
-                    decimals: 0,
-                    units: '°F',
-                    interpolate: true,
+                    readoutFunction: cityDataLabelReadout,
+                    readoutOptions: {
+                        projection,
+                        type: 'scalar',
+                        decimals: 0,
+                        units: '°F',
+                        interpolate: true,
+                    },
                 },
             }),
             pickable: true,

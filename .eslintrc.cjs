@@ -20,7 +20,7 @@ module.exports = {
         'react/no-array-index-key': 'off',
         'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
         // '*' turns off all files for now.  Can't get it working
-        'import/no-unresolved': [2, { ignore: ['\\?url$', 'desi-graphics', 'demo-data'] }], // can't resolve ?url for some reason
+        'import/no-unresolved': [2, { ignore: ['\\?url$', 'wizard-graphics', 'demo-data'] }], // can't resolve ?url for some reason
         'react/prop-types': [0], // set to disabled
         'import/no-extraneous-dependencies': [
             'error',

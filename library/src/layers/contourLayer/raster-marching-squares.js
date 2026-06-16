@@ -3621,11 +3621,11 @@ function BandGrid2Areas(grid){
     return areas;
 } */
 
-export const isolines = function (data, lonlatGrid, geotransform, intervals) {
+export const isolines = function (data, lonlatGrid, geotransform, intervals, shape = null) {
     const lines = { type: 'FeatureCollection', features: [] };
     for (let i = 0; i < intervals.length; i++) {
         const value = intervals[i];
-        const coords = projectedIsoline(data, lonlatGrid, geotransform, value);
+        const coords = projectedIsoline(data, lonlatGrid, geotransform, value, shape);
 
         lines.features.push({
             type: 'Feature',
@@ -3640,8 +3640,41 @@ export const isolines = function (data, lonlatGrid, geotransform, intervals) {
     return lines;
 };
 
-export const projectedIsoline = function (data, lonlatGrid, geotransform, value) {
-    const dims = [lonlatGrid.length, lonlatGrid[0].length];
+function resolveDims(shape, lonlatGrid) {
+    if (
+        Array.isArray(shape) &&
+        Number.isFinite(shape[0]) &&
+        Number.isFinite(shape[1]) &&
+        shape[0] > 1 &&
+        shape[1] > 1
+    ) {
+        return [Math.floor(shape[0]), Math.floor(shape[1])];
+    }
+
+    if (
+        Array.isArray(lonlatGrid) &&
+        lonlatGrid.length > 1 &&
+        Array.isArray(lonlatGrid[0]) &&
+        Array.isArray(lonlatGrid[0][0]) &&
+        lonlatGrid[0].length > 1
+    ) {
+        return [lonlatGrid.length, lonlatGrid[0].length];
+    }
+
+    return null;
+}
+
+export const projectedIsoline = function (data, lonlatGrid, geotransform, value, shape = null) {
+    const dims = resolveDims(shape, lonlatGrid);
+    if (!dims) {
+        return [];
+    }
+
+    const expectedLength = dims[0] * dims[1];
+    if (!data || data.length < expectedLength || !lonlatGrid || lonlatGrid.length < expectedLength) {
+        return [];
+    }
+
     const coords = isoline(data, value, dims);
     for (let i = 0; i < coords.length; i++) {
         for (let j = 0; j < coords[i].length; j++) {
@@ -3650,6 +3683,7 @@ export const projectedIsoline = function (data, lonlatGrid, geotransform, value)
                 coords[i][j][1],
                 lonlatGrid,
                 geotransform,
+                dims,
             );
             coords[i][j][0] = coordsGeo[0];
             coords[i][j][1] = coordsGeo[1];
@@ -3663,24 +3697,70 @@ export const projectedIsoline = function (data, lonlatGrid, geotransform, value)
      Xgeo = GT(0) + Xpixel*GT(1) + Yline*GT(2)
     Ygeo = GT(3) + Xpixel*GT(4) + Yline*GT(5)
 */
-var applyGeoTransform$1 = function (i, j, lonlatGrid, geotransform) {
+function getLonLatAt(lonlatGrid, dims, row, col) {
+    const [rows, cols] = dims;
+    if (row < 0 || row >= rows || col < 0 || col >= cols) {
+        return null;
+    }
+
+    if (
+        Array.isArray(lonlatGrid) &&
+        lonlatGrid.length > 0 &&
+        Array.isArray(lonlatGrid[0]) &&
+        Array.isArray(lonlatGrid[0][0])
+    ) {
+        return lonlatGrid[row]?.[col] || null;
+    }
+
+    const idx = row * cols + col;
+    return lonlatGrid?.[idx] || null;
+}
+
+var applyGeoTransform$1 = function (i, j, lonlatGrid, geotransform, dims) {
     if (geotransform) {
         var xgeo = geotransform[0] + i * geotransform[1] + j * geotransform[2];
         var ygeo = geotransform[3] + i * geotransform[4] + j * geotransform[5];
     } else {
+        if (!dims) {
+            return [NaN, NaN];
+        }
+
+        const [rows, cols] = dims;
         const i_f = Math.floor(i);
         const i_c = Math.ceil(i);
         const j_f = Math.floor(j);
         const j_c = Math.ceil(j);
 
+        const i_f_c = Math.max(0, Math.min(cols - 1, i_f));
+        const i_c_c = Math.max(0, Math.min(cols - 1, i_c));
+        const j_f_c = Math.max(0, Math.min(rows - 1, j_f));
+        const j_c_c = Math.max(0, Math.min(rows - 1, j_c));
+
         // p3-----p4
         // |------|
         // p1-----p2
 
-        const p1 = lonlatGrid[j_c][i_f];
-        const p2 = lonlatGrid[j_c][i_c];
-        const p3 = lonlatGrid[j_f][i_f];
-        const p4 = lonlatGrid[j_f][i_c];
+        const p1 = getLonLatAt(lonlatGrid, dims, j_c_c, i_f_c);
+        const p2 = getLonLatAt(lonlatGrid, dims, j_c_c, i_c_c);
+        const p3 = getLonLatAt(lonlatGrid, dims, j_f_c, i_f_c);
+        const p4 = getLonLatAt(lonlatGrid, dims, j_f_c, i_c_c);
+
+        if (
+            !p1 ||
+            !p2 ||
+            !p3 ||
+            !p4 ||
+            !Number.isFinite(p1[0]) ||
+            !Number.isFinite(p1[1]) ||
+            !Number.isFinite(p2[0]) ||
+            !Number.isFinite(p2[1]) ||
+            !Number.isFinite(p3[0]) ||
+            !Number.isFinite(p3[1]) ||
+            !Number.isFinite(p4[0]) ||
+            !Number.isFinite(p4[1])
+        ) {
+            return [NaN, NaN];
+        }
 
         const i_w = 1 - (i - i_f);
         const i_w2 = 1 - i_w;
