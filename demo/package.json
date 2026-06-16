@@ -12,7 +12,7 @@
     "dependencies": {
         "d3": "~7.9.0",
         "deck.gl": "9.3.4",
-        "wizard-graphics": "file:../library",
+        "@noaa-gsl/wizard-graphics": "file:../library",
         "lodash": "~4.18.1",
         "maplibre-gl": "5.24.0",
         "proj4": "~2.12.1",

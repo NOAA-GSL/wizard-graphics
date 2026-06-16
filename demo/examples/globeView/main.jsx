@@ -16,7 +16,7 @@ import {
     ParticleLayer,
     configFields,
     GeoJsonLayer,
-} from 'wizard-graphics';
+} from '@noaa-gsl/wizard-graphics';
 import { DeckGL } from '@deck.gl/react';
 import { TextLayer } from '@deck.gl/layers';
 
@@ -47,7 +47,7 @@ import { _GlobeView, MapView, TerrainLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'wizard-graphics/wizard-graphics.css';
+import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
 import coastLines from './ne_10m_coastline.json';
 
 const checkboxConfig = [

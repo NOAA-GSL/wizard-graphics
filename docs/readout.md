@@ -16,7 +16,7 @@ Example integration:
 From the package:
 
 ```js
-import { Readout, readoutFunction } from 'wizard-graphics';
+import { Readout, readoutFunction } from '@noaa-gsl/wizard-graphics';
 ```
 
 ## Component Props
@@ -48,7 +48,7 @@ Each item should return display-ready text from `readoutFunction(...)`. `Readout
 
 ## Built-In `readoutFunction`
 
-`readoutFunction` from `wizard-graphics` is a wrapper around the samplers in `readoutFunctions.js`:
+`readoutFunction` from `@noaa-gsl/wizard-graphics` is a wrapper around the samplers in `readoutFunctions.js`:
 
 - `griddedReadout`
 - `sphericalReadout`

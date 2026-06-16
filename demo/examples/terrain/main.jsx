@@ -13,7 +13,7 @@ import {
     ContourLayer,
     ParticleLayer,
     configFields,
-} from 'wizard-graphics';
+} from '@noaa-gsl/wizard-graphics';
 
 import hrefTemperatures from 'demo-data/HREF/temp';
 import hrefWdir from 'demo-data/HREF/wdir';
@@ -34,7 +34,7 @@ import { TerrainLayer, SolidPolygonLayer } from 'deck.gl';
 import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'wizard-graphics/wizard-graphics.css';
+import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
 
 const checkboxConfig = [
     { key: 'contourCheckbox', label: 'Contour Layer' },

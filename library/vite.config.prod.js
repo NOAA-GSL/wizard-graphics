@@ -8,7 +8,7 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
         alias: {
-            'wizard-graphics': path.resolve('./src'),
+            '@noaa-gsl/wizard-graphics': path.resolve('./src'),
         },
     },
     build: {

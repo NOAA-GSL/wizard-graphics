@@ -4,7 +4,7 @@ An extension of of deck.gl along with other mapping tools for numerical weather 
 
 ## Getting Started
 
-This is a monorepo setup using NPM Workspaces. The `/library` directory contains the `wizard-graphics` package and the `/demo` directory contains the examples, which can be run with [Vite](https://vitejs.dev/).
+This is a monorepo setup using NPM Workspaces. The `/library` directory contains the `@noaa-gsl/wizard-graphics` package and the `/demo` directory contains the examples, which can be run with [Vite](https://vitejs.dev/).
 
 In order for the basemaps to load in the examples, you need an [ESRI API key](https://developers.arcgis.com/documentation/security-and-authentication/api-key-authentication/tutorials/migrate-to-api-key-credentials/). You can either set an environment variable:
 
@@ -24,7 +24,7 @@ _**Note:** Following commands are all from the root directory_
     npm install
     ```
 
-2. Build the `wizard-graphics` package
+2. Build the `@noaa-gsl/wizard-graphics` package
 
     ```bash
     npm run build

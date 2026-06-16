@@ -17,7 +17,7 @@ import {
     SPCLayer,
     WPCLayer,
     WWALayer,
-} from 'wizard-graphics';
+} from '@noaa-gsl/wizard-graphics';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import demoCities from 'demo-data/demoCities';
@@ -26,7 +26,7 @@ import projDict from 'demo-data/HREF/projection';
 import URLdata from './URLdata';
 import iconMapping from './icon/location-icon-mapping.json?url';
 import iconAtlas from './icon/location-icon-atlas.png?url';
-import 'wizard-graphics/wizard-graphics.css';
+import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
 
 // Custom persistent tooltip component
 function PersistentTooltip({ tooltip, onClose }) {
