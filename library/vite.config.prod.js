@@ -22,7 +22,7 @@ export default defineConfig({
             // name for different formats during the build
             fileName: (format) => `wizard-graphics.${format}.js`,
         },
-        rollupOptions: {
+        rolldownOptions: {
             // put all peer dependencies here
             external: [
                 'react',
