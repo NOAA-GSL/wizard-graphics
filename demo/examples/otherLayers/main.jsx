@@ -117,7 +117,7 @@ function MapContainer() {
             units,
             interpolate,
         )
-        value = gUtilities.roundto(value, decimals);
+        value = gUtilities.roundto(value, decimals) + units;
         return value;
     }, []);
 
