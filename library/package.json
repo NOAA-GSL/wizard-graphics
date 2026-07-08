@@ -4,7 +4,7 @@
         "registry": "https://registry.npmjs.org/",
         "access": "public"
     },
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "An extension of deck.gl for producing weather graphics",
     "type": "module",
     "license": "MIT",
