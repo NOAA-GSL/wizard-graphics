@@ -306,7 +306,7 @@ function MapContainer() {
         const citiesLayer = new CitiesLayer({
             id: 'citiesLayer',
             cityList: demoCities,
-            cityBaseScale: 34,
+            cityBaseScale: 14,
             cityPadding: state.cityPadding,
             ...(state.citiesDataLabelsCheckbox && {
                 dataLabels: {

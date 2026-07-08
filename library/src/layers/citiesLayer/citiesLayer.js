@@ -119,10 +119,6 @@ export default class CitiesLayer extends CompositeLayer {
             cityLengthLast = cityLength;
 
             const { viewport } = this.context;
-            // Globeview bearing is undefined, so grab it this way
-            const bearing = viewport.bearing || 0;
-
-            const { latPerPixel } = deckUtilities.getLatLonPerPixel(viewport);
             // added cityBaseScale to make padding dynamic based on city fontsize when running graphicUtilities.js
             const citiesInDomain = deckUtilities.getCities(
                 viewport,
@@ -209,15 +205,13 @@ export default class CitiesLayer extends CompositeLayer {
             this.setState({
                 cityData,
                 zoomScale,
-                latPerPixel,
-                bearing,
                 lastTrigger,
             });
         }, wait);
     }
 
     renderLayers() {
-        const { cityData, zoomScale, latPerPixel, bearing } = this.state;
+        const { cityData, zoomScale } = this.state;
         const {
             elevation,
             cityHaloEnabled,
@@ -241,6 +235,9 @@ export default class CitiesLayer extends CompositeLayer {
         const { zoom } = viewport;
         const cameraLat = viewport.latitude;
         const cameraLon = viewport.longitude;
+        // Keep displacement calculations tied to the current render frame during zoom.
+        const bearing = viewport.bearing || 0;
+        const { latPerPixel } = deckUtilities.getLatLonPerPixel(viewport);
 
         const visibleCityData =
             cityData?.filter((d) =>
