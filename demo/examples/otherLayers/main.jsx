@@ -100,14 +100,19 @@ function MapContainer() {
 
     // Format data (nulls to NaN)
     const data = new Float32Array(
-           Object.values(temperatures)
-              .flat()
-              .map((value) => (value === null ? NaN : (value-273.15)*9/5+32)),
+        Object.values(temperatures)
+            .flat()
+            .map((value) => (value === null ? NaN : ((value - 273.15) * 9) / 5 + 32)),
     );
 
     const cityDataLabelReadout = useCallback((lat, lon, readoutData, options = {}) => {
-        const { projection: readoutProjection, units = '', interpolate = true, decimals = 0 } = options;
-        
+        const {
+            projection: readoutProjection,
+            units = '',
+            interpolate = true,
+            decimals = 0,
+        } = options;
+
         if (!readoutProjection || !readoutData) return NaN;
         let value = gUtilities.getreadoutvalue(
             lat,
@@ -116,7 +121,7 @@ function MapContainer() {
             readoutData,
             units,
             interpolate,
-        )
+        );
         value = gUtilities.roundto(value, decimals);
         return value;
     }, []);
@@ -301,7 +306,7 @@ function MapContainer() {
         const citiesLayer = new CitiesLayer({
             id: 'citiesLayer',
             cityList: demoCities,
-            cityBaseScale: 14,
+            cityBaseScale: 34,
             cityPadding: state.cityPadding,
             ...(state.citiesDataLabelsCheckbox && {
                 dataLabels: {

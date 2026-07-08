@@ -11,21 +11,32 @@ const defaultProps = {
     cityPadding: 1,
     fontFamily: 'Open Sans, sans-serif',
     billboard: true,
-    backgroundPadding: [4, 1],
     getTextAnchor: 'middle',
-    getAlignmentBaseline: 'bottom', // was 'center' but descenders were cut off
-    getPixelOffset: [0, 10], // prevent descenders from being cut off
+    getAlignmentBaseline: 'center',
+    getPixelOffset: [0, 0],
     characterSet: 'auto',
     fontSettings: {
-        sdf: true,
+        sdf: false,
         radius: 12,
         cutoff: 0.25,
         buffer: 10,
-        smoothing: 0.2, // only applies if sdf is true
+        smoothing: 0.2,
     },
-    outlineWidth: 4, // was 3.59
+    outlineWidth: 0,
     outlineColor: [0, 0, 0, 255],
-    fontWeight: '700', // was 500
+    fontWeight: '700',
+    cityHaloEnabled: true,
+    cityHaloColor: [0, 0, 0, 255],
+    cityHaloPixelRadius: null,
+    cityHaloSizeRatio: 0.03,
+    cityHaloMinPixelRadius: 0.25,
+    cityHaloMaxPixelRadius: Infinity,
+    dataLabelHaloEnabled: true,
+    dataLabelHaloColor: [0, 0, 0, 255],
+    dataLabelHaloPixelRadius: null,
+    dataLabelHaloSizeRatio: 0.03,
+    dataLabelHaloMinPixelRadius: 0.25,
+    dataLabelHaloMaxPixelRadius: Infinity,
     getColor: (x) => x.color || [255, 255, 255, 255],
     getLabel: (x) => x.label,
     getWeight: (x) => x.weight || 1,
@@ -46,6 +57,27 @@ const findPopulationScale = (d) => {
 const throttle = 500;
 let tree;
 let cityLengthLast;
+
+const haloDirections = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+];
+
+const resolvePixelOffset = (baseOffset, d, info) => {
+    if (typeof baseOffset === 'function') {
+        const value = baseOffset(d, info);
+        return Array.isArray(value) ? value : [0, 0];
+    }
+    return Array.isArray(baseOffset) ? baseOffset : [0, 0];
+};
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export default class CitiesLayer extends CompositeLayer {
     initializeState() {
@@ -186,9 +218,23 @@ export default class CitiesLayer extends CompositeLayer {
 
     renderLayers() {
         const { cityData, zoomScale, latPerPixel, bearing } = this.state;
-        const { elevation } = this.props;
+        const {
+            elevation,
+            cityHaloEnabled,
+            cityHaloColor,
+            cityHaloPixelRadius,
+            cityHaloSizeRatio,
+            cityHaloMinPixelRadius,
+            cityHaloMaxPixelRadius,
+            dataLabelHaloEnabled,
+            dataLabelHaloColor,
+            dataLabelHaloPixelRadius,
+            dataLabelHaloSizeRatio,
+            dataLabelHaloMinPixelRadius,
+            dataLabelHaloMaxPixelRadius,
+        } = this.props;
         const baseScale = this.props.cityBaseScale;
-        const readoutScale = 1.5; // was 1.2
+        const readoutScale = 1.5;
 
         // access the camera position
         const { viewport } = this.context;
@@ -196,64 +242,147 @@ export default class CitiesLayer extends CompositeLayer {
         const cameraLat = viewport.latitude;
         const cameraLon = viewport.longitude;
 
-        const layers = [
+        const visibleCityData =
+            cityData?.filter((d) =>
+                deckUtilities.isFeatureVisibleOnGlobe(cameraLat, cameraLon, d.lat, d.lon, zoom),
+            ) || [];
+
+        const cityFontSettings = cityHaloEnabled
+            ? {
+                  ...this.props.fontSettings,
+                  sdf: false,
+              }
+            : this.props.fontSettings;
+
+        const dataLabelFontSettings = dataLabelHaloEnabled
+            ? {
+                  ...this.props.fontSettings,
+                  sdf: false,
+              }
+            : this.props.fontSettings;
+
+        const getCityPosition = (d) => [Number(d.lon), Number(d.lat), elevation];
+        const getCitySize = (d) => {
+            const populationScale = findPopulationScale(d);
+            return baseScale * populationScale * zoomScale;
+        };
+
+        const getDataLabelPosition = (d) => {
+            // padding between readout and city name is based on scale and a small padding multiplier
+            const padding = 1.1;
+            const rad = (bearing * Math.PI) / 180;
+            const populationScale = findPopulationScale(d);
+            const displace = latPerPixel * baseScale * populationScale * padding;
+            return [
+                Number(d.lon) + Math.sin(rad) * displace,
+                Number(d.lat) + Math.cos(rad) * displace,
+                elevation,
+            ];
+        };
+        const getDataLabelSize = (d) => {
+            const populationScale = findPopulationScale(d);
+            return baseScale * populationScale * zoomScale * readoutScale;
+        };
+
+        const getCityHaloRadius = (d) => {
+            if (Number.isFinite(cityHaloPixelRadius)) return cityHaloPixelRadius;
+            const size = getCitySize(d);
+            const ratio = Number.isFinite(cityHaloSizeRatio) ? cityHaloSizeRatio : 0.14;
+            const minRadius = Number.isFinite(cityHaloMinPixelRadius)
+                ? cityHaloMinPixelRadius
+                : 0.5;
+            const maxRadius = Number.isFinite(cityHaloMaxPixelRadius)
+                ? cityHaloMaxPixelRadius
+                : Infinity;
+            return clamp(size * ratio, minRadius, maxRadius);
+        };
+
+        const getDataHaloRadius = (d) => {
+            if (Number.isFinite(dataLabelHaloPixelRadius)) return dataLabelHaloPixelRadius;
+            const size = getDataLabelSize(d);
+            const ratio = Number.isFinite(dataLabelHaloSizeRatio) ? dataLabelHaloSizeRatio : 0.14;
+            const minRadius = Number.isFinite(dataLabelHaloMinPixelRadius)
+                ? dataLabelHaloMinPixelRadius
+                : 0.5;
+            const maxRadius = Number.isFinite(dataLabelHaloMaxPixelRadius)
+                ? dataLabelHaloMaxPixelRadius
+                : Infinity;
+            return clamp(size * ratio, minRadius, maxRadius);
+        };
+
+        const getPixelOffsetProp = this.props.getPixelOffset;
+
+        const makeOffsetAccessor = (dx, dy, getRadius) => (d, info) => {
+            const [x, y] = resolvePixelOffset(getPixelOffsetProp, d, info);
+            const radius = getRadius(d);
+            return [x + dx * radius, y + dy * radius];
+        };
+
+        const layers = [];
+
+        if (cityHaloEnabled) {
+            haloDirections.forEach(([dx, dy], index) => {
+                layers.push(
+                    new TextLayer(this.props, {
+                        id: `${this.props.id}-tagmap-halo-layer-${index}`,
+                        data: visibleCityData,
+                        getText: (d) => d.name,
+                        getPosition: getCityPosition,
+                        getSize: getCitySize,
+                        getColor: cityHaloColor,
+                        getPixelOffset: makeOffsetAccessor(dx, dy, getCityHaloRadius),
+                        outlineWidth: 0,
+                        fontSettings: cityFontSettings,
+                        pickable: false,
+                        autoHighlight: false,
+                    }),
+                );
+            });
+        }
+
+        layers.push(
             new TextLayer(this.props, {
                 id: `${this.props.id}-tagmap-layer`,
-                // hack to prevent labels on the opposite side of the globe from being visible
-                data:
-                    cityData?.filter((d) =>
-                        deckUtilities.isFeatureVisibleOnGlobe(
-                            cameraLat,
-                            cameraLon,
-                            d.lat,
-                            d.lon,
-                            zoom,
-                        ),
-                    ) || false,
+                data: visibleCityData,
                 getText: (d) => d.name,
-                getPosition: (d) => [Number(d.lon), Number(d.lat), elevation],
-                getSize: (d) => {
-                    const populationScale = findPopulationScale(d);
-                    return baseScale * populationScale * zoomScale;
-                },
+                getPosition: getCityPosition,
+                getSize: getCitySize,
+                outlineWidth: cityHaloEnabled ? 0 : this.props.outlineWidth,
+                fontSettings: cityFontSettings,
             }),
-        ];
+        );
 
         if (this.props.dataLabels) {
+            if (dataLabelHaloEnabled) {
+                haloDirections.forEach(([dx, dy], index) => {
+                    layers.push(
+                        new TextLayer(this.props, {
+                            id: `${this.props.id}-tagmap-dataLabels-halo-${index}`,
+                            data: visibleCityData,
+                            getText: (d) => d.value,
+                            getPosition: getDataLabelPosition,
+                            getSize: getDataLabelSize,
+                            getColor: dataLabelHaloColor,
+                            getPixelOffset: makeOffsetAccessor(dx, dy, getDataHaloRadius),
+                            outlineWidth: 0,
+                            fontSettings: dataLabelFontSettings,
+                            pickable: false,
+                            autoHighlight: false,
+                        }),
+                    );
+                });
+            }
+
             layers.push(
                 new TextLayer(this.props, {
                     id: `${this.props.id}-tagmap-dataLabels`,
-                    // hack to prevent labels on the opposite side of the globe from being visible
-                    data: cityData?.filter(
-                        (d) =>
-                            deckUtilities.isFeatureVisibleOnGlobe(
-                                cameraLat,
-                                cameraLon,
-                                d.lat,
-                                d.lon,
-                                zoom,
-                            ) || false,
-                    ),
+                    data: visibleCityData,
                     fontWeight: '700',
-                    outlineWidth: 3,
                     getText: (d) => d.value,
-                    // Always make sure the value is above the city, no matter the bearing
-                    getPosition: (d) => {
-                        // padding between readout and city name is based on scale and a small padding multiplier
-                        const padding = 1; // shrank this because now setting alignment to bottom
-                        const rad = (bearing * Math.PI) / 180;
-                        const populationScale = findPopulationScale(d);
-                        const displace = latPerPixel * baseScale * populationScale * padding;
-                        return [
-                            Number(d.lon) + Math.sin(rad) * displace,
-                            Number(d.lat) + Math.cos(rad) * displace,
-                            elevation,
-                        ];
-                    },
-                    getSize: (d) => {
-                        const populationScale = findPopulationScale(d);
-                        return baseScale * populationScale * zoomScale * readoutScale;
-                    },
+                    getPosition: getDataLabelPosition,
+                    getSize: getDataLabelSize,
+                    outlineWidth: dataLabelHaloEnabled ? 0 : 3,
+                    fontSettings: dataLabelFontSettings,
                 }),
             );
         }
