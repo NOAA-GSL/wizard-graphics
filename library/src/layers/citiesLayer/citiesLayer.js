@@ -135,14 +135,9 @@ export default class CitiesLayer extends CompositeLayer {
                 const { name } = citiesInDomain[i];
                 const { population } = citiesInDomain[i];
                 let value;
-                let fvalue = '';
                 if (dataLabels) {
                     const {
                         data,
-                        decimals = 0,
-                        units = '',
-                        interpolate = true,
-                        valueFormatter,
                         readoutFunction,
                         readoutOptions,
                     } = dataLabels;
@@ -150,35 +145,13 @@ export default class CitiesLayer extends CompositeLayer {
                     if (typeof readoutFunction === 'function') {
                         value = readoutFunction(lat, lon, data, {
                             ...readoutOptions,
-                            interpolate: readoutOptions?.interpolate ?? interpolate,
-                            units,
                         });
                     }
 
-                    if (props.isTiming && Number.isFinite(value)) {
-                        const initDate = new Date(props.initDate);
-                        initDate.setHours(initDate.getHours() + Number(value));
-                        fvalue = gUtilities.formatdate(initDate, 'timing', props.settings);
-                    } else if (typeof valueFormatter === 'function') {
-                        const formattedValue = valueFormatter(value, {
-                            lat,
-                            lon,
-                            data,
-                            decimals,
-                            units,
-                            interpolate,
-                            readoutOptions,
-                        });
-                        fvalue = formattedValue == null ? '' : `${formattedValue}`;
-                    } else if (typeof value === 'string') {
-                        fvalue = value;
-                    } else if (value !== undefined && value !== null && !Number.isNaN(value)) {
-                        fvalue = `${gUtilities.roundto(value, decimals)}${units}`;
-                    }
                 }
 
                 cityData.push({
-                    value: fvalue,
+                    value: String(value),
                     lat,
                     lon,
                     name,
