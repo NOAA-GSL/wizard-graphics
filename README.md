@@ -47,29 +47,24 @@ npm run dev
 
 - [ShadedLayer](docs/shaded-layer.md)
 
-    <img src="docs/images/shadedLayer.png" alt="ShadedLayer" style="max-width: 300px;" />
-
+      <img src="docs/images/shadedLayer.png" alt="ShadedLayer" style="max-width: 300px;" />
 
 - [ParticleLayer](docs/particle-layer.md)
 
-    <img src="docs/images/particleLayer.png" alt="ParticleLayer" style="max-width: 300px;" />
+      <img src="docs/images/particleLayer.png" alt="ParticleLayer" style="max-width: 300px;" />
 
 - [ContourLayer](docs/contour-layer.md)
 
-    <img src="docs/images/contourLayer.png" alt="ContourLayer" style="max-width: 300px;" />
+      <img src="docs/images/contourLayer.png" alt="ContourLayer" style="max-width: 300px;" />
 
 - [VectorLayer](docs/vector-layer.md)
 
-    <img src="docs/images/vectorLayer.png" alt="VectorLayer" style="max-width: 300px;" />
+      <img src="docs/images/vectorLayer.png" alt="VectorLayer" style="max-width: 300px;" />
 
 - [CitiesLayer](docs/cities-layer.md)
 
-    <img src="docs/images/cityLayer.png" alt="CitiesLayer" style="max-width: 300px;" />
+      <img src="docs/images/cityLayer.png" alt="CitiesLayer" style="max-width: 300px;" />
 
 - [Readout](docs/readout.md)
 
-    <img src="docs/images/readout.png" alt="Readout" style="max-width: 300px;" />
-
-
-
-
+      <img src="docs/images/readout.png" alt="Readout" style="max-width: 300px;" />
