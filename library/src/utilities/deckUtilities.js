@@ -2,6 +2,12 @@ import { WebMercatorViewport, _GlobeViewport } from '@deck.gl/core';
 import gUtilities from './graphicsUtilities';
 
 export default class deckUtilities {
+    static normalizeLongitudeNear(referenceLon, lon) {
+        if (!Number.isFinite(referenceLon) || !Number.isFinite(lon)) return lon;
+
+        return referenceLon + ((((lon - referenceLon + 180) % 360) + 360) % 360) - 180;
+    }
+
     static getLatLonPerPixel(viewport) {
         // Always calculate the resLevel for a pitch of 0.  We don't want the resolution changing
         // if a user tilts the maps
@@ -43,10 +49,10 @@ export default class deckUtilities {
             unproject([0, height]),
         ];
 
-        const lons = corners.map((x) => x[0]);
+        const lons = corners.map((x) => this.normalizeLongitudeNear(longitude, x[0]));
         const lats = corners.map((x) => x[1]);
 
-        const lonDiff = this.degreeDiff(Math.max(...lons), Math.min(...lons));
+        const lonDiff = Math.max(...lons) - Math.min(...lons);
         const latDiff = this.degreeDiff(Math.max(...lats), Math.min(...lats));
 
         const latPerPixel = latDiff / height;
@@ -71,6 +77,7 @@ export default class deckUtilities {
 
         const xValues = [];
         const yValues = [];
+        const referenceLon = viewport.longitude || 0;
         for (const x of screenValues) {
             for (const y of screenValues) {
                 const [lon, lat] = unproject([width * x, height * y]);
@@ -81,7 +88,7 @@ export default class deckUtilities {
                     xValues.push(i);
                 } else {
                     yValues.push(lat);
-                    xValues.push(lon);
+                    xValues.push(this.normalizeLongitudeNear(referenceLon, lon));
                 }
             }
         }
