@@ -62,6 +62,7 @@ export default class VectorLayer extends CompositeLayer {
         super.updateState({ props, oldProps, changeFlags });
         const { viewport } = this.context;
         const { zoom } = viewport;
+        const referenceLon = viewport.longitude || 0;
         const t0 = performance.now();
 
         const { yMin, yMax, xMin, xMax } = deckUtilities.getViewportBounds(viewport);
@@ -75,17 +76,13 @@ export default class VectorLayer extends CompositeLayer {
         // or if the viewport has panned to the edge of the previously buffered render area.
         if (!changeFlags.propsOrDataChanged) {
             const prevBounds = this.state.bounds;
-            const hitBufferEdge = prevBounds && (
-                yMin < prevBounds.yMin ||
-                yMax > prevBounds.yMax ||
-                xMin < prevBounds.xMin ||
-                xMax > prevBounds.xMax
-            );
+            const hitBufferEdge =
+                prevBounds &&
+                (yMin < prevBounds.yMin ||
+                    yMax > prevBounds.yMax ||
+                    xMin < prevBounds.xMin ||
+                    xMax > prevBounds.xMax);
             if (!zoom || (Math.abs(zoom - this.state.zoom) < 0.5 && !hitBufferEdge)) return;
-        }
-
-        function wrapLongitude(lon) {
-            return ((((lon + 180) % 360) + 360) % 360) - 180;
         }
 
         const { lonlatGrid, dataDir, dataMag, triangulationMode, shape } = props;
@@ -161,7 +158,7 @@ export default class VectorLayer extends CompositeLayer {
                 for (let i = 0; i < ilen; i += xInterval) {
                     const idx = j * nx + i;
                     const p = lonlatGrid[idx];
-                    const lon = p[0];
+                    const lon = deckUtilities.normalizeLongitudeNear(referenceLon, p[0]);
                     const lat = p[1];
 
                     const speed = dataMag[idx];
@@ -175,10 +172,10 @@ export default class VectorLayer extends CompositeLayer {
                         continue;
                     }
                     if (
-                    !Number.isFinite(lon) ||
-                    !Number.isFinite(lat) ||
-                    !Number.isFinite(speed) ||
-                    !Number.isFinite(direction)
+                        !Number.isFinite(lon) ||
+                        !Number.isFinite(lat) ||
+                        !Number.isFinite(speed) ||
+                        !Number.isFinite(direction)
                     )
                         continue;
                     results.push({
@@ -204,7 +201,7 @@ export default class VectorLayer extends CompositeLayer {
             for (let idx = 0; idx < lonlatGrid.length; idx += 1) {
                 const p = lonlatGrid[idx];
                 if (!p || !Array.isArray(p) || p.length < 2) continue;
-                const lon = p[0];
+                const lon = deckUtilities.normalizeLongitudeNear(referenceLon, p[0]);
                 const lat = p[1];
                 const speed = dataMag[idx];
                 const direction = dataDir[idx];
@@ -216,11 +213,10 @@ export default class VectorLayer extends CompositeLayer {
                     !Number.isFinite(direction)
                 )
                     continue;
-                const wrappedLon = wrapLongitude(lon);
-                const projected = viewport.project([wrappedLon, lat]);
+                const projected = viewport.project([lon, lat]);
                 const px = projected[0];
                 const py = projected[1];
-                // console.log('projected', { lon, lat, wrappedLon, px, py });
+                // console.log('projected', { lon, lat, px, py });
 
                 if (
                     px < -bufferPx ||
@@ -264,7 +260,12 @@ export default class VectorLayer extends CompositeLayer {
             zoom,
             data: results,
             sizeScale,
-            bounds: { yMin: yMin - yBuffer, yMax: yMax + yBuffer, xMin: xMin - xBuffer, xMax: xMax + xBuffer },
+            bounds: {
+                yMin: yMin - yBuffer,
+                yMax: yMax + yBuffer,
+                xMin: xMin - xBuffer,
+                xMax: xMax + xBuffer,
+            },
         });
     }
 
