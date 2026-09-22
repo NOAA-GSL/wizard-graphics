@@ -10,15 +10,15 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "d3": "~7.9.0",
-        "deck.gl": "9.3.4",
         "@noaa-gsl/wizard-graphics": "file:../library",
+        "d3": "~7.9.0",
+        "deck.gl": "^9.4.0",
         "lodash": "~4.18.1",
-        "maplibre-gl": "5.24.0",
+        "maplibre-gl": "^6.10.0",
         "proj4": "~2.12.1",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
-        "react-map-gl": "8.0.4",
+        "react-map-gl": "^8.1.3",
         "stats.js": "^0.17.0"
     },
     "devDependencies": {
