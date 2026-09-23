@@ -22,4 +22,5 @@ jobs:
 
       - run: npm ci
       - run: npm run lint --workspace=library
+      - run: npm run build --workspace=library
       - run: npm run lint --workspace=demo
