@@ -7,7 +7,11 @@ export default function DeckGLOverlay(props) {
     // add/remove/add of controls throws "WebGL context already attached to device"
     // (https://github.com/visgl/deck.gl/issues/10681). Force device reuse to avoid it.
     const overlay = useControl(
-        () => new MapLibreOverlay({ ...props, deviceProps: { _reuseDevices: true, ...props.deviceProps } }),
+        () =>
+            new MapLibreOverlay({
+                ...props,
+                deviceProps: { _reuseDevices: true, ...props.deviceProps },
+            }),
     );
     if (overlayRef) {
         overlayRef.current = overlay;

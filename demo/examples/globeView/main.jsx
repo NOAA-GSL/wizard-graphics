@@ -44,7 +44,6 @@ import radarLonLat from 'demo-data/radar/lonlat';
 import radarMeta from 'demo-data/radar/meta';
 
 import { _GlobeView, MapView, TerrainLayer } from 'deck.gl';
-import { _TerrainExtension as TerrainExtension } from '@deck.gl/extensions';
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@noaa-gsl/wizard-graphics/wizard-graphics.css';
@@ -64,7 +63,7 @@ const checkboxConfig = [
 ];
 
 function MapContainer() {
-    const { mapToken } = process.env;
+    const mapToken = process.env.mapToken;
     const style = useMemo(() => Object.keys(mapStyles)[0], []);
     const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
 
@@ -293,7 +292,7 @@ function MapContainer() {
         prependText: dataLabel,
         decimals: 0,
     };
-    console.log('Base readout options:', baseReadoutOptions);
+    console.debug('Base readout options:', baseReadoutOptions);
 
     const { colors, colorLevels, contourLevels, colorType } =
         configFields[variable].colorBars.default;
@@ -310,7 +309,7 @@ function MapContainer() {
                 strategy: 'no-overlap',
                 color: [255, 255, 255, 170],
                 operation: 'terrain+draw',
-                //onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
+                //onTileLoad: (tile) => console.debug('Terrain tile loaded:', tile),
                 //onTileError: (err) => console.error('Terrain tile error:', err),
             }),
         [projectionMode, state.terrainCheckbox],

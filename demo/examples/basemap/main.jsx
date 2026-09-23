@@ -10,7 +10,7 @@ function MapContainer() {
     const [state, setState] = useState(Object.keys(mapStyles)[0]);
 
     // memoizing so that it doesn't re-run when moving the map or other re-renders
-    const { mapToken } = process.env;
+    const mapToken = process.env.mapToken;
     const mapStyle = useMemo(() => Maps.loadMapStyle(state, mapToken), [state, mapToken]);
 
     return (

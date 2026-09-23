@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { CompositeLayer } from '@deck.gl/core';
 import { IconLayer, IconLayerProps } from '@deck.gl/layers';
 import Supercluster from 'supercluster';

@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import './main.css';
 
 function App() {
-    const { mapToken } = process.env;
+    const mapToken = process.env.mapToken;
     return (
         <div>
             <h1> Welcome to Wizard Graphics!</h1>

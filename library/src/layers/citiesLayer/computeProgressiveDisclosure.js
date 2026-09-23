@@ -31,7 +31,7 @@ export function computeProgressiveDisclosure(citylist, debug = false) {
 
         if (debug) {
             const list = bushes[dy].all();
-            console.log(
+            console.debug(
                 'citylist:',
                 dy,
                 list.length,
@@ -69,7 +69,6 @@ export function computeProgressiveDisclosure(citylist, debug = false) {
     //
     // Build City trees with RBush(), takes about 50 ms
     const tree = {};
-    const t1 = performance.now();
     for (let dy in indexes) {
         const items = [];
         dy = parseFloat(dy);
@@ -88,7 +87,7 @@ export function computeProgressiveDisclosure(citylist, debug = false) {
         tree[dy].load(items);
     }
 
-    console.log('Progressive Disclosure Creation Time:', performance.now() - t0);
+    console.debug('Progressive Disclosure Creation Time:', performance.now() - t0);
 
     return tree;
 }

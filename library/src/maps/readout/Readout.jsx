@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { some } from 'lodash';
 import './Readout.css';
@@ -38,18 +37,14 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
             ) {
                 for (const i in readout) {
                     // added value formatter to allow custom formatting (ie timing/paintball)
-                    const {
-                        data,
-                        readoutFunction,
-                        readoutOptions,
-                    } = readout[i];
+                    const { data, readoutFunction, readoutOptions } = readout[i];
 
                     let value;
                     if (typeof readoutFunction === 'function') {
                         value = readoutFunction(lat, lon, data, {
                             ...readoutOptions,
                         });
-                    }  else {
+                    } else {
                         continue;
                     }
 
@@ -127,7 +122,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
                     } else if (typeof deck.pickMultipleObjects === 'function') {
                         picks = deck.pickMultipleObjects({ x: mouseX, y: mouseY }) || [];
                     }
-                } catch (err) {
+                } catch {
                     picks = [];
                 }
 
@@ -274,7 +269,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
                 try {
                     handleMouseMove(evt);
                 } catch (err) {
-                    console.warn('handleMouseMove failed', err);
+                    console.debug('handleMouseMove failed', err);
                 }
                 return;
             }
@@ -299,7 +294,6 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
         // capture true so it runs early
         document.addEventListener('pointermove', documentPointerMove, true);
 
-        // eslint-disable-next-line consistent-return
         return () => {
             overlayElement.removeEventListener('mousedown', onMouseDown, false);
             overlayElement.removeEventListener('mousemove', onMouseMove, false);
@@ -328,7 +322,7 @@ export default function Readout({ mapContainer, overlayRef, title, views = ['pla
     let viewports;
     try {
         viewports = deck?.viewManager?.getViewports?.() || deck?.getViewports?.() || [];
-    } catch (e) {
+    } catch {
         viewports = [];
     }
     // build mapping from view id -> viewport

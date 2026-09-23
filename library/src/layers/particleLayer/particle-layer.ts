@@ -1,3 +1,4 @@
+/* eslint-disable */
 import {
     Color,
     DefaultProps,
@@ -116,7 +117,7 @@ function getSharedNoiseData(): Float32Array {
 
 // Simple hash function for objects/strings
 function simpleHash(obj: any): string {
-    let str = typeof obj === 'string' ? obj : JSON.stringify(obj);
+    const str = typeof obj === 'string' ? obj : JSON.stringify(obj);
     let hash = 0,
         i,
         chr;
@@ -609,11 +610,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             if (!hasInvalidPoint) {
                 const earcutIndices = earcut(flatPolygon);
                 for (let i = 0; i + 2 < earcutIndices.length; i += 3) {
-                    triangles.push([
-                        earcutIndices[i],
-                        earcutIndices[i + 1],
-                        earcutIndices[i + 2],
-                    ]);
+                    triangles.push([earcutIndices[i], earcutIndices[i + 1], earcutIndices[i + 2]]);
                 }
             }
         }
@@ -716,7 +713,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         );
 
         const scratchKey = `scratch-${width}x${height}`;
-        let uvData: Float32Array =
+        const uvData: Float32Array =
             positionsCache.get(scratchKey)?.uvData || new Float32Array(width * height * 4);
         if (!positionsCache.has(scratchKey)) {
             addToCache(scratchKey, { uvData });
@@ -1206,8 +1203,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
 
         const speedVariation = 0.95 + 0.1 * Math.sin(currentTime * 0.001);
         let currentSpeedFactor: number;
-        currentSpeedFactor = (speedFactor * speedVariation) / (700 + Math.pow(1.9, viewport.zoom +6));
-        
+        currentSpeedFactor =
+            (speedFactor * speedVariation) / (700 + Math.pow(1.9, viewport.zoom + 6));
 
         const seed = Math.sin(currentTime * 0.0001) * 999 + Math.cos(currentTime * 0.00013) * 777;
 

@@ -1,6 +1,7 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
+/* eslint-disable */
 
 import { CompositeLayer } from '@deck.gl/core';
 import PathLayer from '../pathLayer/WizardPathLayer.js';

@@ -1,5 +1,5 @@
 import earcut from 'earcut';
-// eslint-disable-next-line import/no-extraneous-dependencies
+
 import Delaunator from 'delaunator';
 
 export default class TriangulateGrid {
