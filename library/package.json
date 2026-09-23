@@ -8,6 +8,10 @@
     "description": "An extension of deck.gl for producing weather graphics",
     "type": "module",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/NOAA-GSL/wizard-graphics.git"
+    },
     "main": "./dist/wizard-graphics.umd.cjs",
     "module": "./dist/wizard-graphics.es.js",
     "exports": {
