@@ -74,6 +74,7 @@ function MapContainer() {
     let wmag;
     let projDict;
     let resLevel;
+
     switch (currentDataset) {
         case 'HREF':
             temperatures = hrefTemperatures;
