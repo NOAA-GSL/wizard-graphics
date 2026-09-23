@@ -174,7 +174,7 @@ function MapContainer() {
             strategy: 'no-overlap',
             color: [255, 255, 255],
             operation: 'terrain+draw',
-            // onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
+            // onTileLoad: (tile) => console.debug('Terrain tile loaded:', tile),
             // onTileError: (err) => console.error('Terrain tile error:', err),
         });
         return magicalTerrainLayer;
@@ -263,7 +263,7 @@ function MapContainer() {
                     color: [255, 255, 255, 255],
                     width: 1.5,
                     numParticles: 10000,
-                    widthMinPixels:1.5,
+                    widthMinPixels: 1.5,
                     extensions: [new TerrainExtension()],
                     terrainDrawMode: 'offset',
                     readout: [
@@ -338,7 +338,7 @@ function MapContainer() {
                 ))}
             </div>
             <div ref={mapContainer} id="mapContainer" style={{ position: 'relative' }}>
-                {console.log('layers:', layers)}
+                {console.debug('layers:', layers)}
                 <Map
                     initialViewState={{ longitude: -100.4, latitude: 37.8, zoom: 3 }}
                     // maxPitch={0}

@@ -1,3 +1,4 @@
 dist/
 src/static/maps/
 node_modules/
+.github/workflows/**/*.yml

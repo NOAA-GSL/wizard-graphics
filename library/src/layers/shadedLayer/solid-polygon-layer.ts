@@ -1,7 +1,7 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
-
+/* eslint-disable */
 // THW modified deck.gl
 // In the future compare tag v9.1.13 with whatever version you are trying to upgrade
 // - 7/15/2025: updated to deck.gl v9.1.13
@@ -115,11 +115,7 @@ type _ShadedLayerProps<DataT> = {
     getOpacity?: Accessor<DataT, number>;
     texture?: string | TextureSource | Promise<TextureSource>;
     triangulationMode?:
-        | 'unstructured'
-        | 'quadkey'
-        | 'quadkey-cells'
-        | 'spherical'
-        | 'spherical-cells';
+        'unstructured' | 'quadkey' | 'quadkey-cells' | 'spherical' | 'spherical-cells';
     shape?: [number, number];
     /**
      * Material settings for lighting effect. Applies if `extruded: true`
@@ -255,12 +251,11 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
 
         attributeManager.remove(['instancePickingColors']);
 
-        /* eslint-disable max-len */
         attributeManager.add({
             indices: {
                 size: 1,
                 isIndexed: true,
-                // eslint-disable-next-line @typescript-eslint/unbound-method
+
                 update: this.calculateIndices,
                 noAlloc,
             },
@@ -271,7 +266,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 fp64: this.use64bitPositions(),
                 transition: ATTRIBUTE_TRANSITION,
                 accessor: 'getPolygon',
-                // eslint-disable-next-line @typescript-eslint/unbound-method
+
                 update: this.calculatePositions,
                 noAlloc,
                 shaderAttributes: {
@@ -284,7 +279,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 size: 1,
                 type: 'uint16',
                 stepMode: 'instance',
-                // eslint-disable-next-line @typescript-eslint/unbound-method
+
                 update: this.calculateVertexValid,
                 noAlloc,
             },
@@ -353,7 +348,6 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                     ),
             },
         });
-        /* eslint-enable max-len */
     }
 
     getPickingInfo(params: GetPickingInfoParams): PickingInfo {
@@ -428,12 +422,12 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             props.colorType !== oldProps.colorType;
 
         if (props.data !== oldProps.data || colorsChanged) {
-            console.log('Updating Buffers!');
+            console.debug('Updating Buffers!');
             this.setBuffers();
         }
 
         if (props.lonlatGrid !== oldProps.lonlatGrid) {
-            console.log('Updating geometry!');
+            console.debug('Updating geometry!');
             this.updateGeometry(updateParams);
         }
 
@@ -452,7 +446,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         }
 
         if (colorsChanged) {
-            console.log('Updating Texture!');
+            console.debug('Updating Texture!');
             this.setTexture();
         }
     }
@@ -498,7 +492,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 1,
                 effectiveTriangulationMode,
             );
-            console.log('Triangulate Time:', performance.now() - t0);
+            console.debug('Triangulate Time:', performance.now() - t0);
             positions[key].startIndices = new Uint32Array([0]);
         }
 
@@ -519,7 +513,8 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
 
         // If opacity data (or normalized opacity data) is supplied, add it
         if (this.props.odata || this.props.nodata) {
-            const nodata = this.props.nodata || gUtilities.normalize(this.props.odata, [0, 100], 'linear');
+            const nodata =
+                this.props.nodata || gUtilities.normalize(this.props.odata, [0, 100], 'linear');
             data.attributes.getOpacity = TriangulateGrid.triangulate(
                 nodata,
                 'data',

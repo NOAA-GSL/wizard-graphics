@@ -174,7 +174,7 @@ function stitchSegments(segments, bounds) {
     return lines.filter((line) => line.length > 1);
 }
 
-export default function triangleContours(lonlatGrid, values, levels, shape = null) {
+export default function triangleContours(lonlatGrid, values, levels) {
     const points = lonlatGrid;
     const flattenedValues = values;
 

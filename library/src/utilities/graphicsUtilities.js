@@ -203,7 +203,7 @@ export default class gUtilities {
         for (let i = 0; i < nvalues.length; i += 1) {
             nvalues[i] = gUtilities.normalize1D(values[i], max, min, clevels, ctype);
         }
-        // console.log('Done', performance.now() - t0);
+        // console.debug('Done', performance.now() - t0);
 
         return nvalues;
     }

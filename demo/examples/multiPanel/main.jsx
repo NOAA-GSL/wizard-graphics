@@ -1,6 +1,6 @@
 import React, { StrictMode, useMemo, useRef, useCallback, useReducer, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-// eslint-disable-next-line import/no-unresolved
+
 import { Map } from 'react-map-gl/maplibre';
 import Stats from 'stats.js';
 import {
@@ -609,7 +609,7 @@ function MapContainer() {
                             views={state.views}
                             overlayRef={overlayRef}
                             layers={layers}
-                            // eslint-disable-next-line react/jsx-no-bind
+
                             layerFilter={layerFilter}
                             interleaved
                         />

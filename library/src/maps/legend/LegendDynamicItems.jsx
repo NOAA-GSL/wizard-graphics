@@ -14,7 +14,6 @@ export default function LegendDynamicItems({ mapRef, viewState, overlayRef, opti
     const debouncedEffect = useRef(
         debounce(() => {
             if (overlayRef?.current) {
-                // eslint-disable-next-line no-underscore-dangle
                 const { width, height } = overlayRef.current._deck;
                 if (!width || !height) return;
                 // Pick all pickable objects (20-50 ms, ouch!)

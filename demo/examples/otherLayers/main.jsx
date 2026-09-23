@@ -128,7 +128,7 @@ function MapContainer() {
 
     // Handle spot layer clicks
     const handleSpotClick = useCallback((info, event) => {
-        console.log('Spot clicked:', info); // Debug log
+        console.debug('Spot clicked:', info); // Debug log
 
         // Set flag to prevent map click from closing tooltip immediately
         spotClickedRef.current = true;
@@ -139,7 +139,7 @@ function MapContainer() {
         }, 100);
 
         if (info.object) {
-            // Get the screen coordinates from the click event
+            // Get the screen coordinates from the click event,ao
             const rect = mapContainer.current?.getBoundingClientRect();
             if (!rect) return false;
 
@@ -147,8 +147,7 @@ function MapContainer() {
             const y = info.pixel ? info.pixel[1] : event?.center?.y || 0;
 
             // Use the picking function from SpotLayer default props directly
-            const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } =
-                info.object.properties;
+            const { tid, stat, name, rmade, deliverdtg, wfo, snumunum } = info.object.properties;
 
             // Build tooltip content directly (same logic as in SpotLayer)
             const readout = [];
@@ -255,7 +254,7 @@ function MapContainer() {
             }
 
             if (readout.length > 0) {
-                console.log('Setting persistent tooltip'); // Debug log
+                console.debug('Setting persistent tooltip'); // Debug log
                 setPersistentTooltip({
                     readout,
                     x: Math.min(x, window.innerWidth - 320),
@@ -268,26 +267,23 @@ function MapContainer() {
 
     // Close persistent tooltip
     const closePersistentTooltip = useCallback(() => {
-        console.log('Closing persistent tooltip'); // Debug log
+        console.debug('Closing persistent tooltip'); // Debug log
         setPersistentTooltip(null);
     }, []);
 
     // Close tooltip when clicking on map (but not immediately after spot click)
-    const handleMapClick = useCallback(
-        (event) => {
-            // Don't close if a spot was just clicked
-            if (spotClickedRef.current) {
-                console.log('Map click ignored - spot was just clicked'); // Debug log
-                return;
-            }
+    const handleMapClick = useCallback(() => {
+        // Don't close if a spot was just clicked
+        if (spotClickedRef.current) {
+            console.debug('Map click ignored - spot was just clicked'); // Debug log
+            return;
+        }
 
-            if (persistentTooltip) {
-                console.log('Map clicked, closing tooltip'); // Debug log
-                setPersistentTooltip(null);
-            }
-        },
-        [persistentTooltip],
-    );
+        if (persistentTooltip) {
+            console.debug('Map clicked, closing tooltip'); // Debug log
+            setPersistentTooltip(null);
+        }
+    }, [persistentTooltip]);
 
     if (state.iconLayerCheckbox) {
         const iconLayer = new IconClusterLayer({

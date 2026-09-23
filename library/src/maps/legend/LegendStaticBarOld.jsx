@@ -6,7 +6,7 @@ export function getcolors(colorLevels, colors, colorType) {
     const llen = colorLevels.length;
     if (colorType === 'scaleThreshold') {
         if (llen + 1 !== clen) {
-            console.log(
+            console.debug(
                 `ERROR: When using the threshold colorbar the number of colors must be one greater than the number of levels.` +
                     `\nColors Length: ${clen}\nLevels Length: ${llen}
                     \nLevels: ${colorLevels}
@@ -15,7 +15,7 @@ export function getcolors(colorLevels, colors, colorType) {
         }
     } else if (colorType === 'scaleLinear') {
         if (llen !== clen) {
-            console.log(
+            console.debug(
                 `ERROR: When using the linear colorbar the number of colors and levels must be equal` +
                     `\nColors Length: ${clen}\nLevels Length: ${llen}
                     \nLevels: ${colorLevels}
@@ -23,7 +23,7 @@ export function getcolors(colorLevels, colors, colorType) {
             );
         }
     } else {
-        console.log('ERROR: Colorbar of type', colorType, 'not found');
+        console.debug('ERROR: Colorbar of type', colorType, 'not found');
     }
 
     const colorScale = colorType === 'scaleLinear' ? d3.scaleLinear() : d3.scaleThreshold();
@@ -360,7 +360,6 @@ export default function LegendStaticBar({ options }) {
             })
             // eslint-disable-next-line no-unused-vars
             .catch((error) => {
-                // eslint-disable-next-line spaced-comment
                 //console.error('Error:', error);
             });
         // eslint-disable-next-line react-hooks/exhaustive-deps

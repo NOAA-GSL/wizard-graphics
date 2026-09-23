@@ -52,7 +52,7 @@ const getFillColor = (idpSource, category, probability) => {
     let colorTemplate;
     if (idpSource.includes('temp')) colorTemplate = 'temperature';
     if (idpSource.includes('prcp')) colorTemplate = 'precipitation';
-    if (!colorTemplate) console.log('Unknown color template:', idpSource);
+    if (!colorTemplate) console.error('Unknown color template:', idpSource);
 
     const colorMap = colorMaps[colorTemplate] || {};
 
@@ -75,7 +75,7 @@ const defaultProps = {
     getFillColor: (f) =>
         getFillColor(this.legend.layerType, f.properties.cat, f.properties.prob, f),
     getLineColor: [0, 0, 0],
-    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
+    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'back' },
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
         if (d.object) {
@@ -106,7 +106,8 @@ const defaultProps = {
                 <>
                     <strong>Category:</strong> {properties.cat || 'Not available'}
                     <br />
-                    <strong>Probability:</strong> {`${properties.prob}%` || 'Not available'}
+                    <strong>Probability:</strong>{' '}
+                    {properties.prob != null ? `${properties.prob}%` : 'Not available'}
                     <br />
                     <strong>Valid:</strong> {startInfo} - {endInfo}
                 </>
@@ -120,7 +121,8 @@ class CPCLayer extends CompositeLayer {
     renderLayers() {
         return new GeoJsonLayer(this.props, {
             id: `${this.props.id}-geojson`,
-            getFillColor: (f) => getFillColor(this.props.legend.layerType, f.properties.cat, f.properties.prob),
+            getFillColor: (f) =>
+                getFillColor(this.props.legend.layerType, f.properties.cat, f.properties.prob),
         });
     }
 }

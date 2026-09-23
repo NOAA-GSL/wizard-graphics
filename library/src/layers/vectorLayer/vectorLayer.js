@@ -1,10 +1,7 @@
-/* eslint-disable max-len */
 import { CompositeLayer } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
-import { CollisionFilterExtension } from '@deck.gl/extensions';
 import barbsPNG from './barbs-new.png?url';
 import deckUtilities from '../../utilities/deckUtilities';
-import gUtilities from '../../utilities/graphicsUtilities';
 
 //
 // Constants for Korri's wind barbs
@@ -53,7 +50,6 @@ export default class VectorLayer extends CompositeLayer {
         };
     }
 
-    // eslint-disable-next-line class-methods-use-this
     shouldUpdateState({ changeFlags }) {
         return changeFlags.somethingChanged;
     }
@@ -86,8 +82,8 @@ export default class VectorLayer extends CompositeLayer {
         }
 
         const { lonlatGrid, dataDir, dataMag, triangulationMode, shape } = props;
-        // console.log('viewport bounds', { yMin, yMax, xMin, xMax });
-        // console.log('ybuffer, xbuffer', { yBuffer, xBuffer });
+        // console.debug('viewport bounds', { yMin, yMax, xMin, xMax });
+        // console.debug('ybuffer, xbuffer', { yBuffer, xBuffer });
 
         const sizeScale = props.sizeScale * zoom ** 0.25;
         const results = [];
@@ -152,8 +148,6 @@ export default class VectorLayer extends CompositeLayer {
             const xInterval = Math.max(Math.round(idealSpacingPixelPerBarb / xpixelPerBarb), 1);
             const yInterval = Math.max(Math.round(idealSpacingPixelPerBarb / ypixelPerBarb), 1);
 
-            const numy = Math.ceil(jlen / yInterval);
-            const numx = Math.ceil(ilen / xInterval);
             for (let j = 0; j < jlen; j += yInterval) {
                 for (let i = 0; i < ilen; i += xInterval) {
                     const idx = j * nx + i;
@@ -216,7 +210,7 @@ export default class VectorLayer extends CompositeLayer {
                 const projected = viewport.project([lon, lat]);
                 const px = projected[0];
                 const py = projected[1];
-                // console.log('projected', { lon, lat, px, py });
+                // console.debug('projected', { lon, lat, px, py });
 
                 if (
                     px < -bufferPx ||
@@ -252,10 +246,10 @@ export default class VectorLayer extends CompositeLayer {
             }
         }
 
-        console.log('vector layer: processed data in ', performance.now() - t0, 'ms');
-        // console.log('lonlatGrid', lonlatGrid);
-        // console.log('Number of barbs', results.length);
-        // console.log('reulsts', results);
+        console.debug('vector layer: processed data in ', performance.now() - t0, 'ms');
+        // console.debug('lonlatGrid', lonlatGrid);
+        // console.debug('Number of barbs', results.length);
+        // console.debug('reulsts', results);
         this.setState({
             zoom,
             data: results,
@@ -295,7 +289,6 @@ export default class VectorLayer extends CompositeLayer {
             },
         });
 
-        // eslint-disable-next-line consistent-return
         return vectorLayer;
     }
 }
