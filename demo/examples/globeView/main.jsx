@@ -272,7 +272,12 @@ function MapContainer() {
         shape = [ny, nx];
     }
 
-    const readoutType = projDict ? 'gridded' : currentDataset === 'Radar' ? 'spherical' : 'unstructured';
+    const projectionMode = state.isGlobeView ? 'globe' : 'mercator';
+    const readoutType = projDict
+        ? 'gridded'
+        : currentDataset === 'Radar'
+          ? 'spherical'
+          : 'unstructured';
     const shouldInterpolateReadout =
         state.triangulationMode !== 'quadkey-cells' &&
         state.triangulationMode !== 'spherical-cells';
@@ -295,7 +300,7 @@ function MapContainer() {
     const terrainLayer = useMemo(
         () =>
             new TerrainLayer({
-                id: `terrain-layer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+                id: `terrain-layer-${projectionMode}`,
                 //texture: 'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png',
                 elevationData:
                     'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
@@ -308,9 +313,8 @@ function MapContainer() {
                 //onTileLoad: (tile) => console.log('Terrain tile loaded:', tile),
                 //onTileError: (err) => console.error('Terrain tile error:', err),
             }),
-        [state.terrainCheckbox],
+        [projectionMode, state.terrainCheckbox],
     );
-
 
     const valueTextData = useMemo(() => {
         if (!lonlatGrid || !data) return [];
@@ -336,7 +340,7 @@ function MapContainer() {
     if (state.shadedCheckbox)
         layers.push(
             new ShadedLayer({
-                id: `shadedLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${state.triangulationMode}`,
+                id: `shadedLayer-${projectionMode}-${state.triangulationMode}`,
                 beforeId: mapStyles[style].beforeId,
                 data,
                 colors,
@@ -363,7 +367,7 @@ function MapContainer() {
     if (state.contourCheckbox)
         layers.push(
             new ContourLayer({
-                id: `contourLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${state.triangulationMode}-${state.contourAlgorithm}`,
+                id: `contourLayer-${projectionMode}-${state.triangulationMode}-${state.contourAlgorithm}`,
                 beforeId: mapStyles[style].beforeId,
                 data,
                 colors,
@@ -408,7 +412,7 @@ function MapContainer() {
     if (state.vectorCheckbox)
         layers.push(
             new VectorLayer({
-                id: `vectorLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+                id: `vectorLayer-${projectionMode}`,
                 beforeId: mapStyles[style].beforeId,
                 dataDir: wdir,
                 dataMag: wmag,
@@ -423,19 +427,19 @@ function MapContainer() {
                     {
                         data: wmag,
                         readoutFunction,
-                        readoutOptions: { 
+                        readoutOptions: {
                             ...baseReadoutOptions,
                             prependText: 'Wind Speed',
-                            units: 'mph', 
+                            units: 'mph',
                         },
                     },
                     {
                         data: wdir,
                         readoutFunction,
-                        readoutOptions: { 
+                        readoutOptions: {
                             ...baseReadoutOptions,
                             prependText: 'Wind Direction',
-                            units: '°', 
+                            units: '°',
                         },
                     },
                 ],
@@ -444,7 +448,7 @@ function MapContainer() {
     if (state.valueTextCheckbox)
         layers.push(
             new TextLayer({
-                id: `valueTextLayer-${state.isGlobeView ? 'globe' : 'mercator'}`,
+                id: `valueTextLayer-${projectionMode}`,
                 data: valueTextData,
                 getColor: (x) => x.color || [245, 245, 245],
                 getBackgroundColor: [255, 255, 255, 150],
@@ -474,39 +478,39 @@ function MapContainer() {
         );
 
     if (state.particleCheckbox)
-        layers.push( new ParticleLayer({
-            id: `particleLayer-${state.isGlobeView ? 'globe' : 'mercator'}-${currentDataset}-${currentController}`,
-            dataDir: wdir,
-            dataMag: wmag,
-            color: [0, 0, 0, 255],
-            width: 1.5,
-            widthMinPixels: 1.5,
-            numParticles: 10000,
-            lonlatGrid,
-            shape,
-            readout: [
-                {
-                    data: wmag,
-                    readoutFunction,
-                    readoutOptions: { 
-                        ...baseReadoutOptions,
-                        prependText: 'Wind Speed',
-                        units: 'mph', 
+        layers.push(
+            new ParticleLayer({
+                id: `particleLayer-${projectionMode}-${currentDataset}-${currentController}`,
+                dataDir: wdir,
+                dataMag: wmag,
+                color: [0, 0, 0, 255],
+                width: 1.5,
+                widthMinPixels: 1.5,
+                numParticles: 10000,
+                lonlatGrid,
+                shape,
+                readout: [
+                    {
+                        data: wmag,
+                        readoutFunction,
+                        readoutOptions: {
+                            ...baseReadoutOptions,
+                            prependText: 'Wind Speed',
+                            units: 'mph',
+                        },
                     },
-                },
-                {
-                    data: wdir,
-                    readoutFunction,
-                    readoutOptions: { 
-                        ...baseReadoutOptions,
-                        prependText: 'Wind Direction',
-                        units: '°', 
+                    {
+                        data: wdir,
+                        readoutFunction,
+                        readoutOptions: {
+                            ...baseReadoutOptions,
+                            prependText: 'Wind Direction',
+                            units: '°',
+                        },
                     },
-                },
-            ],
-        }))
-
-
+                ],
+            }),
+        );
 
     return (
         <>
@@ -649,9 +653,14 @@ function MapContainer() {
                         ref={mapRef}
                         antialias
                         mapStyle={mapStyle}
-                        projection={state.isGlobeView ? 'globe' : 'mercator'}
+                        projection={projectionMode}
                     >
-                        <DeckGLOverlay overlayRef={overlayRef} layers={layers} interleaved />
+                        <DeckGLOverlay
+                            key={`overlay-${projectionMode}`}
+                            overlayRef={overlayRef}
+                            layers={layers}
+                            interleaved
+                        />
                         <Readout
                             mapContainer={mapContainer}
                             overlayRef={overlayRef}
@@ -673,7 +682,7 @@ function MapContainer() {
                         controller
                         views={
                             state.isGlobeView
-                                ? new _GlobeView({ id: 'globe', controller: true })
+                                ? new _GlobeView({ id: projectionMode, controller: true })
                                 : new MapView()
                         }
                     >

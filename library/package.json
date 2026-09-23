@@ -4,7 +4,7 @@
         "registry": "https://registry.npmjs.org/",
         "access": "public"
     },
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "An extension of deck.gl for producing weather graphics",
     "type": "module",
     "license": "MIT",
@@ -55,12 +55,12 @@
     "//": "Still figuring out best way to manage peerDependency versions",
     "peerDependencies": {
         "d3": "~7.9.0",
-        "deck.gl": ">=9.2.11",
+        "deck.gl": ">=9.4.0",
         "lodash": "~4.18.1",
-        "maplibre-gl": ">=4.7.1",
+        "maplibre-gl": ">=6.10.0",
         "proj4": "^2.12.1",
         "react": "^18 || ^19",
         "react-dom": "^18 || ^19",
-        "react-map-gl": ">=7.1.7"
+        "react-map-gl": ">=8.1.3"
     }
 }

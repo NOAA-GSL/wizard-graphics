@@ -529,7 +529,7 @@ function MapContainer() {
             // mapbox id will be automatically added in multiple displays, we don't use this id
             // in multiple displays
             // Hide the default 'mapbox' viewport in multi-panel mode
-            if (viewport.id === 'mapbox' && displayNum > 1) {
+            if (viewport.id === 'maplibre' && displayNum > 1) {
                 return false;
             }
 
