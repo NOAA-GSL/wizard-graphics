@@ -28,6 +28,10 @@ jobs:
 
       - run: npm ci
       - run: npm run build --workspace=library
+      - name: Verify map token is available
+        run: test -n "$VITE_MAP_TOKEN"
+        env:
+          VITE_MAP_TOKEN: ${{ secrets.VITE_MAP_TOKEN }}
       - name: Build demo
         run: npm run build --workspace=demo
         env:

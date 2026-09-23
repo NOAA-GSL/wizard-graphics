@@ -59,7 +59,7 @@ function PersistentTooltip({ tooltip, onClose }) {
 
 function MapContainer() {
     // memoizing so that it doesn't re-run when moving the map or other re-renders
-    const { mapToken } = process.env;
+    const mapToken = process.env.mapToken;
     const style = Object.keys(mapStyles)[1];
     const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
     const [state, setState] = useState({

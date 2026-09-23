@@ -47,7 +47,7 @@ const checkboxConfig = [
 ];
 
 function MapContainer() {
-    const { mapToken } = process.env;
+    const mapToken = process.env.mapToken;
     const style = useMemo(() => Object.keys(mapStyles)[0], []);
     const mapStyle = useMemo(() => Maps.loadMapStyle(style, mapToken), [style, mapToken]);
 
