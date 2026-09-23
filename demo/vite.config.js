@@ -33,6 +33,6 @@ export default defineConfig({
         },
     },
     define: {
-        'process.env.mapToken': JSON.stringify(process.env.mapToken),
+        'process.env.mapToken': JSON.stringify(process.env.VITE_MAP_TOKEN ?? process.env.mapToken),
     },
 });

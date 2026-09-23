@@ -14,7 +14,7 @@ In order for the basemaps to load in the examples, you need an [ESRI API key](ht
 export mapToken=<ESRI_API_KEY>
 ```
 
-Or set `TOKEN` directly in `main.jsx`. However, this is not recommended.
+Or set `mapToken` directly in `main.jsx`. However, this is not recommended.
 
 ### To install dependencies:
 
