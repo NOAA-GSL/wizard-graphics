@@ -122,7 +122,6 @@ function MapContainer() {
     let dataLabel;
     let nx;
     let ny;
-
     switch (currentDataset) {
         case 'HREF':
             temperatures = hrefTemperatures;
