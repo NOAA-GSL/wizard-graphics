@@ -1,5 +1,7 @@
 # Wizard Graphics
 
+📊 **[View Live Demo](https://noaa-gsl.github.io/wizard-graphics/)**
+
 An extension of of deck.gl along with other mapping tools for numerical weather data.
 
 ## Getting Started
@@ -68,3 +70,11 @@ npm run dev
 - [Readout](docs/readout.md)
 
       <img src="docs/images/readout.png" alt="Readout" style="max-width: 300px;" />
+
+## Lint
+
+npm run lint --workspace=library
+npm run lint --workspace=demo
+
+The demo lint configuration mirrors Vite's `demo-data` alias, including its
+extensionless JSON imports.
