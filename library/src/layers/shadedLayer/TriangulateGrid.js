@@ -484,10 +484,12 @@ export default class TriangulateGrid {
                 }
 
                 if (triangulationMode === 'quadkey-cells' && Array.isArray(dims)) {
+                    const [rows, cols] = dims;
+                    const cellCount = rows * cols;
                     const verticesPerCell = 4;
-                    const arr = new Float32Array(values.length * verticesPerCell * size);
+                    const arr = new Float32Array(cellCount * verticesPerCell * size);
                     let w = 0;
-                    for (let i = 0; i < values.length; i += 1) {
+                    for (let i = 0; i < cellCount; i += 1) {
                         const scaledValue = values[i] * scale;
                         arr[w] = scaledValue;
                         arr[w + 1] = scaledValue;
