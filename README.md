@@ -59,6 +59,8 @@ npm run dev
 
       <img src="docs/images/contourLayer.png" alt="ContourLayer" style="max-width: 300px;" />
 
+- [GpuContourLayer](docs/gpu-contour-layer.md): WebGL2 visual contours with sparse CPU labels.
+
 - [VectorLayer](docs/vector-layer.md)
 
       <img src="docs/images/vectorLayer.png" alt="VectorLayer" style="max-width: 300px;" />
@@ -81,7 +83,9 @@ npm run test
 
 The tests use the real layer code with in-memory buffers and textures, so they
 do not require a browser or GPU. Contour tests cover cache reuse/invalidation
-and coordinate equivalence with the previous marching-squares merge logic.
+and coordinate equivalence with the previous marching-squares merge logic,
+plus GPU-mesh scalar alignment, label placement, threshold-crossing masks,
+multi-level segment scheduling, and resource reuse.
 
 ## Lint
 
