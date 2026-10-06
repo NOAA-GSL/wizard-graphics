@@ -25,6 +25,27 @@ type ResolvedGrid = {
 
 type TriangleIndices = [number, number, number];
 
+type WindRasterLookup = {
+    pixelHeads: Int32Array;
+    next: Int32Array;
+    pointIndices: Uint32Array;
+    weights: Float64Array;
+};
+
+type WindTextureData = {
+    grid: ResolvedGrid;
+    width: number;
+    height: number;
+    pointX: Float32Array;
+    pointY: Float32Array;
+    windU: Float32Array;
+    windV: Float32Array;
+    pointValid: Uint8Array;
+    uvData: Float32Array;
+    turbulence: Float64Array;
+    rasterLookup?: WindRasterLookup;
+};
+
 type GlobeViewportLike = {
     longitude: number;
     latitude: number;
@@ -93,6 +114,8 @@ export const bitmapUniforms = {
 } as const satisfies ShaderModule<UniformProps>;
 
 const positionsCache = new Map<string, any>();
+const gridIds = new WeakMap<object, number>();
+let nextGridId = 0;
 const MAX_CACHE_SIZE = 50; // Increased to support multi-panel setups
 const DEFAULT_RADIUS = 6370972;
 
@@ -113,21 +136,6 @@ function getSharedNoiseData(): Float32Array {
         }
     }
     return sharedNoiseData;
-}
-
-// Simple hash function for objects/strings
-function simpleHash(obj: any): string {
-    const str = typeof obj === 'string' ? obj : JSON.stringify(obj);
-    let hash = 0,
-        i,
-        chr;
-    if (str.length === 0) return hash.toString();
-    for (i = 0; i < str.length; i++) {
-        chr = str.charCodeAt(i);
-        hash = (hash << 5) - hash + chr;
-        hash |= 0; // Convert to 32bit integer
-    }
-    return hash.toString();
 }
 
 function addToCache(key: string, value: any) {
@@ -345,6 +353,14 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         uniformHolder: { bitmap?: any } | null;
         zeroPositions?: Float32Array;
         ringBufferIndex: number; // Current write slot for ring buffer
+        gridCache?: {
+            source: ParticleLayerProps<D>['lonlatGrid'];
+            shapeRows: number | undefined;
+            shapeCols: number | undefined;
+            grid: ResolvedGrid;
+        };
+        windTextureData?: WindTextureData;
+        generatedWindTexture?: { texture: Texture; globalData: boolean };
     };
 
     private _sourcePositions64Low = new Float32Array([0, 0, 0]);
@@ -469,17 +485,30 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     }
 
     _getGridCacheKey(points: LonLatPoint[], rows: number, cols: number): string {
-        if (!points.length) return `${rows}x${cols}-empty`;
-        const first = points[0];
-        const mid = points[Math.floor(points.length / 2)] || first;
-        const last = points[points.length - 1] || first;
-        return simpleHash(`${rows}x${cols}-${first.join(',')}-${mid.join(',')}-${last.join(',')}`);
+        const source = this.props.lonlatGrid;
+        let gridId = gridIds.get(source);
+        if (gridId === undefined) {
+            gridId = nextGridId++;
+            gridIds.set(source, gridId);
+        }
+        return `${gridId}-${rows}x${cols}-${points.length}`;
     }
 
     _resolveGrid(): ResolvedGrid | null {
         const lonlatGrid = this.props.lonlatGrid;
         if (!Array.isArray(lonlatGrid) || lonlatGrid.length === 0) {
             return null;
+        }
+
+        const shapeRows = this.props.shape?.[0];
+        const shapeCols = this.props.shape?.[1];
+        const cached = this.state.gridCache;
+        if (
+            cached?.source === lonlatGrid &&
+            cached.shapeRows === shapeRows &&
+            cached.shapeCols === shapeCols
+        ) {
+            return cached.grid;
         }
 
         const first = lonlatGrid[0] as any;
@@ -526,12 +555,14 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             }
         }
 
-        return {
+        const grid = {
             points,
             rows,
             cols,
             gridKey: this._getGridCacheKey(points, rows, cols),
         };
+        this.setState({ gridCache: { source: lonlatGrid, shapeRows, shapeCols, grid } });
+        return grid;
     }
 
     _isFinitePoint(point: LonLatPoint | undefined): boolean {
@@ -664,42 +695,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         return trailLines;
     }
 
-    _getDataFingerprint(dataDir: any, dataMag: any): string {
-        // Create a fingerprint by hashing sampled values from both arrays
-        // Samples start, middle, end to detect changes without expensive full-array hashing
-        const sampleArray = (arr: any) => {
-            if (!arr?.length) return '0';
-            const len = arr.length;
-            return `${len}-${arr[0]}-${arr[Math.floor(len / 2)]}-${arr[len - 1]}`;
-        };
-
-        const sample = `${sampleArray(dataDir)}|${sampleArray(dataMag)}`;
-        let hash = 0;
-        for (let i = 0; i < sample.length; i++) {
-            hash = (hash << 5) - hash + sample.charCodeAt(i);
-            hash |= 0;
-        }
-        return hash.toString();
-    }
-
-    _createWindTexture() {
-        const { dataDir, dataMag } = this.props;
-        const grid = this._resolveGrid();
-        if (!grid) {
-            return null;
-        }
-
+    _getWindTextureData(grid: ResolvedGrid): WindTextureData {
         const { points, rows, cols, gridKey } = grid;
-
-        // Include data fingerprint in cache key to distinguish different datasets with same grid
-        const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
-        const textureKey = `${gridKey}-${dataFingerprint}-texture`;
-        const cachedTexture = positionsCache.get(textureKey);
-
-        if (cachedTexture?.texture) {
-            return cachedTexture.texture as Texture;
-        }
-
         const bounds = this._getBoundsFromGrid(points, gridKey);
         const { minLng, minLat, maxLng, maxLat } = bounds;
         const lonSpan = Math.max(1e-6, maxLng - minLng);
@@ -712,60 +709,70 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             latSpan,
         );
 
-        const scratchKey = `scratch-${width}x${height}`;
-        const uvData: Float32Array =
-            positionsCache.get(scratchKey)?.uvData || new Float32Array(width * height * 4);
-        if (!positionsCache.has(scratchKey)) {
-            addToCache(scratchKey, { uvData });
+        const previous = this.state.windTextureData;
+        if (previous?.grid === grid && previous.width === width && previous.height === height) {
+            return previous;
         }
-        uvData.fill(0);
 
-        const noiseScale = 0.02;
-
-        const globalData = isGlobalData([minLng, minLat, maxLng, maxLat]);
-
-        const texNoise = (x: number, y: number) =>
-            (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
-
-        const triangles = this._buildMeshTriangles(grid);
-
-        // Project mesh vertices into texture pixel space and keep per-vertex wind vectors.
-        const pointX = new Float32Array(points.length);
-        const pointY = new Float32Array(points.length);
-        const windU = new Float32Array(points.length);
-        const windV = new Float32Array(points.length);
-        const pointValid = new Uint8Array(points.length);
+        const sameSize = previous?.width === width && previous.height === height;
+        const samePointCount = previous?.grid.points.length === points.length;
+        const prepared: WindTextureData = {
+            grid,
+            width,
+            height,
+            pointX: samePointCount ? previous.pointX : new Float32Array(points.length),
+            pointY: samePointCount ? previous.pointY : new Float32Array(points.length),
+            windU: samePointCount ? previous.windU : new Float32Array(points.length),
+            windV: samePointCount ? previous.windV : new Float32Array(points.length),
+            pointValid: samePointCount ? previous.pointValid : new Uint8Array(points.length),
+            uvData: sameSize ? previous.uvData : new Float32Array(width * height * 4),
+            turbulence: sameSize ? previous.turbulence : new Float64Array(width * height * 2),
+        };
 
         for (let i = 0; i < points.length; i++) {
             const point = points[i];
             if (!this._isFinitePoint(point)) {
-                pointX[i] = NaN;
-                pointY[i] = NaN;
+                prepared.pointX[i] = NaN;
+                prepared.pointY[i] = NaN;
                 continue;
             }
 
             const lon = this._adjustLonForBounds(point[0], minLng, maxLng);
             const lat = point[1];
-            pointX[i] = ((lon - minLng) / lonSpan) * (width - 1);
-            pointY[i] = ((maxLat - lat) / latSpan) * (height - 1);
+            prepared.pointX[i] = ((lon - minLng) / lonSpan) * (width - 1);
+            prepared.pointY[i] = ((maxLat - lat) / latSpan) * (height - 1);
+        }
 
-            const wdirection = Number(dataDir?.[i]);
-            const wmagnitude = Number(dataMag?.[i]);
-            if (Number.isFinite(wdirection) && Number.isFinite(wmagnitude) && wmagnitude >= 0) {
-                const [u, v] = directionToUV(wdirection, wmagnitude);
-                windU[i] = u;
-                windV[i] = v;
-                pointValid[i] = 1;
+        if (!sameSize) {
+            const texNoise = (x: number, y: number) =>
+                (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const offset = (y * width + x) * 2;
+                    prepared.turbulence[offset] = (texNoise(x * 0.1, y * 0.1) - 0.5) * 0.02;
+                    prepared.turbulence[offset + 1] =
+                        (texNoise(x * 0.1 + 100, y * 0.1 + 100) - 0.5) * 0.02;
+                }
             }
         }
 
-        const baryEpsilon = 1e-4;
-        for (let t = 0; t < triangles.length; t++) {
-            const [i0, i1, i2] = triangles[t];
-            if (!pointValid[i0] || !pointValid[i1] || !pointValid[i2]) {
-                continue;
-            }
+        this.setState({ windTextureData: prepared });
+        return prepared;
+    }
 
+    _getWindRasterLookup(prepared: WindTextureData): WindRasterLookup {
+        if (prepared.rasterLookup) return prepared.rasterLookup;
+
+        const { grid, width, height, pointX, pointY } = prepared;
+        const triangles = this._buildMeshTriangles(grid);
+        const pixelHeads = new Int32Array(width * height).fill(-1);
+        const initialCapacity = triangles.length ? pixelHeads.length : 0;
+        let next = new Int32Array(initialCapacity);
+        let pointIndices = new Uint32Array(initialCapacity * 3);
+        let weights = new Float64Array(initialCapacity * 2);
+        let candidateCount = 0;
+        const baryEpsilon = 1e-4;
+        for (const [i0, i1, i2] of triangles) {
             const x0 = pointX[i0];
             const y0 = pointY[i0];
             const x1 = pointX[i1];
@@ -794,10 +801,10 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             const minY = clamp(Math.floor(Math.min(y0, y1, y2)), 0, height - 1);
             const maxY = clamp(Math.ceil(Math.max(y0, y1, y2)), 0, height - 1);
 
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
-                    const px = x + 0.5;
-                    const py = y + 0.5;
+            for (let row = minY; row <= maxY; row++) {
+                for (let column = minX; column <= maxX; column++) {
+                    const px = column + 0.5;
+                    const py = row + 0.5;
 
                     const w0 = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / denom;
                     const w1 = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / denom;
@@ -807,12 +814,79 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
                         continue;
                     }
 
-                    const o = (y * width + x) * 4;
-                    uvData[o] = w0 * windU[i0] + w1 * windU[i1] + w2 * windU[i2];
-                    uvData[o + 1] = w0 * windV[i0] + w1 * windV[i1] + w2 * windV[i2];
-                    uvData[o + 2] = 0;
-                    uvData[o + 3] = 1;
+                    if (candidateCount === next.length) {
+                        const capacity = Math.max(1, next.length * 2);
+                        const expandedNext = new Int32Array(capacity);
+                        expandedNext.set(next);
+                        next = expandedNext;
+                        const expandedIndices = new Uint32Array(capacity * 3);
+                        expandedIndices.set(pointIndices);
+                        pointIndices = expandedIndices;
+                        const expandedWeights = new Float64Array(capacity * 2);
+                        expandedWeights.set(weights);
+                        weights = expandedWeights;
+                    }
+
+                    const pixel = row * width + column;
+                    next[candidateCount] = pixelHeads[pixel];
+                    pointIndices[candidateCount * 3] = i0;
+                    pointIndices[candidateCount * 3 + 1] = i1;
+                    pointIndices[candidateCount * 3 + 2] = i2;
+                    weights[candidateCount * 2] = w0;
+                    weights[candidateCount * 2 + 1] = w1;
+                    pixelHeads[pixel] = candidateCount++;
                 }
+            }
+        }
+
+        const lookup = { pixelHeads, next, pointIndices, weights };
+        prepared.rasterLookup = lookup;
+        return lookup;
+    }
+
+    _createWindTexture() {
+        const { dataDir, dataMag } = this.props;
+        const grid = this._resolveGrid();
+        if (!grid) return null;
+
+        const { points, gridKey } = grid;
+        const { minLng, minLat, maxLng, maxLat } = this._getBoundsFromGrid(points, gridKey);
+        const globalData = isGlobalData([minLng, minLat, maxLng, maxLat]);
+        const prepared = this._getWindTextureData(grid);
+        const { width, height, pointX, pointY, windU, windV, pointValid, uvData, turbulence } =
+            prepared;
+        const { pixelHeads, next, pointIndices, weights } = this._getWindRasterLookup(prepared);
+        uvData.fill(0);
+        pointValid.fill(0);
+
+        for (let index = 0; index < points.length; index++) {
+            if (!Number.isFinite(pointX[index]) || !Number.isFinite(pointY[index])) continue;
+
+            const direction = Number(dataDir?.[index]);
+            const magnitude = Number(dataMag?.[index]);
+            if (Number.isFinite(direction) && Number.isFinite(magnitude) && magnitude >= 0) {
+                const [windComponentU, windComponentV] = directionToUV(direction, magnitude);
+                windU[index] = windComponentU;
+                windV[index] = windComponentV;
+                pointValid[index] = 1;
+            }
+        }
+
+        for (let pixel = 0; pixel < pixelHeads.length; pixel++) {
+            for (let candidate = pixelHeads[pixel]; candidate !== -1; candidate = next[candidate]) {
+                const i0 = pointIndices[candidate * 3];
+                const i1 = pointIndices[candidate * 3 + 1];
+                const i2 = pointIndices[candidate * 3 + 2];
+                if (!pointValid[i0] || !pointValid[i1] || !pointValid[i2]) continue;
+
+                const w0 = weights[candidate * 2];
+                const w1 = weights[candidate * 2 + 1];
+                const w2 = 1 - w0 - w1;
+                const offset = pixel * 4;
+                uvData[offset] = w0 * windU[i0] + w1 * windU[i1] + w2 * windU[i2];
+                uvData[offset + 1] = w0 * windV[i0] + w1 * windV[i1] + w2 * windV[i2];
+                uvData[offset + 3] = 1;
+                break;
             }
         }
 
@@ -823,9 +897,20 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
                 if (uvData[o + 3] < 0.5) {
                     continue;
                 }
-                uvData[o] += (texNoise(x * 0.1, y * 0.1) - 0.5) * noiseScale;
-                uvData[o + 1] += (texNoise(x * 0.1 + 100, y * 0.1 + 100) - 0.5) * noiseScale;
+                const noiseOffset = (y * width + x) * 2;
+                uvData[o] += turbulence[noiseOffset];
+                uvData[o + 1] += turbulence[noiseOffset + 1];
             }
+        }
+
+        const generated = this.state.generatedWindTexture;
+        if (
+            generated?.texture.width === width &&
+            generated.texture.height === height &&
+            generated.globalData === globalData
+        ) {
+            generated.texture.copyImageData({ data: uvData, width, height });
+            return generated.texture;
         }
 
         const texture = this.context.device.createTexture({
@@ -841,7 +926,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             },
         });
 
-        addToCache(textureKey, { texture });
+        generated?.texture.destroy();
+        this.setState({ generatedWindTexture: { texture, globalData } });
         return texture;
     }
 
@@ -933,7 +1019,8 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             props.dataDir !== oldProps.dataDir ||
             props.dataMag !== oldProps.dataMag ||
             props.lonlatGrid !== oldProps.lonlatGrid ||
-            props.shape !== oldProps.shape;
+            props.shape?.[0] !== oldProps.shape?.[0] ||
+            props.shape?.[1] !== oldProps.shape?.[1];
 
         if (structureChanged) {
             this._setupState();
@@ -948,7 +1035,6 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
     }
 
     _updateWindTexture() {
-        const { dataDir, dataMag } = this.props;
         const grid = this._resolveGrid();
         if (!grid) {
             return;
@@ -963,23 +1049,14 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         }
         const globalData = isGlobalData(calculatedBounds);
 
-        // Clear the cached texture so _createWindTexture builds a fresh one with new data
-        const dataFingerprint = this._getDataFingerprint(dataDir, dataMag);
-        const textureKey = `${gridKey}-${dataFingerprint}-texture`;
-        const cachedEntry = positionsCache.get(textureKey);
-        if (cachedEntry?.texture) {
-            cachedEntry.texture.destroy();
-            positionsCache.delete(textureKey);
-        }
-
-        const oldTexture = this.state.texture;
-        if (oldTexture && oldTexture !== this.props.image && oldTexture !== cachedEntry?.texture) {
-            oldTexture.destroy();
-        }
-
         // Create new wind texture from updated data
         const newTexture = this.props.image || this._createWindTexture();
         if (newTexture && typeof newTexture !== 'string') {
+            if (this.props.image && this.state.generatedWindTexture) {
+                this.state.generatedWindTexture.texture.destroy();
+                this.setState({ generatedWindTexture: undefined });
+            }
+            this.boundsCache = null;
             this.setState({
                 texture: newTexture,
                 bounds: calculatedBounds,
@@ -1306,27 +1383,14 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
         // Clear initialized first to prevent draw() from using deleted resources
         this.setState({ initialized: false });
 
-        const { sourcePositions, targetPositions, colors, transform, texture, noiseTexture } =
-            this.state;
+        const { sourcePositions, targetPositions, colors, transform, noiseTexture } = this.state;
         sourcePositions?.destroy();
         targetPositions?.destroy();
         colors?.destroy();
         transform?.destroy();
         noiseTexture?.destroy();
 
-        if (texture && texture !== this.props.image) {
-            // Only destroy texture if it's NOT in the cache (other layers may be using it)
-            let isInCache = false;
-            for (const [key, value] of positionsCache.entries()) {
-                if (value.texture === texture) {
-                    isInCache = true;
-                    break;
-                }
-            }
-            if (!isInCache) {
-                texture.destroy();
-            }
-        }
+        this.state.generatedWindTexture?.texture.destroy();
 
         // Clear references to destroyed resources (but NOT model - it's managed by parent LineLayer)
         this.setState({
@@ -1335,6 +1399,7 @@ export default class ParticleLayer<D = any, ExtraPropsT = ParticleLayerProps<D>>
             colors: null,
             transform: null,
             noiseTexture: null,
+            generatedWindTexture: undefined,
         });
     }
 
