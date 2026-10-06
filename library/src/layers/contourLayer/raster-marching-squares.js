@@ -3996,9 +3996,7 @@ function ContourGrid2Paths(grid) {
                             Math.abs(paths[k][0][0] - x) <= epsilon &&
                             Math.abs(paths[k][0][1] - y) <= epsilon
                         ) {
-                            for (let l = p.path.length - 2; l >= 0; --l) {
-                                paths[k].unshift(p.path[l]);
-                            }
+                            paths[k] = p.path.slice(0, -1).concat(paths[k]);
                             merged = true;
                             break;
                         }

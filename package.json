@@ -9,9 +9,10 @@
     "main": "index.js",
     "scripts": {
         "dev": "npm run dev --workspace=demo",
+        "lint": "npm run lint --workspaces",
         "build": "npm run build --workspace=library",
         "build:dev": "npm run build:dev --workspace=library",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "node --test library/test/*.test.js"
     },
     "devDependencies": {
         "@eslint/js": "^9.25.0",

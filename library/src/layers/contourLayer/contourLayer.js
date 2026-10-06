@@ -27,6 +27,16 @@ function normalizeContourColors(colors) {
     return colors;
 }
 
+function sameValues(left, right) {
+    return (
+        left === right ||
+        (Array.isArray(left) &&
+            Array.isArray(right) &&
+            left.length === right.length &&
+            left.every((value, index) => Object.is(value, right[index])))
+    );
+}
+
 function flattenLonLatGrid(lonlatGrid) {
     if (
         Array.isArray(lonlatGrid) &&
@@ -70,30 +80,39 @@ export default class ContourLayer extends CompositeLayer {
         return changeFlags.propsOrDataChanged;
     }
 
-    // { props, oldProps, changeFlags }
-    updateState({ props }) {
-        // Get colors, set contour Levels
-        const isoLines = [];
-        const colorscale = getColors(
-            props.colorLevels,
-            normalizeContourColors(props.colors),
-            props.colorType,
-        );
+    updateState({ props, changeFlags }) {
         const contourLevels = props.contourLevels || props.colorLevels;
-        const t0 = performance.now();
-
-        // Get isolines
-        let { lines } = props;
-        if (!lines) {
-            const lonlatGrid = props.lonlatGrid || props.projection?.lonlatGrid;
-            lines = contourLines(
-                lonlatGrid,
-                props.data,
-                contourLevels,
-                props.algorithm,
-                props.shape,
-            );
+        const lonlatGrid = props.lonlatGrid || props.projection?.lonlatGrid;
+        const colors = normalizeContourColors(props.colors);
+        const { contourInputs, colorInputs } = this.state;
+        const geometryChanged =
+            !this.state.lines ||
+            props.lines !== contourInputs?.lines ||
+            (!props.lines &&
+                (changeFlags?.dataChanged ||
+                    props.data !== contourInputs?.data ||
+                    lonlatGrid !== contourInputs?.lonlatGrid ||
+                    props.algorithm !== contourInputs?.algorithm ||
+                    !sameValues(props.shape, contourInputs?.shape) ||
+                    !sameValues(contourLevels, contourInputs?.levels)));
+        const colorsChanged =
+            !colorInputs ||
+            !sameValues(colors, colorInputs.colors) ||
+            !sameValues(props.colorLevels, colorInputs.colorLevels) ||
+            !sameValues(contourLevels, colorInputs.contourLevels) ||
+            props.colorType !== colorInputs.colorType ||
+            props.elevation !== colorInputs.elevation;
+        if (!geometryChanged && !colorsChanged) {
+            return;
         }
+
+        const t0 = performance.now();
+        const lines = geometryChanged
+            ? props.lines ||
+              contourLines(lonlatGrid, props.data, contourLevels, props.algorithm, props.shape)
+            : this.state.lines;
+        const isoLines = [];
+        const colorscale = getColors(props.colorLevels, colors, props.colorType);
 
         // Color isolines
         lines.features.forEach((d, i) => {
@@ -125,6 +144,21 @@ export default class ContourLayer extends CompositeLayer {
         this.setState({
             lines,
             isoLines,
+            contourInputs: {
+                lines: props.lines,
+                data: props.data,
+                lonlatGrid,
+                algorithm: props.algorithm,
+                shape: props.shape?.slice(),
+                levels: contourLevels?.slice(),
+            },
+            colorInputs: {
+                colors: Array.isArray(colors) ? colors.slice() : colors,
+                colorLevels: props.colorLevels?.slice(),
+                contourLevels: contourLevels?.slice(),
+                colorType: props.colorType,
+                elevation: props.elevation,
+            },
         });
     }
 
