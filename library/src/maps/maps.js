@@ -63,7 +63,6 @@ function updateToken(item, mapToken) {
         return item.map((subItem) => updateToken(subItem, mapToken));
     } else if (typeof item === 'object' && item !== null) {
         for (const key in item) {
-            // eslint-disable-next-line no-param-reassign
             item[key] = updateToken(item[key], mapToken);
         }
     }
@@ -96,26 +95,5 @@ export class Maps {
         return `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/${
             mapStyles[style].url
         }?type=style&token=${mapToken}&worldview=unitedStatesOfAmerica`;
-    }
-
-    static getBeforeID(plottype) {
-        if (getMaptype(chartOptions) == 'Mapbox') {
-            const beforeID =
-                MapBoxLayers[chartOptions.x4dMaps.mapboxBasemap.value][
-                    plotorder[plottype].beforeId
-                ];
-            const mapLayers = mapRef?.current?.getStyle()?.layers ?? [];
-            for (let layer of mapLayers) {
-                if (layer.id == beforeID) {
-                    return beforeID;
-                }
-            }
-            console.log(
-                `\n\nWarning: Could not find beforeID ${beforeID} in mapbox layers.  Please set correct beforeID.\n\n`,
-            );
-            return undefined;
-        } else {
-            return undefined;
-        }
     }
 }

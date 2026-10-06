@@ -1,7 +1,7 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
-
+/* eslint-disable */
 // Handles tesselation of polygons with holes
 // - 2D surfaces
 // - 2D outlines

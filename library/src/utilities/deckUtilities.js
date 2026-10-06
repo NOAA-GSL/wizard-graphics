@@ -81,7 +81,7 @@ export default class deckUtilities {
         for (const x of screenValues) {
             for (const y of screenValues) {
                 const [lon, lat] = unproject([width * x, height * y]);
-                // console.log('yes', lon, lat, proj);
+                // console.debug('yes', lon, lat, proj);
                 if (proj) {
                     const [i, j] = proj.LonLatToij(lon, lat);
                     yValues.push(j);
@@ -94,7 +94,7 @@ export default class deckUtilities {
         }
 
         // Takes about 0.2 ms
-        // console.log('done', performance.now() - t0);
+        // console.debug('done', performance.now() - t0);
         const yMin = Math.min(...yValues);
         const yMax = Math.max(...yValues);
         const xMin = Math.min(...xValues);

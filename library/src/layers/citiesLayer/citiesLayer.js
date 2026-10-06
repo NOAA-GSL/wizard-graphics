@@ -1,7 +1,5 @@
-/* eslint-disable max-len */
 import { CompositeLayer } from '@deck.gl/core';
 import { TextLayer } from '@deck.gl/layers';
-import gUtilities from '../../utilities/graphicsUtilities';
 import deckUtilities from '../../utilities/deckUtilities';
 import { computeProgressiveDisclosure, dys } from './computeProgressiveDisclosure';
 
@@ -90,7 +88,6 @@ export default class CitiesLayer extends CompositeLayer {
         };
     }
 
-    // eslint-disable-next-line class-methods-use-this
     shouldUpdateState({ changeFlags }) {
         return changeFlags.somethingChanged;
     }
@@ -136,18 +133,13 @@ export default class CitiesLayer extends CompositeLayer {
                 const { population } = citiesInDomain[i];
                 let value;
                 if (dataLabels) {
-                    const {
-                        data,
-                        readoutFunction,
-                        readoutOptions,
-                    } = dataLabels;
+                    const { data, readoutFunction, readoutOptions } = dataLabels;
 
                     if (typeof readoutFunction === 'function') {
                         value = readoutFunction(lat, lon, data, {
                             ...readoutOptions,
                         });
                     }
-
                 }
 
                 cityData.push({

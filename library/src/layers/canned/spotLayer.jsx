@@ -55,13 +55,12 @@ const defaultProps = {
     getTextBorderWidth: 4,
     getElevation: 0,
     elevationScale: 1,
-    parameters: { depthTest:true, depthCompare: 'always', cullMode: 'none' },
+    parameters: { depthTest: true, depthCompare: 'always', cullMode: 'none' },
     // Add click handler prop
     onSpotClick: null,
     pickingFunction: (d) => {
         if (d.object) {
-            const { tid, stat, name, type, rmade, rfill, deliverdtg, wfo, snumunum } =
-                d.object.properties;
+            const { tid, stat, name, rmade, deliverdtg, wfo, snumunum } = d.object.properties;
 
             // Initialize an array to store available rows
             const readout = [];
@@ -117,9 +116,9 @@ const defaultProps = {
                 readout.push(
                     <div key="spot-link" className="spot-forecast-link">
                         <strong>Link:</strong>{' '}
-                        <a 
-                            href={spoturl} 
-                            target="_blank" 
+                        <a
+                            href={spoturl}
+                            target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -134,11 +133,11 @@ const defaultProps = {
             }
 
             // Return readout with additional metadata for persistent tooltips
-            return { 
-                readout, 
+            return {
+                readout,
                 coordinates: [d.coordinate[0], d.coordinate[1]],
                 object: d.object,
-                isPersistent: d.type === 'click' // Will be true for clicks
+                isPersistent: d.type === 'click', // Will be true for clicks
             };
         }
         return { readout: null };

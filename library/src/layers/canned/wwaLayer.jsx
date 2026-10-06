@@ -54,7 +54,7 @@ const defaultProps = {
     getLineWidth: 2,
     stroked: true,
     opacity: 0.5,
-    parameters: { depthTest:false, depthCompare: 'always', cullMode: 'back' },
+    parameters: { depthTest: false, depthCompare: 'always', cullMode: 'back' },
     pickingFunction: (d) => {
         const threshold = 1704070800 * 1000; // Convert to milliseconds
 

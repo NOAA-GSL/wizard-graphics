@@ -1,5 +1,7 @@
 # Wizard Graphics
 
+📊 **[View Live Demo](https://noaa-gsl.github.io/wizard-graphics/)**
+
 An extension of of deck.gl along with other mapping tools for numerical weather data.
 
 ## Getting Started
@@ -12,7 +14,7 @@ In order for the basemaps to load in the examples, you need an [ESRI API key](ht
 export mapToken=<ESRI_API_KEY>
 ```
 
-Or set `TOKEN` directly in `main.jsx`. However, this is not recommended.
+Or set `mapToken` directly in `main.jsx`. However, this is not recommended.
 
 ### To install dependencies:
 
@@ -68,3 +70,11 @@ npm run dev
 - [Readout](docs/readout.md)
 
       <img src="docs/images/readout.png" alt="Readout" style="max-width: 300px;" />
+
+## Lint
+
+npm run lint --workspace=library
+npm run lint --workspace=demo
+
+The demo lint configuration mirrors Vite's `demo-data` alias, including its
+extensionless JSON imports.

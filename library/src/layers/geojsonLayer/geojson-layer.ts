@@ -1,5 +1,6 @@
 // my-point-cloud-layer.js
 // Example to add per-point size to point cloud layer
+/* eslint-disable */
 import { GeoJsonLayer, GeoJsonLayerProps } from 'deck.gl';
 import { LINE_LAYER, forwardProps } from './sub-layer-map';
 import { DefaultProps, Layer } from '@deck.gl/core';

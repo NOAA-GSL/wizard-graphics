@@ -1,4 +1,3 @@
-/* eslint-disable max-len */
 import { CompositeLayer } from '@deck.gl/core';
 import gUtilities from '../../utilities/graphicsUtilities';
 import { ContourLabels } from './contourLabels';
@@ -54,11 +53,11 @@ function contourLines(lonlatGrid, values, levels, algorithm, shape) {
     }
 
     if (algorithm === 'marchingSquares') {
-        console.log('ContourLayer method: marchingSquares');
+        console.debug('ContourLayer method: marchingSquares');
         return isolines(values, lonlatGrid, undefined, contourLevels, shape);
     }
 
-    console.log('ContourLayer method: marchingTriangles (delaunay)');
+    console.debug('ContourLayer method: marchingTriangles (delaunay)');
     return triangleContours(lonlatGrid, values, contourLevels, shape);
 }
 
@@ -67,7 +66,6 @@ export default class ContourLayer extends CompositeLayer {
         this.state = {};
     }
 
-    // eslint-disable-next-line class-methods-use-this
     shouldUpdateState({ changeFlags }) {
         return changeFlags.propsOrDataChanged;
     }
@@ -122,7 +120,7 @@ export default class ContourLayer extends CompositeLayer {
             }
         });
 
-        console.log('contour layer: isolines calculated in ', performance.now() - t0, 'ms');
+        console.debug('contour layer: isolines calculated in ', performance.now() - t0, 'ms');
 
         this.setState({
             lines,

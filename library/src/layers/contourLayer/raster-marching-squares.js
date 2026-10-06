@@ -1,3 +1,4 @@
+/* eslint-disable no-redeclare */
 // https://github.com/rveciana/raster-marching-squares#readme Version 0.1.2. Copyright 2019 Roger Veciana i Rovira.
 // Modified by travis.wilson@noaa.gov to work with deck.gl and DESI
 
@@ -121,7 +122,7 @@ export const isoband = function (data, minV, bandwidth, options) {
         settings[key] = val;
     }
 
-    if (settings.verbose) console.log(`computing isobands for [${minV}:${minV + bandwidth}]`);
+    if (settings.verbose) console.debug(`computing isobands for [${minV}:${minV + bandwidth}]`);
 
     const grid = computeBandGrid(data, minV, bandwidth);
 
@@ -1299,7 +1300,7 @@ var p13 = function (cell) {
     ];
 };
 /* square case */
-var p14 = function (cell) {
+var p14 = function () {
     return [
         [0, 0],
         [0, 1],
@@ -2506,7 +2507,7 @@ var computeBandGrid = function (data, minV, bandwidth) {
                     lefttop < 0 ||
                     lefttop > 1
                 ) {
-                    console.log(
+                    console.debug(
                         `${cval} ${cval_real} ${tl},${tr},${br},${bl} ${flipped} ${topleft} ${topright} ${righttop} ${rightbottom} ${bottomright} ${bottomleft} ${leftbottom} ${lefttop}`,
                     );
                 }
@@ -2545,7 +2546,6 @@ function BandGrid2AreaPaths(grid) {
             if (typeof grid.cells[j][i] !== 'undefined' && grid.cells[j][i].edges.length > 0) {
                 const cell = grid.cells[j][i];
                 /* get start coordinates */
-                const { cval } = cell;
 
                 let prev = getStartXY(cell);
                 let next = null;
@@ -2554,12 +2554,12 @@ function BandGrid2AreaPaths(grid) {
 
                 if (prev !== null) {
                     currentPolygon.push([prev.p[0] + p, prev.p[1] + q]);
-                    // console.log(cell);
-                    // console.log("coords: " + (prev.p[0] + p) + " " + (prev.p[1] + q));
+                    // console.debug(cell);
+                    // console.debug("coords: " + (prev.p[0] + p) + " " + (prev.p[1] + q));
                 }
                 do {
                     if (count > rows * cols) {
-                        console.log(
+                        console.debug(
                             'Infinite loop dectected in Marching Squares.  Breaking out',
                             count,
                             i,
@@ -2568,23 +2568,23 @@ function BandGrid2AreaPaths(grid) {
                         return [];
                     }
                     count += 1;
-                    // console.log(p + "," + q);
-                    // console.log(grid.cells[q][p]);
-                    // console.log(grid.cells[q][p].edges);
+                    // console.debug(p + "," + q);
+                    // console.debug(grid.cells[q][p]);
+                    // console.debug(grid.cells[q][p].edges);
 
                     next = getExitXY(grid.cells[q][p], prev.x, prev.y, prev.o);
 
                     if (next !== null) {
-                        // console.log("coords: " + (next.p[0] + p) + " " + (next.p[1] + q));
+                        // console.debug("coords: " + (next.p[0] + p) + " " + (next.p[1] + q));
                         currentPolygon.push([next.p[0] + p, next.p[1] + q]);
                         p += next.x;
                         q += next.y;
                         prev = next;
                     } else {
-                        // console.log("getExitXY() returned null!");
+                        // console.debug("getExitXY() returned null!");
                         break;
                     }
-                    // console.log("to : " + next.x + " " + next.y + " " + next.o);
+                    // console.debug("to : " + next.x + " " + next.y + " " + next.o);
                     /* special case, where we've reached the grid boundaries */
                     if (
                         q < 0 ||
@@ -2602,12 +2602,12 @@ function BandGrid2AreaPaths(grid) {
                         p -= next.x;
                         q -= next.y;
 
-                        // console.log("reached boundary at " + p + " " + q);
+                        // console.debug("reached boundary at " + p + " " + q);
 
                         const missing = traceOutOfGridPath(grid, p, q, next.x, next.y, next.o);
                         if (missing !== null) {
                             missing.path.forEach((pp) => {
-                                // console.log("coords: " + (pp[0]) + " " + (pp[1]));
+                                // console.debug("coords: " + (pp[0]) + " " + (pp[1]));
                                 currentPolygon.push(pp);
                             });
                             p = missing.i;
@@ -2616,7 +2616,7 @@ function BandGrid2AreaPaths(grid) {
                         } else {
                             break;
                         }
-                        // console.log(grid.cells[q][p]);
+                        // console.debug(grid.cells[q][p]);
                     }
                 } while (
                     typeof grid.cells[q][p] !== 'undefined' &&
@@ -2628,9 +2628,9 @@ function BandGrid2AreaPaths(grid) {
                 } else {
                     holes.push(currentPolygon);
                 }
-                // console.log(currentPolygon);
-                // console.log(polygonArea([...currentPolygon]));
-                // console.log(" ")
+                // console.debug(currentPolygon);
+                // console.debug(polygonArea([...currentPolygon]));
+                // console.debug(" ")
                 currentPolygon = [];
                 if (grid.cells[j][i].edges.length > 0) i--;
             }
@@ -2648,7 +2648,7 @@ function BandGrid2AreaPaths(grid) {
     }
 
     const polygons = [];
-    areas.forEach((area, j) => {
+    areas.forEach((area) => {
         const p = [];
         p.push(area);
 
@@ -2742,14 +2742,12 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
     let p = i + d_x;
     let q = j + d_y;
     const path = [];
-    const { rows } = grid;
-    const { cols } = grid;
     let closed = false;
 
     while (!closed) {
-        // console.log("processing cell " + p + "," + q + " " + d_x + " " + d_y + " " + d_o);
+        // console.debug("processing cell " + p + "," + q + " " + d_x + " " + d_y + " " + d_o);
         if (typeof grid.cells[q] === 'undefined' || typeof grid.cells[q][p] === 'undefined') {
-            // console.log("which is undefined");
+            // console.debug("which is undefined");
             /* we can't move on, so we have to change direction to proceed further */
 
             /* go back to previous cell */
@@ -2806,7 +2804,7 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                 }
             } else if (d_y === 1) {
                 /* we came from bottom */
-                // console.log("we came from bottom and hit a non-existing cell " + (p + d_x) + "," + (q + d_y) + "!");
+                // console.debug("we came from bottom and hit a non-existing cell " + (p + d_x) + "," + (q + d_y) + "!");
                 if (d_o === 0) {
                     /* exit left */
                     if (cval & Node1) {
@@ -2822,7 +2820,7 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         d_y = -1;
                         d_o = 1;
                         closed = true;
-                        // console.log("found entry from bottom at " + p + "," + q);
+                        // console.debug("found entry from bottom at " + p + "," + q);
                         break;
                     } else {
                         path.push([p + cell.topleft, q + 1]);
@@ -2843,23 +2841,23 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                     d_x = 1;
                     d_y = 0;
                     d_o = 1;
-                    // console.log("wtf");
+                    // console.debug("wtf");
                     // break;
                 }
             } else if (d_x === -1) {
                 /* we came from right */
-                // console.log("we came from right and hit a non-existing cell at " + (p + d_x) + "," + (q + d_y) + "!");
+                // console.debug("we came from right and hit a non-existing cell at " + (p + d_x) + "," + (q + d_y) + "!");
                 if (d_o === 0) {
-                    // console.log("continue at bottom");
+                    // console.debug("continue at bottom");
                     if (cval & Node0) {
                         path.push([p, q + 1]);
                         d_x = 0;
                         d_y = 1;
                         d_o = 0;
-                        // console.log("moving upwards to " + (p + d_x) + "," + (q + d_y) + "!");
+                        // console.debug("moving upwards to " + (p + d_x) + "," + (q + d_y) + "!");
                     } else if (!(cval & Node3)) {
                         /* there has to be an entry into the regular grid again! */
-                        // console.log("exiting top");
+                        // console.debug("exiting top");
                         path.push([p, q + cell.lefttop]);
                         d_x = 1;
                         d_y = 0;
@@ -2867,7 +2865,7 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         closed = true;
                         break;
                     } else {
-                        // console.log("exiting bottom");
+                        // console.debug("exiting bottom");
                         path.push([p, q + cell.leftbottom]);
                         d_x = 1;
                         d_y = 0;
@@ -2876,22 +2874,22 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         break;
                     }
                 } else {
-                    // console.log("continue at top");
+                    // console.debug("continue at top");
                     if (cval & Node0) {
                         path.push([p, q + 1]);
                         d_x = 0;
                         d_y = 1;
                         d_o = 0;
-                        // console.log("moving upwards to " + (p + d_x) + "," + (q + d_y) + "!");
+                        // console.debug("moving upwards to " + (p + d_x) + "," + (q + d_y) + "!");
                     } else {
                         /* */
-                        console.log('wtf');
+                        console.debug('wtf');
                         break;
                     }
                 }
             } else if (d_x === 1) {
                 /* we came from left */
-                // console.log("we came from left and hit a non-existing cell " + (p + d_x) + "," + (q + d_y) + "!");
+                // console.debug("we came from left and hit a non-existing cell " + (p + d_x) + "," + (q + d_y) + "!");
                 if (d_o === 0) {
                     /* exit bottom */
                     if (cval & Node2) {
@@ -2931,14 +2929,14 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                 }
             } else {
                 /* we came from the same cell */
-                console.log('we came from nowhere!');
+                console.debug('we came from nowhere!');
                 break;
             }
         } else {
             /* try to find an entry into the regular grid again! */
             cell = grid.cells[q][p];
             cval = cell.cval_real;
-            // console.log("which is defined");
+            // console.debug("which is defined");
 
             if (d_x === -1) {
                 if (d_o === 0) {
@@ -2952,7 +2950,7 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         d_o = 1;
                     } else if (cval & Node3) {
                         /* proceed searching in x-direction */
-                        // console.log("proceeding in x-direction!");
+                        // console.debug("proceeding in x-direction!");
                         path.push([p, q]);
                     } else {
                         /* we must have found an entry into the regular grid */
@@ -2961,20 +2959,20 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         d_y = 1;
                         d_o = 1;
                         closed = true;
-                        // console.log("found entry from bottom at " + p + "," + q);
+                        // console.debug("found entry from bottom at " + p + "," + q);
                         break;
                     }
                 } else if (cval & Node0) {
                     /* proceed searchin in x-direction */
-                    console.log('proceeding in x-direction!');
+                    console.debug('proceeding in x-direction!');
                 } else {
                     /* we must have found an entry into the regular grid */
-                    console.log(`found entry from top at ${p},${q}`);
+                    console.debug(`found entry from top at ${p},${q}`);
                     break;
                 }
             } else if (d_x === 1) {
                 if (d_o === 0) {
-                    console.log('wtf');
+                    console.debug('wtf');
                     break;
                 } else {
                     /* try to go upwards */
@@ -2997,7 +2995,7 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         d_y = -1;
                         d_o = 0;
                         closed = true;
-                        // console.log("found entry from bottom at " + p + "," + q);
+                        // console.debug("found entry from bottom at " + p + "," + q);
                         break;
                     }
                 }
@@ -3020,16 +3018,16 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         d_y = 0;
                         d_o = 1;
                         closed = true;
-                        // console.log("found entry from top at " + p + "," + q);
+                        // console.debug("found entry from top at " + p + "," + q);
                         break;
                     }
                 } else {
-                    console.log('wtf');
+                    console.debug('wtf');
                     break;
                 }
             } else if (d_y === 1) {
                 if (d_o === 0) {
-                    // console.log("we came from bottom left and proceed to the left");
+                    // console.debug("we came from bottom left and proceed to the left");
                     /* try to go left */
                     if (typeof grid.cells[q][p - 1] !== 'undefined') {
                         d_x = -1;
@@ -3047,23 +3045,23 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
                         d_y = 0;
                         d_o = 0;
                         closed = true;
-                        // console.log("found entry from bottom at " + p + "," + q);
+                        // console.debug("found entry from bottom at " + p + "," + q);
                         break;
                     }
                 } else {
-                    // console.log("we came from bottom right and proceed to the right");
-                    console.log('wtf');
+                    // console.debug("we came from bottom right and proceed to the right");
+                    console.debug('wtf');
                     break;
                 }
             } else {
-                console.log('where did we came from???');
+                console.debug('where did we came from???');
                 break;
             }
         }
 
         p += d_x;
         q += d_y;
-        // console.log("going on to  " + p + "," + q + " via " + d_x + " " + d_y + " " + d_o);
+        // console.debug("going on to  " + p + "," + q + " via " + d_x + " " + d_y + " " + d_o);
 
         if (p === i && q === j) {
             /* bail out, once we've closed a circle path */
@@ -3071,7 +3069,7 @@ function traceOutOfGridPath(grid, i, j, d_x, d_y, d_o) {
         }
     }
 
-    // console.log("exit with " + p + "," + q + " " + d_x + " " + d_y + " " + d_o);
+    // console.debug("exit with " + p + "," + q + " " + d_x + " " + d_y + " " + d_o);
     return { path, i: p, j: q, x: d_x, y: d_y, o: d_o };
 }
 
@@ -3086,7 +3084,7 @@ function deleteEdge(cell, edgeIdx) {
 function getStartXY(cell) {
     if (cell.edges.length > 0) {
         const e = cell.edges[cell.edges.length - 1];
-        // console.log("starting with edge " + e);
+        // console.debug("starting with edge " + e);
         const cval = cell.cval_real;
         switch (e) {
             case 0:
@@ -3236,8 +3234,8 @@ function getStartXY(cell) {
                 return { p: [cell.topright, 1], x: 0, y: -1, o: 1 };
 
             default:
-                console.log('edge index out of range!');
-                console.log(cell);
+                console.debug('edge index out of range!');
+                console.debug(cell);
                 break;
         }
     }
@@ -3332,9 +3330,9 @@ function getExitXY(cell, x, y, o) {
     if (typeof cell.edges[id_x] !== 'undefined') {
         deleteEdge(cell, id_x);
     } else {
-        // console.log("wrong edges...");
-        // console.log(x + " " + y + " " + o);
-        // console.log(cell);
+        // console.debug("wrong edges...");
+        // console.debug(x + " " + y + " " + o);
+        // console.debug(cell);
         return null;
     }
 
@@ -3560,8 +3558,8 @@ function getExitXY(cell, x, y, o) {
             }
             break;
         default:
-            console.log('edge index out of range!');
-            console.log(cell);
+            console.debug('edge index out of range!');
+            console.debug(cell);
             return null;
     }
 
@@ -3572,9 +3570,9 @@ function getExitXY(cell, x, y, o) {
         typeof d_y === 'undefined' ||
         typeof d_o === 'undefined'
     ) {
-        console.log('undefined value!');
-        console.log(cell);
-        console.log(`${x} ${y} ${d_x} ${d_y} ${d_o}`);
+        console.debug('undefined value!');
+        console.debug(cell);
+        console.debug(`${x} ${y} ${d_x} ${d_y} ${d_o}`);
     }
     return { p: [x, y], x: d_x, y: d_y, o: d_o };
 }
@@ -3609,10 +3607,10 @@ function BandGrid2Areas(grid){
                 areas[area_idx++] = a;
             }
             } else {
-            console.log("bandcell polygon with malformed coordinates");
+            console.debug("bandcell polygon with malformed coordinates");
             }
         } else {
-            console.log("bandcell polygon with null coordinates");
+            console.debug("bandcell polygon with null coordinates");
         }
         }
     });
@@ -3671,7 +3669,12 @@ export const projectedIsoline = function (data, lonlatGrid, geotransform, value,
     }
 
     const expectedLength = dims[0] * dims[1];
-    if (!data || data.length < expectedLength || !lonlatGrid || lonlatGrid.length < expectedLength) {
+    if (
+        !data ||
+        data.length < expectedLength ||
+        !lonlatGrid ||
+        lonlatGrid.length < expectedLength
+    ) {
         return [];
     }
 
@@ -3799,9 +3802,9 @@ export const isoline = function (data, threshold, dims, options) {
         settings[key] = val;
     }
 
-    if (settings.verbose) console.log(`computing isocontour for ${threshold}`);
+    if (settings.verbose) console.debug(`computing isocontour for ${threshold}`);
     const ret = ContourGrid2Paths(computeContourGrid(data, threshold, dims));
-    // console.log("RET",ret,threshold,data)
+    // console.debug("RET",ret,threshold,data)
 
     if (typeof settings.successCallback === 'function') settings.successCallback(ret);
 
@@ -3921,7 +3924,7 @@ function computeContourGrid(data, threshold, dims) {
                     left = interpolateX$1(threshold, bl, tl);
                     bottom = interpolateX$1(threshold, bl, br);
                 } else {
-                    console.log(`Illegal cval detected: ${cval}`);
+                    console.debug(`Illegal cval detected: ${cval}`);
                 }
                 ContourGrid.cells[j][i] = {
                     cval,
@@ -4015,7 +4018,6 @@ function ContourGrid2Paths(grid) {
     */
 function tracePath(grid, j, i, rows, cols) {
     const maxj = grid.length;
-    const maxi = grid[0].length;
     const p = [];
     const dxContour = [0, 0, 1, 1, 0, 0, 0, 0, -1, 0, 1, 1, -1, 0, -1, 0];
     const dyContour = [0, -1, 0, 0, 1, 1, 1, 1, 0, -1, 0, 0, 0, -1, 0, 0];
@@ -4058,7 +4060,6 @@ function tracePath(grid, j, i, rows, cols) {
         'none',
     ];
 
-    const startCell = grid[j][i];
     let currentCell = grid[j][i];
 
     let { cval } = currentCell;
@@ -4083,12 +4084,12 @@ function tracePath(grid, j, i, rows, cols) {
         currentCell = grid[l][k];
         if (typeof currentCell === 'undefined') {
             /* path ends here */
-            // console.log(k + " " + l + " is undefined, stopping path!");
+            // console.debug(k + " " + l + " is undefined, stopping path!");
             break;
         }
         // Added by THW to prevent infinite loops
         if (count > rows * cols) {
-            console.log('Infinite loop dectected in Marching Squares.  Breaking out', count);
+            console.debug('Infinite loop dectected in Marching Squares.  Breaking out', count);
             break;
         }
         cval = currentCell.cval;

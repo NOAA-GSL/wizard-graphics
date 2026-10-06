@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 import { some } from 'lodash';
 import LegendDynamicItems from './LegendDynamicItems';
 import LegendStaticItems from './LegendStaticItems';

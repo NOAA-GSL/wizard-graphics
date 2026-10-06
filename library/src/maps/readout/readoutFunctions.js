@@ -1,4 +1,4 @@
-import gUtilities from "../../utilities/graphicsUtilities";
+import gUtilities from '../../utilities/graphicsUtilities';
 
 function findNearestIndexFlat(lon, lat, lonlatGrid) {
     if (!Array.isArray(lonlatGrid) || lonlatGrid.length === 0) return -1;
@@ -126,19 +126,18 @@ function uvToDirection(u, v) {
     return 180 + (180 / Math.PI) * Math.atan2(u, v);
 }
 
-export default function readoutFunction(lat,lon,data,options = {}){
+export default function readoutFunction(lat, lon, data, options = {}) {
     let value;
     if (options.readoutType === 'gridded') value = griddedReadout(lat, lon, data, options);
     else if (options.readoutType === 'spherical') value = sphericalReadout(lat, lon, data, options);
-    else if (options.readoutType === 'unstructured') value = unstructuredReadout(lat, lon, data, options);
+    else if (options.readoutType === 'unstructured')
+        value = unstructuredReadout(lat, lon, data, options);
 
-    if ( Number.isNaN(value) )
-        value = 'NaN';
-    else
-        value = gUtilities.roundto(value, options.decimals);
-    
+    if (Number.isNaN(value)) value = 'NaN';
+    else value = gUtilities.roundto(value, options.decimals);
+
     value = `${options.prependText}: ${value}${options.units}`;
-    return value
+    return value;
 }
 
 export function griddedReadout(lat, lon, data, options = {}) {

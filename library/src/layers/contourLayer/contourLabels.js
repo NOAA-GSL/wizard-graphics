@@ -1,4 +1,3 @@
-/* eslint-disable max-len */
 import { CompositeLayer } from '@deck.gl/core';
 import RBush from 'rbush';
 import { TextLayer } from '@deck.gl/layers';
@@ -61,7 +60,6 @@ export default class ContourLabels extends CompositeLayer {
         };
     }
 
-    // eslint-disable-next-line class-methods-use-this
     shouldUpdateState({ changeFlags }) {
         return changeFlags.somethingChanged;
     }
