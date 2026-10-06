@@ -78,3 +78,19 @@ npm run lint --workspace=demo
 
 The demo lint configuration mirrors Vite's `demo-data` alias, including its
 extensionless JSON imports.
+
+## Releasing / Publishing to npm
+
+Publishing `@noaa-gsl/wizard-graphics` to npm is handled by the
+[`publish-npm.yml`](.github/workflows/publish-npm.yml) GitHub Actions workflow.
+It runs whenever a tag matching `v*.*.*` (e.g. `v1.0.4`) is pushed to the repo.
+
+### To cut a new release:
+
+1. Tag the commit you want to release and push the tag (no need to touch
+   `library/package.json`):
+
+    ```bash
+    git tag v1.0.4
+    git push origin v1.0.4
+    ```
