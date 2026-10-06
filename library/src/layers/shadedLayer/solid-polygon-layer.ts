@@ -37,12 +37,24 @@ import type { PolygonGeometry } from './polygon';
 import gUtilities from '../../utilities/graphicsUtilities';
 import TriangulateGrid from './TriangulateGrid';
 
-// Where all the verticies, indicies, rgbValues, and startIndicies
-// are stored so we only have to caluclate once per model
-const positions = {};
+// THW ADD
+type GridGeometry = {
+    positionAttribute: { value: Float32Array; size: number };
+    indexAttribute: { value: Uint32Array; size: number };
+    startIndices: Uint32Array;
+};
+const positions = new WeakMap<object, Map<string, GridGeometry>>();
 
 type _ShadedLayerProps<DataT> = {
     data: LayerDataSource<DataT>;
+    ndata?: ArrayLike<number>;
+    odata?: ArrayLike<number>;
+    nodata?: ArrayLike<number>;
+    lonlatGrid: number[][] | number[][][];
+    colors: string[];
+    colorLevels?: number[];
+    colorType?: 'scaleLinear' | 'scaleThreshold';
+    elevation?: number;
     /** Whether to fill the polygons
      * @default true
      */
@@ -190,6 +202,8 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         models?: Model[];
         numInstances: number;
         polygonTesselator: PolygonTesselator;
+        // THW ADD
+        positionAttribute?: { value: Float32Array | Float64Array; size: number };
     };
 
     getShaders(type) {
@@ -412,6 +426,7 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         }
     }
 
+    // THW Changed
     updateState(updateParams: UpdateParameters<this>) {
         super.updateState(updateParams);
         const { props, oldProps, changeFlags } = updateParams;
@@ -421,12 +436,28 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             props.colorLevels !== oldProps.colorLevels ||
             props.colorType !== oldProps.colorType;
 
-        if (props.data !== oldProps.data || colorsChanged) {
+        const geometryChanged =
+            props.lonlatGrid !== oldProps.lonlatGrid ||
+            props.shape?.[0] !== oldProps.shape?.[0] ||
+            props.shape?.[1] !== oldProps.shape?.[1] ||
+            props.triangulationMode !== oldProps.triangulationMode ||
+            props.elevation !== oldProps.elevation ||
+            props._normalize !== oldProps._normalize ||
+            props._full3d !== oldProps._full3d;
+
+        if (
+            props.data !== oldProps.data ||
+            props.ndata !== oldProps.ndata ||
+            props.odata !== oldProps.odata ||
+            props.nodata !== oldProps.nodata ||
+            colorsChanged ||
+            geometryChanged
+        ) {
             console.debug('Updating Buffers!');
             this.setBuffers();
         }
 
-        if (props.lonlatGrid !== oldProps.lonlatGrid) {
+        if (geometryChanged) {
             console.debug('Updating geometry!');
             this.updateGeometry(updateParams);
         }
@@ -458,10 +489,16 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         const triDims = this.props.shape;
         const effectiveTriangulationMode = this.props.triangulationMode;
 
-        // Get cashing key for grid, 4 points is all that is needed to figure out
-        // if this is a new grid or not
-        const flatLonlatGrid = lonlatGrid.flat();
-        const key = `${flatLonlatGrid[0]}-${flatLonlatGrid[1]}-${flatLonlatGrid[2]}-${flatLonlatGrid[flatLonlatGrid.length - 1]}-${lonlatGrid.length}-${effectiveTriangulationMode}`;
+        let gridPositions = positions.get(lonlatGrid);
+        if (!gridPositions) {
+            gridPositions = new Map();
+            positions.set(lonlatGrid, gridPositions);
+        }
+        const key = JSON.stringify([
+            triDims ?? null,
+            effectiveTriangulationMode,
+            this.props.elevation ?? 0,
+        ]);
 
         // Make normalized data if it doesn't exist
         const ndata =
@@ -480,10 +517,10 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
             1,
             effectiveTriangulationMode,
         );
-        if (!positions?.[key]?.vertices) {
+        let geometry = gridPositions.get(key);
+        if (!geometry) {
             const t0 = performance.now();
-            positions[key] = {};
-            [positions[key].vertices, positions[key].triangleIndices] = TriangulateGrid.triangulate(
+            const [vertices, triangleIndices] = TriangulateGrid.triangulate(
                 lonlatGrid,
                 'positions',
                 triDims,
@@ -491,22 +528,31 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
                 this.props.elevation,
                 1,
                 effectiveTriangulationMode,
-            );
+            ) as [Float32Array, Uint32Array];
             console.debug('Triangulate Time:', performance.now() - t0);
-            positions[key].startIndices = new Uint32Array([0]);
+            geometry = {
+                positionAttribute: { value: vertices, size: 3 },
+                indexAttribute: { value: triangleIndices, size: 1 },
+                startIndices: new Uint32Array([0]),
+            };
+            gridPositions.set(key, geometry);
         }
 
-        const data = {
-            length: positions[key].startIndices.length,
+        const data: {
+            length: number;
+            startIndices: Uint32Array;
+            attributes: Record<string, unknown>;
+        } = {
+            length: geometry.startIndices.length,
             // startIndices should be [0] for a triangle and an array of start positions for a polygon
-            startIndices: positions[key].startIndices,
+            startIndices: geometry.startIndices,
             attributes: {
-                getPolygon: { value: positions[key].vertices, size: 3 },
+                getPolygon: geometry.positionAttribute,
+                vertexPositions: this.props._normalize
+                    ? this.state.positionAttribute
+                    : geometry.positionAttribute,
                 // When supplying Triangle Indicies, the polygon is assumed to be a triangle
-                getTriangleIndices: {
-                    value: positions[key].triangleIndices,
-                    size: 1,
-                },
+                getTriangleIndices: geometry.indexAttribute,
                 getPolygonData: { value: dataValues, size: 1 },
             },
         };
@@ -575,44 +621,38 @@ export default class ShadedLayer<DataT = any, ExtraPropsT extends {} = {}> exten
         }
     }
 
-    protected updateGeometry({ props, oldProps, changeFlags }: UpdateParameters<this>) {
-        const geometryConfigChanged =
-            changeFlags.dataChanged ||
-            (changeFlags.updateTriggersChanged &&
-                (changeFlags.updateTriggersChanged.all ||
-                    changeFlags.updateTriggersChanged.getPolygon));
+    // THW Changed
+    protected updateGeometry({ props }: UpdateParameters<this>) {
+        const { polygonTesselator } = this.state;
+        const buffers = (props.data as any).attributes || {};
+        polygonTesselator.updateGeometry({
+            data: props.data,
+            normalize: props._normalize,
+            geometryBuffer: buffers.getPolygon,
+            buffers,
+            getGeometry: props.getPolygon,
+            positionFormat: props.positionFormat,
+            wrapLongitude: props.wrapLongitude,
+            // TODO - move the flag out of the viewport
+            resolution: this.context.viewport.resolution,
+            fp64: this.use64bitPositions(),
+            dataChanged: 'geometry changed',
+            full3d: props._full3d,
+        });
 
-        // When the geometry config  or the data is changed,
-        // tessellator needs to be invoked
-        if (geometryConfigChanged) {
-            const { polygonTesselator } = this.state;
-            const buffers = (props.data as any).attributes || {};
-            polygonTesselator.updateGeometry({
-                data: props.data,
-                normalize: props._normalize,
-                geometryBuffer: buffers.getPolygon,
-                buffers,
-                getGeometry: props.getPolygon,
-                positionFormat: props.positionFormat,
-                wrapLongitude: props.wrapLongitude,
-                // TODO - move the flag out of the viewport
-                resolution: this.context.viewport.resolution,
-                fp64: this.use64bitPositions(),
-                dataChanged: changeFlags.dataChanged,
-                full3d: props._full3d,
-            });
-
-            this.setState({
-                numInstances: polygonTesselator.instanceCount,
-                startIndices: polygonTesselator.vertexStarts,
-            });
-
-            if (!changeFlags.dataChanged) {
-                // Base `layer.updateState` only invalidates all attributes on data change
-                // Cover the rest of the scenarios here
-                this.getAttributeManager()!.invalidateAll();
-            }
-        }
+        const positionAttribute = props._normalize
+            ? {
+                  value: polygonTesselator.get('positions') as Float32Array | Float64Array,
+                  size: 3,
+              }
+            : buffers.getPolygon;
+        buffers.vertexPositions = positionAttribute;
+        this.setState({
+            numInstances: polygonTesselator.instanceCount,
+            startIndices: polygonTesselator.vertexStarts,
+            positionAttribute,
+        });
+        this.getAttributeManager()!.invalidateAll();
     }
 
     protected _getModels() {

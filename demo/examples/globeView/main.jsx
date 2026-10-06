@@ -82,6 +82,9 @@ function MapContainer() {
         contourAlgorithm: 'marchingSquares',
         showStats: false, // Enable stats by default
         vectorMode: 'quadkey',
+        temperatureOffset: 0,
+        windDirectionOffset: 0,
+        windSpeedOffset: 0,
     });
     const radioOptions = ['HREF', 'RRFS', 'EAGLE', 'Unstructured', 'Radar'];
     const [currentDataset, setCurrentDataset] = React.useState(radioOptions[1]);
@@ -183,15 +186,39 @@ function MapContainer() {
         default:
             console.error('ERROR', `Unknown dataset: ${currentDataset}`);
     }
-    wdir = useMemo(() => wdir.flat(), [wdir]);
-    wmag = useMemo(() => wmag.flat().map((v) => v * 2.23694), [wmag]);
+    wdir = useMemo(
+        () =>
+            wdir.flat().map((value) => {
+                if (value == null || !Number.isFinite(value)) return NaN;
+                if (state.windDirectionOffset === 0) return value;
+                return (((value + state.windDirectionOffset) % 360) + 360) % 360;
+            }),
+        [wdir, state.windDirectionOffset],
+    );
+    wmag = useMemo(
+        () =>
+            wmag
+                .flat()
+                .map((value) =>
+                    value == null || !Number.isFinite(value)
+                        ? NaN
+                        : Math.max(0, value * 2.23694 + state.windSpeedOffset),
+                ),
+        [wmag, state.windSpeedOffset],
+    );
     const data = useMemo(() => {
         const values = temperatures.flat();
         if (rawDataTransform === 'identity') {
-            return new Float32Array(values.map((v) => (v == null ? NaN : v)));
+            return new Float32Array(
+                values.map((value) => (value == null ? NaN : value + state.temperatureOffset)),
+            );
         }
-        return new Float32Array(values.map((v) => (v == null ? NaN : ((v - 273.15) * 9) / 5 + 32)));
-    }, [temperatures, rawDataTransform]);
+        return new Float32Array(
+            values.map((value) =>
+                value == null ? NaN : ((value - 273.15) * 9) / 5 + 32 + state.temperatureOffset,
+            ),
+        );
+    }, [temperatures, rawDataTransform, state.temperatureOffset]);
 
     // Initialize Stats.js
     useEffect(() => {
@@ -259,17 +286,27 @@ function MapContainer() {
         };
     }, [state.showStats]);
 
-    if (projDict) {
-        projection = new Projection(projDict, resLevel);
-        projection.makeLonLatGrid();
-        lonlatGrid = projection.lonlatGrid;
-        lonlatGrid = lonlatGrid.flat();
-        nx = projection.nx;
-        ny = projection.ny;
+    const projectedGrid = useMemo(() => {
+        if (!projDict) return null;
+        const gridProjection = new Projection(projDict, resLevel);
+        gridProjection.makeLonLatGrid();
+        return {
+            projection: gridProjection,
+            lonlatGrid: gridProjection.lonlatGrid.flat(),
+            nx: gridProjection.nx,
+            ny: gridProjection.ny,
+        };
+    }, [projDict, resLevel]);
+    if (projectedGrid) {
+        projection = projectedGrid.projection;
+        lonlatGrid = projectedGrid.lonlatGrid;
+        nx = projectedGrid.nx;
+        ny = projectedGrid.ny;
     }
-    if (Number.isFinite(nx) && Number.isFinite(ny) && nx > 0 && ny > 0) {
-        shape = [ny, nx];
-    }
+    shape = useMemo(
+        () => (Number.isFinite(nx) && Number.isFinite(ny) && nx > 0 && ny > 0 ? [ny, nx] : null),
+        [nx, ny],
+    );
 
     const projectionMode = state.isGlobeView ? 'globe' : 'mercator';
     const readoutType = projDict
@@ -542,6 +579,63 @@ function MapContainer() {
                             onChange={() => setCurrentDataset(option)}
                         />
                         {option}
+                    </label>
+                ))}
+            </div>
+            <div
+                style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '1em',
+                    margin: '1em 0',
+                }}
+            >
+                {[
+                    {
+                        key: 'temperatureOffset',
+                        label: dataLabel,
+                        units: dataUnits,
+                        min: -50,
+                        max: 50,
+                    },
+                    {
+                        key: 'windDirectionOffset',
+                        label: 'Wind Direction',
+                        units: '°',
+                        min: -180,
+                        max: 180,
+                    },
+                    {
+                        key: 'windSpeedOffset',
+                        label: 'Wind Speed',
+                        units: 'mph',
+                        min: -50,
+                        max: 50,
+                    },
+                ].map(({ key, label, units, min, max }) => (
+                    <label
+                        key={key}
+                        htmlFor={key}
+                        style={{ display: 'grid', gap: '0.25em', width: 'min(100%, 16em)' }}
+                    >
+                        <span>
+                            {label} Offset:{' '}
+                            <output htmlFor={key}>
+                                {state[key] > 0 ? '+' : ''}
+                                {state[key]} {units}
+                            </output>
+                        </span>
+                        <input
+                            id={key}
+                            type="range"
+                            min={min}
+                            max={max}
+                            step={1}
+                            value={state[key]}
+                            onChange={(event) =>
+                                dispatch({ key, value: Number(event.target.value) })
+                            }
+                        />
                     </label>
                 ))}
             </div>

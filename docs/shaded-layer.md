@@ -32,6 +32,31 @@ Color ramp contract:
 - If `ndata` is not supplied, values are normalized from `data` using `colorLevels` and `colorType`.
 - Fragment shading samples the color ramp only when normalized values are in `[0, 1]`.
 
+## Updating Data and Geometry
+
+Keep the same layer `id` when replacing scalar values or switching datasets.
+Provide a new `data` or `ndata` array for scalar updates, or a new `odata` or
+`nodata` array for opacity updates. Value-only updates retain the cached position
+and triangle-index descriptors; they do not rebuild geometry or upload unchanged
+position buffers. Color changes update the value normalization and color texture
+without rebuilding geometry.
+
+Treat `lonlatGrid` as immutable. Reuse its reference while coordinates are unchanged,
+and supply a new array when any coordinate changes. In React examples, memoize
+projection-derived grids independently of scalar values. In-place coordinate edits
+are not detected.
+
+Geometry updates are triggered by changes to `lonlatGrid`, the values in `shape`,
+`triangulationMode`, `elevation`, `_normalize`, or `_full3d`, even when scalar data
+has not changed. Geometry is cached by grid identity, shape, triangulation mode,
+and elevation; distinct grids cannot reuse a mesh merely because a few sampled
+coordinates match. Grid keys are weakly held so unused grids can be garbage-collected.
+
+With `_normalize: false`, the layer binds cached grid positions directly. With
+`_normalize: true`, it binds the tessellator's normalized positions and retains that
+descriptor during value-only updates. Both paths keep the position-buffer format
+stable while scrubbing values or switching datasets.
+
 ## ShadedLayer Props
 
 In addition to inherited layer props, `ShadedLayer` supports:
