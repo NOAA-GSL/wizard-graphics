@@ -1,5 +1,6 @@
 import { ContourLayer } from './contourLayer/contourLayer';
 import { ContourLabels } from './contourLayer/contourLabels';
+import GpuContourLayer from './gpuContourLayer/gpuContourLayer.js';
 import ShadedLayer from './shadedLayer/solid-polygon-layer.ts';
 import VectorLayer from './vectorLayer/vectorLayer';
 import ParticleLayer from './particleLayer/particle-layer';
@@ -12,6 +13,7 @@ import { SpotLayer, NIFCLayer, CPCLayer, SPCLayer, WPCLayer, WWALayer } from './
 export {
     ContourLayer,
     ContourLabels,
+    GpuContourLayer,
     ShadedLayer,
     VectorLayer,
     ParticleLayer,
