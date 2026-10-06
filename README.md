@@ -73,14 +73,15 @@ npm run dev
 
 ## Tests
 
-Run the shaded-layer and particle-layer regressions from the repository root:
+Run the shaded-layer, particle-layer, and contour-layer regressions from the repository root:
 
 ```bash
 npm run test
 ```
 
 The tests use the real layer code with in-memory buffers and textures, so they
-do not require a browser or GPU.
+do not require a browser or GPU. Contour tests cover cache reuse/invalidation
+and coordinate equivalence with the previous marching-squares merge logic.
 
 ## Lint
 
