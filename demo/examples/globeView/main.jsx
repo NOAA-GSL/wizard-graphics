@@ -65,6 +65,11 @@ const checkboxConfig = [
     { key: 'showStats', label: 'Show Performance Stats' },
 ];
 
+function maskGridValues(values, percentage) {
+    values.fill(NaN, 0, Math.round((values.length * percentage) / 100));
+    return values;
+}
+
 function MapContainer() {
     const mapToken = process.env.mapToken;
     const style = useMemo(() => Object.keys(mapStyles)[0], []);
@@ -90,6 +95,7 @@ function MapContainer() {
         showStats: false, // Enable stats by default
         vectorMode: 'quadkey',
         temperatureOffset: 0,
+        nanPercentage: 0,
         windDirectionOffset: 0,
         windSpeedOffset: 0,
     });
@@ -196,37 +202,49 @@ function MapContainer() {
     }
     wdir = useMemo(
         () =>
-            wdir.flat().map((value) => {
-                if (value == null || !Number.isFinite(value)) return NaN;
-                if (state.windDirectionOffset === 0) return value;
-                return (((value + state.windDirectionOffset) % 360) + 360) % 360;
-            }),
-        [wdir, state.windDirectionOffset],
+            maskGridValues(
+                wdir.flat().map((value) => {
+                    if (value == null || !Number.isFinite(value)) return NaN;
+                    if (state.windDirectionOffset === 0) return value;
+                    return (((value + state.windDirectionOffset) % 360) + 360) % 360;
+                }),
+                state.nanPercentage,
+            ),
+        [wdir, state.windDirectionOffset, state.nanPercentage],
     );
     wmag = useMemo(
         () =>
-            wmag
-                .flat()
-                .map((value) =>
-                    value == null || !Number.isFinite(value)
-                        ? NaN
-                        : Math.max(0, value * 2.23694 + state.windSpeedOffset),
-                ),
-        [wmag, state.windSpeedOffset],
+            maskGridValues(
+                wmag
+                    .flat()
+                    .map((value) =>
+                        value == null || !Number.isFinite(value)
+                            ? NaN
+                            : Math.max(0, value * 2.23694 + state.windSpeedOffset),
+                    ),
+                state.nanPercentage,
+            ),
+        [wmag, state.windSpeedOffset, state.nanPercentage],
     );
     const data = useMemo(() => {
         const values = temperatures.flat();
         if (rawDataTransform === 'identity') {
-            return new Float32Array(
-                values.map((value) => (value == null ? NaN : value + state.temperatureOffset)),
+            return maskGridValues(
+                new Float32Array(
+                    values.map((value) => (value == null ? NaN : value + state.temperatureOffset)),
+                ),
+                state.nanPercentage,
             );
         }
-        return new Float32Array(
-            values.map((value) =>
-                value == null ? NaN : ((value - 273.15) * 9) / 5 + 32 + state.temperatureOffset,
+        return maskGridValues(
+            new Float32Array(
+                values.map((value) =>
+                    value == null ? NaN : ((value - 273.15) * 9) / 5 + 32 + state.temperatureOffset,
+                ),
             ),
+            state.nanPercentage,
         );
-    }, [temperatures, rawDataTransform, state.temperatureOffset]);
+    }, [temperatures, rawDataTransform, state.temperatureOffset, state.nanPercentage]);
 
     // Initialize Stats.js
     useEffect(() => {
@@ -678,6 +696,26 @@ function MapContainer() {
                         />
                     </label>
                 ))}
+                <label
+                    htmlFor="nanPercentage"
+                    style={{ display: 'grid', gap: '0.25em', width: 'min(100%, 16em)' }}
+                >
+                    <span>
+                        NaN Coverage:{' '}
+                        <output htmlFor="nanPercentage">{state.nanPercentage}%</output>
+                    </span>
+                    <input
+                        id="nanPercentage"
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={state.nanPercentage}
+                        onChange={(event) =>
+                            dispatch({ key: 'nanPercentage', value: Number(event.target.value) })
+                        }
+                    />
+                </label>
                 <label
                     htmlFor="contourWidth"
                     style={{ display: 'grid', gap: '0.25em', width: 'min(100%, 16em)' }}
