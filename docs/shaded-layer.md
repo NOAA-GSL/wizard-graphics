@@ -9,20 +9,20 @@ The layer uses `lonlatGrid` for geometry and scalar values from `data` (or `ndat
 Supported `lonlatGrid` layouts:
 
 1. Flattened structured grid (preferred):
-   - `lonlatGrid`: 1D array of `[lon, lat]`
-   - `shape`: `[rows, cols]`
-   - `data`: 1D array of scalar values aligned by index
-   - Should be used with `triangulationMode` `quadkey`, `quadkey-cells`, or `unstructured`
+    - `lonlatGrid`: 1D array of `[lon, lat]`
+    - `shape`: `[rows, cols]`
+    - `data`: 1D array of scalar values aligned by index
+    - Should be used with `triangulationMode` `quadkey`, `quadkey-cells`, or `unstructured`
 
 2. Flattened spherical grid (radar):
-   - `lonlatGrid`: 1D array of `[lon, lat]` points (flattened ray-major order)
-   - `shape`: `[rows, cols]` where `rows` = ray count and `cols` = gate count
-   - `data`: 1D reflectivity array aligned 1:1 with `lonlatGrid`
-   - Recommended `triangulationMode`: `spherical` or `spherical-cells` (can also use `unstructured`)
+    - `lonlatGrid`: 1D array of `[lon, lat]` points (flattened ray-major order)
+    - `shape`: `[rows, cols]` where `rows` = ray count and `cols` = gate count
+    - `data`: 1D reflectivity array aligned 1:1 with `lonlatGrid`
+    - Recommended `triangulationMode`: `spherical` or `spherical-cells` (can also use `unstructured`)
 
 3. Unstructured grid/ring:
-   - `lonlatGrid`: 1D array of `[lon, lat]`
-   - Use `triangulationMode` `unstructured` (Delaunay triangulation path).
+    - `lonlatGrid`: 1D array of `[lon, lat]`
+    - Use `triangulationMode` `unstructured` (Delaunay triangulation path).
 
 Color ramp contract:
 
@@ -32,43 +32,68 @@ Color ramp contract:
 - If `ndata` is not supplied, values are normalized from `data` using `colorLevels` and `colorType`.
 - Fragment shading samples the color ramp only when normalized values are in `[0, 1]`.
 
+## Updating Data and Geometry
+
+Keep the same layer `id` when replacing scalar values.
+Provide a new `data` or `ndata` array for scalar updates, or a new `odata` or
+`nodata` array for opacity updates. Value-only updates retain the cached position
+and triangle-index descriptors; they do not rebuild geometry or upload unchanged
+position buffers. Color changes update the value normalization and color texture
+without rebuilding geometry.
+
+Treat `lonlatGrid` as immutable. Reuse its reference while coordinates are unchanged,
+and supply a new array when any coordinate changes. In React examples, memoize
+projection-derived grids independently of scalar values. In-place coordinate edits
+are not detected.
+
+Geometry updates are triggered by changes to `lonlatGrid`, the values in `shape`,
+`triangulationMode`, `elevation`, `_normalize`, or `_full3d`, even when scalar data
+has not changed. Geometry is cached by grid identity, shape, triangulation mode,
+and elevation; distinct grids cannot reuse a mesh merely because a few sampled
+coordinates match. Grid keys are weakly held so unused grids can be garbage-collected.
+
+With `_normalize: false`, the layer binds cached grid positions directly. With
+`_normalize: true`, it binds the tessellator's normalized positions and retains that
+descriptor during value-only updates. Both paths keep the position-buffer format
+stable while scrubbing values.
+
 ## ShadedLayer Props
 
 In addition to inherited layer props, `ShadedLayer` supports:
 
-| Prop | Type | Required | Default | Notes |
-| --- | --- | --- | --- | --- |
-| `lonlatGrid` | `Array<[number, number]> \| Array<Array<[number, number]>>` | Yes | None | Geometry points used to build triangles/cells. |
-| `colors` | `string[]` | Yes | None | Color ramp entries. Use `rgb(...)` or `rgba(...)` strings. |
-| `data` | `ArrayLike<number>` | Conditional | None | Required when `ndata` is not provided. Scalar values aligned with `lonlatGrid`. |
-| `ndata` | `ArrayLike<number>` | Conditional | None | Pre-normalized scalar values (typically in `[0, 1]`). Can be used instead of `data`+normalization. |
-| `colorLevels` | `number[]` | Conditional | None | Required when `ndata` is not provided (used to normalize `data`). |
-| `colorType` | `'scaleLinear' \| 'scaleThreshold'` | Conditional | Treated as non-linear sampling unless `'scaleLinear'` | Controls normalization behavior and color ramp interpolation. |
-| `shape` | `[number, number]` | Conditional | None | Required for structured grid/cell modes (`quadkey`, `quadkey-cells`, `spherical`, `spherical-cells`). Format is `[rows, cols]`. |
-| `triangulationMode` | `'unstructured' \| 'quadkey' \| 'quadkey-cells' \| 'spherical' \| 'spherical-cells'` | No | `'unstructured'` | Controls how geometry/data are triangulated. |
-| `odata` | `ArrayLike<number>` | No | None | Raw opacity values. Normalized internally to `[0, 1]` if `nodata` is not provided. |
-| `nodata` | `ArrayLike<number>` | No | None | Pre-normalized opacity values in `[0, 1]`. Overrides `odata` when both are present. |
-| `elevation` | `number` | No | `0` | Elevation baked into generated vertex positions. |
-| `id` | `string` | No | deck.gl generated layer id | Standard layer id override. |
-| `filled` | `boolean` | No | `true` | Draw filled polygons. |
-| `extruded` | `boolean` | No | `false` | Draw extruded side walls. |
-| `wireframe` | `boolean` | No | `false` | Draw wireframe for extruded geometry. |
-| `_normalize` | `boolean` | No | `false` | Experimental deck.gl polygon normalization toggle. |
-| `_windingOrder` | `'CW' \| 'CCW'` | No | `'CW'` | Experimental ring winding override. |
-| `_full3d` | `boolean` | No | `false` | Experimental full-3D tessellation mode. |
-| `elevationScale` | `number` | No | `1` | Extrusion scale multiplier. |
-| `getPolygon` | `AccessorFunction` | No | `(f) => f.polygon` | Base polygon accessor (advanced usage). |
-| `getElevation` | `Accessor<number>` | No | `0` | Base elevation accessor (advanced usage). |
-| `getFillColor` | `Accessor<Color>` | No | `[0, 0, 0, 255]` | Base fill color accessor (advanced usage). |
-| `getLineColor` | `Accessor<Color>` | No | `[0, 0, 0, 255]` | Base line color accessor (advanced usage). |
-| `getPolygonData` | `Accessor<number>` | No | `1000` | Internal scalar attribute accessor (advanced usage). |
-| `getVertex1` | `Accessor<number>` | No | `-1` | Internal custom vertex attribute (advanced usage). |
-| `getVertex2` | `Accessor<number>` | No | `-1` | Internal custom vertex attribute (advanced usage). |
-| `getVertex3` | `Accessor<number>` | No | `-1` | Internal custom vertex attribute (advanced usage). |
-| `getOpacity` | `Accessor<number>` | No | `-1` | Internal opacity accessor. Values in `[0, 1]` modulate final alpha. |
-| `texture` | `string \| TextureSource \| Promise<TextureSource>` | No | `null` | Declared image prop. Color ramp sampling is generated from `colors`. |
-| `material` | `Material` | No | `true` | Lighting material settings (when `extruded: true`). |
-| `parameters` | `object` | No | `{ depthCompare: 'always', cullMode: 'back' }` | GPU render-state overrides. |
+| Prop                | Type                                                                                 | Required    | Default                                               | Notes                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `lonlatGrid`        | `Array<[number, number]> \| Array<Array<[number, number]>>`                          | Yes         | None                                                  | Geometry points used to build triangles/cells.                                                                                  |
+| `colors`            | `string[]`                                                                           | Yes         | None                                                  | Color ramp entries. Use `rgb(...)` or `rgba(...)` strings.                                                                      |
+| `data`              | `ArrayLike<number>`                                                                  | Conditional | None                                                  | Required when `ndata` is not provided. Scalar values aligned with `lonlatGrid`.                                                 |
+| `ndata`             | `ArrayLike<number>`                                                                  | Conditional | None                                                  | Pre-normalized scalar values (typically in `[0, 1]`). Can be used instead of `data`+normalization.                              |
+| `colorLevels`       | `number[]`                                                                           | Conditional | None                                                  | Required when `ndata` is not provided (used to normalize `data`).                                                               |
+| `colorType`         | `'scaleLinear' \| 'scaleThreshold'`                                                  | Conditional | Treated as non-linear sampling unless `'scaleLinear'` | Controls normalization behavior and color ramp interpolation.                                                                   |
+| `shape`             | `[number, number]`                                                                   | Conditional | None                                                  | Required for structured grid/cell modes (`quadkey`, `quadkey-cells`, `spherical`, `spherical-cells`). Format is `[rows, cols]`. |
+| `triangulationMode` | `'unstructured' \| 'quadkey' \| 'quadkey-cells' \| 'spherical' \| 'spherical-cells'` | No          | `'unstructured'`                                      | Controls how geometry/data are triangulated.                                                                                    |
+| `odata`             | `ArrayLike<number>`                                                                  | No          | None                                                  | Raw opacity values. Normalized internally to `[0, 1]` if `nodata` is not provided.                                              |
+| `nodata`            | `ArrayLike<number>`                                                                  | No          | None                                                  | Pre-normalized opacity values in `[0, 1]`. Overrides `odata` when both are present.                                             |
+| `elevation`         | `number`                                                                             | No          | `0`                                                   | Elevation baked into generated vertex positions.                                                                                |
+| `id`                | `string`                                                                             | No          | deck.gl generated layer id                            | Standard layer id override.                                                                                                     |
+| `filled`            | `boolean`                                                                            | No          | `true`                                                | Draw filled polygons.                                                                                                           |
+| `extruded`          | `boolean`                                                                            | No          | `false`                                               | Draw extruded side walls.                                                                                                       |
+| `wireframe`         | `boolean`                                                                            | No          | `false`                                               | Draw wireframe for extruded geometry.                                                                                           |
+| `_normalize`        | `boolean`                                                                            | No          | `false`                                               | Experimental deck.gl polygon normalization toggle.                                                                              |
+| `_windingOrder`     | `'CW' \| 'CCW'`                                                                      | No          | `'CW'`                                                | Experimental ring winding override.                                                                                             |
+| `_full3d`           | `boolean`                                                                            | No          | `false`                                               | Experimental full-3D tessellation mode.                                                                                         |
+| `elevationScale`    | `number`                                                                             | No          | `1`                                                   | Extrusion scale multiplier.                                                                                                     |
+| `getPolygon`        | `AccessorFunction`                                                                   | No          | `(f) => f.polygon`                                    | Base polygon accessor (advanced usage).                                                                                         |
+| `getElevation`      | `Accessor<number>`                                                                   | No          | `0`                                                   | Base elevation accessor (advanced usage).                                                                                       |
+| `getFillColor`      | `Accessor<Color>`                                                                    | No          | `[0, 0, 0, 255]`                                      | Base fill color accessor (advanced usage).                                                                                      |
+| `getLineColor`      | `Accessor<Color>`                                                                    | No          | `[0, 0, 0, 255]`                                      | Base line color accessor (advanced usage).                                                                                      |
+| `getPolygonData`    | `Accessor<number>`                                                                   | No          | `1000`                                                | Internal scalar attribute accessor (advanced usage).                                                                            |
+| `getVertex1`        | `Accessor<number>`                                                                   | No          | `-1`                                                  | Internal custom vertex attribute (advanced usage).                                                                              |
+| `getVertex2`        | `Accessor<number>`                                                                   | No          | `-1`                                                  | Internal custom vertex attribute (advanced usage).                                                                              |
+| `getVertex3`        | `Accessor<number>`                                                                   | No          | `-1`                                                  | Internal custom vertex attribute (advanced usage).                                                                              |
+| `getOpacity`        | `Accessor<number>`                                                                   | No          | `-1`                                                  | Internal opacity accessor. Values in `[0, 1]` modulate final alpha.                                                             |
+| `texture`           | `string \| TextureSource \| Promise<TextureSource>`                                  | No          | `null`                                                | Declared image prop. Color ramp sampling is generated from `colors`.                                                            |
+| `material`          | `Material`                                                                           | No          | `true`                                                | Lighting material settings (when `extruded: true`).                                                                             |
+| `parameters`        | `object`                                                                             | No          | `{ depthCompare: 'always', cullMode: 'back' }`        | GPU render-state overrides.                                                                                                     |
 
 Requirement rules:
 

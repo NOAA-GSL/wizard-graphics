@@ -59,6 +59,8 @@ npm run dev
 
       <img src="docs/images/contourLayer.png" alt="ContourLayer" style="max-width: 300px;" />
 
+- [GpuContourLayer](docs/gpu-contour-layer.md): WebGL2 visual contours with sparse CPU labels.
+
 - [VectorLayer](docs/vector-layer.md)
 
       <img src="docs/images/vectorLayer.png" alt="VectorLayer" style="max-width: 300px;" />
@@ -71,10 +73,34 @@ npm run dev
 
       <img src="docs/images/readout.png" alt="Readout" style="max-width: 300px;" />
 
+## Tests
+
+Run the shaded-layer, particle-layer, and contour-layer regressions from the repository root:
+
+```bash
+npm run test
+```
+
+The tests use the real layer code with in-memory buffers and textures, so they
+do not require a browser or GPU. Contour tests cover cache reuse/invalidation
+and coordinate equivalence with the previous marching-squares merge logic,
+plus GPU-mesh scalar alignment, label placement, threshold-crossing masks,
+multi-level segment scheduling, and resource reuse.
+
 ## Lint
 
+Lint both the library and demo from the repository root:
+
+```bash
+npm run lint
+```
+
+Or lint either workspace individually:
+
+```bash
 npm run lint --workspace=library
 npm run lint --workspace=demo
+```
 
 The demo lint configuration mirrors Vite's `demo-data` alias, including its
 extensionless JSON imports.
